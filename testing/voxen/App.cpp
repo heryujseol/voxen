@@ -262,9 +262,12 @@ bool App::InitDirectX()
 		return false;
 	}
 
-	m_globalConstantData.view = Matrix();
-	m_globalConstantData.proj = Matrix();
-	if (!Utils::CreateConstantBuffer(m_device, m_globalConstantBuffer, m_globalConstantData)) {
+	m_globalConstantData.view = m_camera.GetViewMatrix();
+	m_globalConstantData.proj = m_camera.GetProjectionMatrix();
+	GlobalConstantData tempConstantData;
+	tempConstantData.view = m_globalConstantData.view.Transpose();
+	tempConstantData.proj = m_globalConstantData.proj.Transpose();
+	if (!Utils::CreateConstantBuffer(m_device, m_globalConstantBuffer, tempConstantData)) {
 		std::cout << "failed create constant buffer" << std::endl;
 		return false;
 	}
