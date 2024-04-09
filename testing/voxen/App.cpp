@@ -11,25 +11,10 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 }
 
 App::App()
-	: m_width(1600), m_height(900), m_hwnd(), m_viewport(), m_chunks(nullptr), m_camera(),
+	: m_width(1600), m_height(900), m_hwnd(), m_viewport(), m_chunks(), m_camera(),
 	  m_mouseNdcX(0.0f), m_mouseNdcY(0.0f)
 {
 	g_app = this;
-
-	m_chunks = new Chunk**[CHUNK_SIZE];
-	for (int i = 0; i < CHUNK_SIZE; ++i) {
-		m_chunks[i] = new Chunk*[CHUNK_SIZE];
-		for (int j = 0; j < CHUNK_SIZE; ++j) {
-			m_chunks[i][j] = new Chunk[CHUNK_SIZE];
-			for (int k = 0; k < CHUNK_SIZE; ++k) {
-				int x_pos = i - CHUNK_SIZE / 2;
-				int y_pos = j;
-				int z_pos = k - CHUNK_SIZE / 2;
-				m_chunks[i][j][k] = Chunk(x_pos * Chunk::BLOCK_SIZE, y_pos * Chunk::BLOCK_SIZE,
-					z_pos * Chunk::BLOCK_SIZE);
-			}
-		}
-	}
 }
 
 App::~App()
@@ -40,14 +25,7 @@ App::~App()
 
 	DestroyWindow(m_hwnd);
 
-	// delete memory
-	for (int i = 0; i < CHUNK_SIZE; ++i) {
-		for (int j = 0; j < CHUNK_SIZE; ++j) {
-			delete[] m_chunks[i][j];
-		}
-		delete[] m_chunks[i];
-	}
-	delete[] m_chunks;
+	m_chunks.clear();
 }
 
 LRESULT App::EventHandler(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -131,7 +109,8 @@ void App::Update(float dt)
 {
 	m_camera.UpdatePosition(m_keyPressed, dt);
 	m_camera.UpdateViewDirection(m_mouseNdcX, m_mouseNdcY);
-	if (m_camera.IsDirtyFlag()) {
+
+	if (m_camera.IsOnConstantDirtyFlag()) {
 		m_globalConstantData.view = m_camera.GetViewMatrix();
 		m_globalConstantData.proj = m_camera.GetProjectionMatrix();
 
@@ -139,7 +118,18 @@ void App::Update(float dt)
 		tempConstantData.view = m_globalConstantData.view.Transpose();
 		tempConstantData.proj = m_globalConstantData.proj.Transpose();
 		Utils::UpdateConstantBuffer(m_context, m_globalConstantBuffer, tempConstantData);
+
+		m_camera.OffConstantDirtyFlag();
 	}
+
+	if (m_camera.IsOnChunkDirtyFlag()) {
+		SetLoadChunkList();
+		m_camera.OffChunkDirtyFlag();
+	}
+	if (!m_loadChunkList.empty()) { // { 1, 2, 3, 4, 5, 6, 7, 8, 9 }
+		//LoadChunks();               // { 1, 2, 3, 4, 5, 6, a, b, c }
+		std::future<void> fut = std::async(std::launch::async, &App::LoadChunks, this);
+	} 
 	/*
 	for (int i = 0; i < CHUNK_SIZE; ++i) {
 		for (int j = 0; j < CHUNK_SIZE; ++j) {
@@ -175,13 +165,11 @@ void App::Render()
 	std::vector<ID3D11ShaderResourceView *> pptr = { m_textureSRV1.Get(), m_textureSRV2.Get(), m_textureSRV3.Get(), m_textureSRV4.Get() };
 	m_context->PSSetShaderResources(0, 4, pptr.data());
 
-	for (int i = 0; i < CHUNK_SIZE; ++i) {
-		for (int j = 0; j < CHUNK_SIZE; ++j) {
-			for (int k = 0; k < CHUNK_SIZE; ++k) {
-				if (!m_chunks[i][j][k].IsEmpty())
-					m_chunks[i][j][k].Render(m_context);
-			}
-		}
+	for (std::vector<Chunk>::iterator it = m_chunks.begin(); it != m_chunks.end(); ++it) {
+		if (it->IsEmpty())
+			continue;
+
+		it->Render(m_context);
 	}
 }
 
@@ -351,11 +339,70 @@ bool App::InitGUI()
 
 void App::InitMesh() 
 {
+	Vector3 cameraOffset = m_camera.GetChunkPosition();
+
 	for (int i = 0; i < CHUNK_SIZE; ++i) {
 		for (int j = 0; j < CHUNK_SIZE; ++j) {
 			for (int k = 0; k < CHUNK_SIZE; ++k) {
-				m_chunks[i][j][k].Initialize(m_device);
+				int x = cameraOffset.x + Chunk::BLOCK_SIZE * (i - CHUNK_SIZE / 2);
+				int y = cameraOffset.y + Chunk::BLOCK_SIZE * (j - CHUNK_SIZE / 2);
+				int z = cameraOffset.z + Chunk::BLOCK_SIZE * (k - CHUNK_SIZE / 2);
+
+				Chunk c = Chunk(x, y, z);
+				c.Initialize(m_device);
+				m_chunks.push_back(c);
 			}
 		}
 	}
+}
+
+bool App::IsLoadedPosition(int x, int y, int z)
+{
+	Vector3 position = Vector3(float(x), float(y), float(z));
+	for (std::vector<Chunk>::iterator it = m_chunks.begin(); it != m_chunks.end(); ++it) {
+		if (it->GetPosition() == position)
+			return true;
+	}
+	return false;
+}
+
+void App::SetLoadChunkList()
+{
+	Vector3 cameraOffset = m_camera.GetChunkPosition();
+
+	for (int i = 0; i < CHUNK_SIZE; ++i) {
+		for (int j = 0; j < CHUNK_SIZE; ++j) {
+			for (int k = 0; k < CHUNK_SIZE; ++k) {
+				int x = cameraOffset.x + Chunk::BLOCK_SIZE * (i - CHUNK_SIZE / 2);
+				int y = cameraOffset.y + Chunk::BLOCK_SIZE * (j - CHUNK_SIZE / 2);
+				int z = cameraOffset.z + Chunk::BLOCK_SIZE * (k - CHUNK_SIZE / 2);
+
+				if (!IsLoadedPosition(x, y, z))
+					m_loadChunkList.push_back(Vector3((float)x, (float)y, (float)z));
+			}
+		}
+	}
+}
+
+void App::LoadChunks()
+{
+	int count = 0;
+	while (!m_loadChunkList.empty()) {
+		Vector3 pos = m_loadChunkList.back();
+		m_loadChunkList.pop_back();
+
+		Chunk c = Chunk(pos.x, pos.y, pos.z);
+		c.Initialize(m_device);
+		m_chunks.push_back(c);
+		count++;
+		if (count == 1) //  chunks loading per each frame
+			return;
+	}
+}
+
+
+
+void App::UnloadChunks() 
+{
+
 }

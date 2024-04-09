@@ -3,15 +3,18 @@
 
 Camera::Camera()
 	: m_projFovAngleY(80.0f), m_nearZ(0.01f), m_farZ(360.0f), m_aspectRatio(16.0f / 9.0f),
-	  m_eyePos(0.0f, 50.0f, 0.0f), m_to(0.0f, 0.0f, 1.0f), m_up(0.0f, 1.0f, 0.0f),
+	  m_eyePos(16.0f, 50.0f, 16.0f), m_chunkPos(0.0f, 0.0f, 0.0f), m_to(0.0f, 0.0f, 1.0f), m_up(0.0f, 1.0f, 0.0f),
 	  m_right(1.0f, 0.0f, 0.0f), m_viewNdcX(0.0f), m_viewNdcY(0.0f), m_speed(10.0f),
-	  m_dirtyFlag(false)
+	  m_constantDirtyFlag(false), m_chunkDirtyFlag(false)
 {
+	m_chunkPos = Utils::CalcChunkOffset(m_eyePos);
 }
 
 Camera::~Camera() {}
 
 Vector3 Camera::GetPosition() { return m_eyePos; }
+
+Vector3 Camera::GetChunkPosition() { return m_chunkPos; }
 
 float Camera::GetDistance() { return m_farZ; }
 
@@ -33,19 +36,27 @@ void Camera::UpdatePosition(bool keyPressed[256], float dt)
 {
 	if (keyPressed['W']) {
 		MoveForward(dt);
-		m_dirtyFlag = true;
+		m_constantDirtyFlag = true;
 	}
 	if (keyPressed['S']) {
 		MoveForward(-dt);
-		m_dirtyFlag = true;
+		m_constantDirtyFlag = true;
 	}
 	if (keyPressed['D']) {
 		MoveRight(dt);
-		m_dirtyFlag = true;
+		m_constantDirtyFlag = true;
 	}
 	if (keyPressed['A']) {
 		MoveRight(-dt);
-		m_dirtyFlag = true;
+		m_constantDirtyFlag = true;
+	}
+
+	if (m_constantDirtyFlag) {
+		Vector3 newChunkOffset = Utils::CalcChunkOffset(m_eyePos);
+		if (newChunkOffset != m_chunkPos) {
+			m_chunkPos = newChunkOffset;
+			m_chunkDirtyFlag = true;
+		}
 	}
 }
 
@@ -54,7 +65,7 @@ void Camera::UpdateViewDirection(float ndcX, float ndcY)
 	if (m_viewNdcX == ndcX && m_viewNdcY == ndcY)
 		return;
 
-	m_dirtyFlag = true;
+	m_constantDirtyFlag = true;
 
 	m_viewNdcX = ndcX;
 	m_viewNdcY = ndcY;
@@ -76,6 +87,10 @@ void Camera::UpdateViewDirection(float ndcX, float ndcY)
 	m_up = Vector3::Transform(basisY, Matrix::CreateFromQuaternion(q));
 }
 
-bool Camera::IsDirtyFlag() { return m_dirtyFlag; }
+bool Camera::IsOnConstantDirtyFlag() { return m_constantDirtyFlag; }
 
-void Camera::OffDirtyFlag() { m_dirtyFlag = false; }
+void Camera::OffConstantDirtyFlag() { m_constantDirtyFlag = false; }
+
+bool Camera::IsOnChunkDirtyFlag() { return m_chunkDirtyFlag; }
+
+void Camera::OffChunkDirtyFlag() { m_chunkDirtyFlag = false; }

@@ -6,23 +6,15 @@
 #include <vector>
 #include <fstream>
 
-#include "Block.h"
-
+#include "Structure.h"
+#include "Chunk.h"
 
 
 
 using namespace Microsoft::WRL;
 
-struct GlobalConstantData {
-	Matrix view;
-	Matrix proj;
-};
-
-struct ChunkConstantData {
-	Matrix world;
-};
-
 namespace Utils {
+	Vector3 CalcChunkOffset(Vector3 pos);
 	extern float Lerp(float a, float b, float w);
 	extern float CubicLerp(float a, float b, float w);
 	extern float Smootherstep(float a, float b, float w);

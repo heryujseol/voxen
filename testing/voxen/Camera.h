@@ -4,16 +4,19 @@
 #include <DirectXMath.h>
 #include "directxtk/SimpleMath.h"
 
-using namespace DirectX::SimpleMath;
+#include "Chunk.h"
+
 using namespace DirectX;
+using namespace DirectX::SimpleMath;
 
 class Camera {
 public:
 	Camera();
 	~Camera();
 
-
 	Vector3 GetPosition();
+	Vector3 GetChunkPosition();
+
 	float GetDistance();
 	Matrix GetViewMatrix();
 	Matrix GetProjectionMatrix();
@@ -26,8 +29,11 @@ public:
 	void UpdatePosition(bool keyPressed[256], float dt);
 	void UpdateViewDirection(float mouseX, float mouseY);
 
-	bool IsDirtyFlag();
-	void OffDirtyFlag();
+	bool IsOnConstantDirtyFlag();
+	void OffConstantDirtyFlag();
+
+	bool IsOnChunkDirtyFlag();
+	void OffChunkDirtyFlag();
 
 private:
 	float m_projFovAngleY;
@@ -36,6 +42,7 @@ private:
 	float m_aspectRatio;
 
 	Vector3 m_eyePos;
+	Vector3 m_chunkPos;
 	Vector3 m_to;
 	Vector3 m_up;
 	Vector3 m_right;
@@ -45,5 +52,6 @@ private:
 
 	float m_speed;
 
-	bool m_dirtyFlag;
+	bool m_constantDirtyFlag;
+	bool m_chunkDirtyFlag;
 };

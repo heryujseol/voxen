@@ -154,6 +154,7 @@
     <ClInclude Include="Block.h" />
     <ClInclude Include="Camera.h" />
     <ClInclude Include="Chunk.h" />
+    <ClInclude Include="Structure.h" />
     <ClInclude Include="Utils.h" />
   </ItemGroup>
   <ItemGroup>

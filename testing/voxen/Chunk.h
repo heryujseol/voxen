@@ -16,11 +16,13 @@ public:
 	void Render(ComPtr<ID3D11DeviceContext>& context);
 
 	bool IsEmpty();
+	Vector3 GetPosition();
 
 	static const int BLOCK_SIZE = 32;
 
 private:
-	void CreateBlock(int x, int y, int z, bool x_n, bool x_p, bool y_n, bool y_p, bool z_n, bool z_p);
+	void CreateBlock(
+		int x, int y, int z, bool x_n, bool x_p, bool y_n, bool y_p, bool z_n, bool z_p);
 
 	UINT m_stride;
 	UINT m_offset;

@@ -1,5 +1,18 @@
 #include "Utils.h"
 
+Vector3 Utils::CalcChunkOffset(Vector3 pos)
+{
+	int floorX = (int)floor(pos.x);
+	int floorY = (int)floor(pos.y);
+	int floorZ = (int)floor(pos.z);
+
+	int offsetX = floorX - (floorX % Chunk::BLOCK_SIZE);
+	int offsetY = floorY - (floorY % Chunk::BLOCK_SIZE);
+	int offsetZ = floorZ - (floorZ % Chunk::BLOCK_SIZE);
+
+	return Vector3(offsetX, offsetY, offsetZ);
+}
+
 float Utils::Lerp(float a, float b, float w) { return (1 - w) * a + w * b; }
 
 float Utils::CubicLerp(float a, float b, float w)

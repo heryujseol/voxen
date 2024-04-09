@@ -14,7 +14,7 @@ Chunk::Chunk(int x, int y, int z)
 	}
 }
 
-Chunk::~Chunk() 
+Chunk::~Chunk()
 {
 	for (int i = 0; i < BLOCK_SIZE; ++i) {
 		for (int j = 0; j < BLOCK_SIZE; ++j) {
@@ -83,7 +83,7 @@ bool Chunk::Initialize(ComPtr<ID3D11Device>& device)
 	return true;
 }
 
-void Chunk::Update(ComPtr<ID3D11DeviceContext>& context, float dt) 
+void Chunk::Update(ComPtr<ID3D11DeviceContext>& context, float dt)
 {
 	m_constantData.world *= Matrix::CreateRotationY(dt);
 
@@ -216,3 +216,4 @@ void Chunk::CreateBlock(
 
 bool Chunk::IsEmpty() { return m_indexCount == 0; }
 
+Vector3 Chunk::GetPosition() { return m_position; }

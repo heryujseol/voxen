@@ -9,11 +9,6 @@ using namespace Microsoft::WRL;
 using namespace DirectX::SimpleMath;
 
 
-struct Vertex {
-	Vector3 pos;
-	Vector3 normal;
-};
-
 class Block 
 {
 public:

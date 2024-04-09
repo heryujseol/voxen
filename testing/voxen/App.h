@@ -44,6 +44,11 @@ private:
 	bool InitDirectX();
 	bool InitGUI();
 	void InitMesh();
+
+	void LoadChunks();
+	void UnloadChunks();
+	bool IsLoadedPosition(int x, int y, int z);
+	void SetLoadChunkList();
 	
 	
 	HWND m_hwnd;
@@ -75,9 +80,10 @@ private:
 	GlobalConstantData m_globalConstantData;
 	ComPtr<ID3D11Buffer> m_globalConstantBuffer;
 
-	Chunk ***m_chunks;
-	static const int CHUNK_SIZE = 4;
-
+	static const int CHUNK_SIZE = 3;
+	std::vector<Chunk> m_chunks;
+	std::vector<Vector3> m_loadChunkList;
+	
 	Camera m_camera;
 
 	bool m_keyPressed[256];
