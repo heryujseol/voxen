@@ -47,6 +47,7 @@ private:
 	Vector3 m_up;
 	Vector3 m_right;
 
+
 	float m_viewNdcX;
 	float m_viewNdcY;
 

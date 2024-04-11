@@ -17,7 +17,6 @@ float4 main(vsOutput input) : SV_TARGET
 {
     float temperature = 0.5;
     float downfall = 1.0;
-    
     float4 biome = g_colorMap.Sample(g_sampler, float2(1 - temperature, 1 - temperature / downfall));
     float4 color;
     if (input.normalWorld.y > 0.0)

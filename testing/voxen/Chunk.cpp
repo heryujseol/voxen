@@ -1,9 +1,14 @@
 #include "Chunk.h"
 
-Chunk::Chunk() : m_position(0.0f, 0.0f, 0.0f), m_stride(0), m_offset(0), m_indexCount(0) {}
+Chunk::Chunk()
+	: m_position(0.0f, 0.0f, 0.0f), m_stride(0), m_offset(0), m_indexCount(0),
+	  m_vertexBuffer(nullptr), m_indexBuffer(nullptr), m_constantBuffer(nullptr), m_isLoaded(false)
+{
+}
 
 Chunk::Chunk(int x, int y, int z)
-	: m_position((float)x, (float)y, (float)z), m_stride(0), m_offset(0), m_indexCount(0)
+	: m_position((float)x, (float)y, (float)z), m_stride(0), m_offset(0), m_indexCount(0),
+	  m_vertexBuffer(nullptr), m_indexBuffer(nullptr), m_constantBuffer(nullptr), m_isLoaded(false)
 {
 	m_blocks.resize(BLOCK_SIZE);
 	for (int i = 0; i < BLOCK_SIZE; ++i) {
@@ -16,27 +21,39 @@ Chunk::Chunk(int x, int y, int z)
 
 Chunk::~Chunk()
 {
-	for (int i = 0; i < BLOCK_SIZE; ++i) {
-		for (int j = 0; j < BLOCK_SIZE; ++j) {
-			m_blocks[i][j].clear();
-		}
-		m_blocks[i].clear();
-	}
 	m_blocks.clear();
+	m_vertices.clear();
+	m_indices.clear();
+
+	if (m_vertexBuffer) {
+		m_vertexBuffer.Reset();
+		m_vertexBuffer = nullptr;
+	}
+	if (m_indexBuffer) {
+		m_vertexBuffer.Reset();
+		m_indexBuffer = nullptr;
+	}
+	if (m_constantBuffer) {
+		m_vertexBuffer.Reset();
+		m_constantBuffer = nullptr;
+	}
+
+	m_isLoaded = false;
 }
 
 bool Chunk::Initialize(ComPtr<ID3D11Device>& device)
 {
 	for (int x = 0; x < BLOCK_SIZE; ++x) {
-		for (int y = 0; y < BLOCK_SIZE; ++y) {
-			for (int z = 0; z < BLOCK_SIZE; ++z) {
-				int height = Utils::GetHeight((int)m_position.x + x, (int)m_position.z + z);
-				if (m_position.y + y <= height)
+		for (int z = 0; z < BLOCK_SIZE; ++z) {
+			int height = Utils::GetHeight((int)m_position.x + x, (int)m_position.z + z);
+			for (int y = 0; y < BLOCK_SIZE; ++y) {
+				if (m_position.y + y <= height) {
 					m_blocks[x][y][z].SetActive(true);
+				}
 			}
 		}
 	}
-
+	
 	for (int x = 0; x < BLOCK_SIZE; ++x) {
 		for (int y = 0; y < BLOCK_SIZE; ++y) {
 			for (int z = 0; z < BLOCK_SIZE; ++z) {
@@ -59,6 +76,7 @@ bool Chunk::Initialize(ComPtr<ID3D11Device>& device)
 			}
 		}
 	}
+	
 
 	m_indexCount = m_indices.size();
 	if (m_indexCount != 0) {
@@ -80,6 +98,7 @@ bool Chunk::Initialize(ComPtr<ID3D11Device>& device)
 		m_constantData.world = m_constantData.world.Transpose();
 	}
 
+	m_isLoaded = true;
 	return true;
 }
 
@@ -189,7 +208,7 @@ void Chunk::CreateBlock(
 		normals.push_back(Vector3(1.0f, 0.0f, 0.0f));
 		normals.push_back(Vector3(1.0f, 0.0f, 0.0f));
 	}
-
+	
 	std::vector<uint32_t> indices;
 	for (int i = 0; i < positions.size(); i += 4) {
 		indices.push_back(i);
@@ -200,7 +219,7 @@ void Chunk::CreateBlock(
 		indices.push_back(i + 2);
 		indices.push_back(i + 3);
 	}
-
+	
 	uint32_t offsetIndex = (uint32_t)m_vertices.size();
 	for (size_t i = 0; i < indices.size(); ++i) {
 		m_indices.push_back(offsetIndex + indices[i]);
@@ -214,6 +233,9 @@ void Chunk::CreateBlock(
 	}
 }
 
-bool Chunk::IsEmpty() { return m_indexCount == 0; }
+bool Chunk::IsLoaded() { return m_isLoaded; }
+
+bool Chunk::IsEmpty() { return m_indexCount == 0; } 
 
 Vector3 Chunk::GetPosition() { return m_position; }
+

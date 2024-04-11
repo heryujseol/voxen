@@ -6,11 +6,11 @@ Vector3 Utils::CalcChunkOffset(Vector3 pos)
 	int floorY = (int)floor(pos.y);
 	int floorZ = (int)floor(pos.z);
 
-	int offsetX = floorX - (floorX % Chunk::BLOCK_SIZE);
-	int offsetY = floorY - (floorY % Chunk::BLOCK_SIZE);
-	int offsetZ = floorZ - (floorZ % Chunk::BLOCK_SIZE);
+	int modX = ((floorX % Chunk::BLOCK_SIZE) + Chunk::BLOCK_SIZE) % Chunk::BLOCK_SIZE;
+	int modY = ((floorY % Chunk::BLOCK_SIZE) + Chunk::BLOCK_SIZE) % Chunk::BLOCK_SIZE;
+	int modZ = ((floorZ % Chunk::BLOCK_SIZE) + Chunk::BLOCK_SIZE) % Chunk::BLOCK_SIZE;
 
-	return Vector3(offsetX, offsetY, offsetZ);
+	return Vector3(floorX - modX, floorY - modY, floorZ - modZ);
 }
 
 float Utils::Lerp(float a, float b, float w) { return (1 - w) * a + w * b; }

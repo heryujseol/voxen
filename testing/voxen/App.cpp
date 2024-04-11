@@ -11,10 +11,12 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 }
 
 App::App()
-	: m_width(1600), m_height(900), m_hwnd(), m_viewport(), m_chunks(), m_camera(),
-	  m_mouseNdcX(0.0f), m_mouseNdcY(0.0f)
+	: m_width(1920), m_height(1080), m_hwnd(), m_viewport(), m_map(), m_camera(), m_mouseNdcX(0.0f),
+	  m_mouseNdcY(0.0f)
 {
 	g_app = this;
+
+	m_loadFuture = std::async(std::launch::async, &App::LoadChunks, this);
 }
 
 App::~App()
@@ -25,7 +27,7 @@ App::~App()
 
 	DestroyWindow(m_hwnd);
 
-	m_chunks.clear();
+	m_map.clear();
 }
 
 LRESULT App::EventHandler(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -123,23 +125,18 @@ void App::Update(float dt)
 	}
 
 	if (m_camera.IsOnChunkDirtyFlag()) {
-		SetLoadChunkList();
+		UpdateChunkList();
 		m_camera.OffChunkDirtyFlag();
-	}
-	if (!m_loadChunkList.empty()) { // { 1, 2, 3, 4, 5, 6, 7, 8, 9 }
-		//LoadChunks();               // { 1, 2, 3, 4, 5, 6, a, b, c }
-		std::future<void> fut = std::async(std::launch::async, &App::LoadChunks, this);
-	} 
-	/*
-	for (int i = 0; i < CHUNK_SIZE; ++i) {
-		for (int j = 0; j < CHUNK_SIZE; ++j) {
-			for (int k = 0; k < CHUNK_SIZE; ++k) {
-				if (!m_chunks[i][j][k].IsEmpty())
-					m_chunks[i][j][k].Update(m_context, dt);
-			}
+		if (!m_unloadChunkList.empty()) {
+			UnloadChunks();
 		}
 	}
-	*/
+	
+	if (!m_loadChunkList.empty()) {
+		if (m_loadFuture.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) {
+			m_loadFuture = std::async(std::launch::async, &App::LoadChunks, this);
+		}
+	}
 }
 
 void App::Render()
@@ -162,14 +159,15 @@ void App::Render()
 
 	m_context->PSSetShader(m_pixelShader.Get(), 0, 0);
 	m_context->PSSetSamplers(0, 1, m_samplerState.GetAddressOf());
-	std::vector<ID3D11ShaderResourceView *> pptr = { m_textureSRV1.Get(), m_textureSRV2.Get(), m_textureSRV3.Get(), m_textureSRV4.Get() };
+	std::vector<ID3D11ShaderResourceView*> pptr = { m_textureSRV1.Get(), m_textureSRV2.Get(),
+		m_textureSRV3.Get(), m_textureSRV4.Get() };
 	m_context->PSSetShaderResources(0, 4, pptr.data());
 
-	for (std::vector<Chunk>::iterator it = m_chunks.begin(); it != m_chunks.end(); ++it) {
-		if (it->IsEmpty())
+	for (auto& p : m_map) {
+		if (p.second.IsEmpty() || !p.second.IsLoaded())
 			continue;
 
-		it->Render(m_context);
+		p.second.Render(m_context);
 	}
 }
 
@@ -277,7 +275,8 @@ bool App::InitDirectX()
 		return false;
 	}
 
-	if (!Utils::CreateTexture2DFromFile(m_device, m_texture, "../assets/grass_block_side_overlay.png")) {
+	if (!Utils::CreateTexture2DFromFile(
+			m_device, m_texture, "../assets/grass_block_side_overlay.png")) {
 		std::cout << "failed create texture" << std::endl;
 		return false;
 	}
@@ -337,49 +336,51 @@ bool App::InitGUI()
 	return true;
 }
 
-void App::InitMesh() 
+void App::InitMesh()
 {
 	Vector3 cameraOffset = m_camera.GetChunkPosition();
 
 	for (int i = 0; i < CHUNK_SIZE; ++i) {
 		for (int j = 0; j < CHUNK_SIZE; ++j) {
 			for (int k = 0; k < CHUNK_SIZE; ++k) {
-				int x = cameraOffset.x + Chunk::BLOCK_SIZE * (i - CHUNK_SIZE / 2);
-				int y = cameraOffset.y + Chunk::BLOCK_SIZE * (j - CHUNK_SIZE / 2);
-				int z = cameraOffset.z + Chunk::BLOCK_SIZE * (k - CHUNK_SIZE / 2);
+				int x = (int)cameraOffset.x + Chunk::BLOCK_SIZE * (i - CHUNK_SIZE / 2);
+				int y = (int)cameraOffset.y + Chunk::BLOCK_SIZE * (j - CHUNK_SIZE / 2);
+				int z = (int)cameraOffset.z + Chunk::BLOCK_SIZE * (k - CHUNK_SIZE / 2);
 
-				Chunk c = Chunk(x, y, z);
-				c.Initialize(m_device);
-				m_chunks.push_back(c);
+				m_map[std::make_tuple(x, y, z)] = Chunk(x, y, z);
+				m_map[std::make_tuple(x, y, z)].Initialize(m_device);
 			}
 		}
 	}
 }
 
-bool App::IsLoadedPosition(int x, int y, int z)
-{
-	Vector3 position = Vector3(float(x), float(y), float(z));
-	for (std::vector<Chunk>::iterator it = m_chunks.begin(); it != m_chunks.end(); ++it) {
-		if (it->GetPosition() == position)
-			return true;
-	}
-	return false;
-}
-
-void App::SetLoadChunkList()
+void App::UpdateChunkList()
 {
 	Vector3 cameraOffset = m_camera.GetChunkPosition();
 
+	std::map<std::tuple<int, int, int>, bool> loadedChunkMap;
 	for (int i = 0; i < CHUNK_SIZE; ++i) {
 		for (int j = 0; j < CHUNK_SIZE; ++j) {
 			for (int k = 0; k < CHUNK_SIZE; ++k) {
-				int x = cameraOffset.x + Chunk::BLOCK_SIZE * (i - CHUNK_SIZE / 2);
-				int y = cameraOffset.y + Chunk::BLOCK_SIZE * (j - CHUNK_SIZE / 2);
-				int z = cameraOffset.z + Chunk::BLOCK_SIZE * (k - CHUNK_SIZE / 2);
+				int x = (int)cameraOffset.x + Chunk::BLOCK_SIZE * (i - CHUNK_SIZE / 2);
+				int y = (int)cameraOffset.y + Chunk::BLOCK_SIZE * (j - CHUNK_SIZE / 2);
+				int z = (int)cameraOffset.z + Chunk::BLOCK_SIZE * (k - CHUNK_SIZE / 2);
 
-				if (!IsLoadedPosition(x, y, z))
-					m_loadChunkList.push_back(Vector3((float)x, (float)y, (float)z));
+				if (m_map.find(std::make_tuple(x, y, z)) == m_map.end())
+					m_loadChunkList.push_back(Vector3((float)x, (float)y, (float)z)); // will be loaded
+				else
+					loadedChunkMap[std::make_tuple(x, y, z)] = true;
 			}
+		}
+	}
+
+	for (auto& p : m_map) { // {1 , 2, 3} -> {1, 2}
+		if (loadedChunkMap.find(p.first) == loadedChunkMap.end() && m_map[p.first].IsLoaded()) {
+			int x = std::get<0>(p.first);
+			int y = std::get<1>(p.first);
+			int z = std::get<2>(p.first);
+
+			m_unloadChunkList.push_back(Vector3((float)x, (float)y, (float)z));
 		}
 	}
 }
@@ -391,18 +392,27 @@ void App::LoadChunks()
 		Vector3 pos = m_loadChunkList.back();
 		m_loadChunkList.pop_back();
 
-		Chunk c = Chunk(pos.x, pos.y, pos.z);
-		c.Initialize(m_device);
-		m_chunks.push_back(c);
+		int x = (int)pos.x;
+		int y = (int)pos.y;
+		int z = (int)pos.z;
+		m_map[std::make_tuple(x, y, z)] = Chunk(x, y, z);
+		m_map[std::make_tuple(x, y, z)].Initialize(m_device);
 		count++;
-		if (count == 1) //  chunks loading per each frame
+
+		if (count == 3) //  chunks loading per each frame
 			return;
 	}
 }
 
-
-
-void App::UnloadChunks() 
+void App::UnloadChunks()
 {
+	for (int i = 0; i < m_unloadChunkList.size(); ++i) 
+	{
+		Vector3 pos = m_unloadChunkList[i];
 
+		// Chunk를 지워야하잖아
+		// 메모리 초기화
+		m_map.erase(std::make_tuple((int)pos.x, (int)pos.y, (int)pos.z));
+	}
+	m_unloadChunkList.clear();
 }

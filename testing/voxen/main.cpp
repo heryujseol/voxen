@@ -1,8 +1,8 @@
 #include <iostream>
 #include "App.h"
-
+#include <vector>
 int main(void) {
-	App app = App();
+	App app;
 	
 	if (!app.Initialize()) {
 		std::cout << "Failed App Initialized" << std::endl;

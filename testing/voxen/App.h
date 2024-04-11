@@ -12,6 +12,7 @@
 #include <thread>
 #include <future>
 #include <vector>
+#include <map>
 
 #include "Utils.h"
 #include "Chunk.h"
@@ -35,8 +36,6 @@ public:
 
 
 private:
-	
-
 	void Update(float dt);
 	void Render();
 
@@ -47,10 +46,8 @@ private:
 
 	void LoadChunks();
 	void UnloadChunks();
-	bool IsLoadedPosition(int x, int y, int z);
-	void SetLoadChunkList();
-	
-	
+	void UpdateChunkList();
+
 	HWND m_hwnd;
 	UINT m_width;
 	UINT m_height;
@@ -81,8 +78,10 @@ private:
 	ComPtr<ID3D11Buffer> m_globalConstantBuffer;
 
 	static const int CHUNK_SIZE = 3;
-	std::vector<Chunk> m_chunks;
+	std::map<std::tuple<int, int, int>, Chunk> m_map;
 	std::vector<Vector3> m_loadChunkList;
+	std::vector<Vector3> m_unloadChunkList;
+	std::future<void> m_loadFuture;
 	
 	Camera m_camera;
 

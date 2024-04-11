@@ -14,7 +14,8 @@ public:
 	bool Initialize(ComPtr<ID3D11Device>& device);
 	void Update(ComPtr<ID3D11DeviceContext>& context, float dt);
 	void Render(ComPtr<ID3D11DeviceContext>& context);
-
+	
+	bool IsLoaded();
 	bool IsEmpty();
 	Vector3 GetPosition();
 
@@ -24,6 +25,7 @@ private:
 	void CreateBlock(
 		int x, int y, int z, bool x_n, bool x_p, bool y_n, bool y_p, bool z_n, bool z_p);
 
+	bool m_isLoaded;
 	UINT m_stride;
 	UINT m_offset;
 
