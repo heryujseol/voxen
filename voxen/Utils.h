@@ -2,6 +2,7 @@
 
 #include <d3d11.h>
 #include <d3dcompiler.h>
+#include <directxtk/DDSTextureLoader.h>
 #include <wrl.h>
 #include <vector>
 #include <fstream>
@@ -10,8 +11,8 @@
 #include "Chunk.h"
 
 
-
 using namespace Microsoft::WRL;
+using namespace DirectX;
 
 namespace Utils {
 	Vector3 CalcChunkOffset(Vector3 pos);
@@ -82,12 +83,10 @@ namespace Utils {
 
 	extern void ReadImage(
 		const std::string filename, std::vector<uint8_t>& image, int& width, int& height);
+
+	extern bool CreateDDSTexture(ComPtr<ID3D11Device>& device,
+		ComPtr<ID3D11ShaderResourceView>& srv, const std::wstring& filename, bool isCubemap);
+
+	extern bool CreateSamplerStateLinear(
+		ComPtr<ID3D11Device>& device, ComPtr<ID3D11SamplerState>& samplerState);
 }
-
-/*
-D3D11_MAPPED_SUBRESOURCE ms;
-
-		m_context->Map(m_globalConstantBuffer.Get(), NULL, D3D11_MAP_WRITE_DISCARD, NULL, &ms);
-		memcpy(ms.pData, &m_globalConstantData, sizeof(m_globalConstantData));
-		m_context->Unmap(m_globalConstantBuffer.Get(), NULL);
-*/
