@@ -158,6 +158,7 @@
     <ClInclude Include="Utils.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\.gitignore" />
     <None Include=".clang-format" />
   </ItemGroup>
   <ItemGroup>
