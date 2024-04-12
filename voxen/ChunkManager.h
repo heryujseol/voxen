@@ -15,19 +15,19 @@ public:
 	~ChunkManager();
 
 	void Initialize(ComPtr<ID3D11Device>& device, Vector3 cameraOffset);
-	void update(Camera& camera);
-	void render(ComPtr<ID3D11DeviceContext>& m_context);
+	void Update(ComPtr<ID3D11Device>& device, Camera& camera);
+	void Render(ComPtr<ID3D11DeviceContext>& m_context);
 
-	void LoadChunks();
+	void LoadChunks(ComPtr<ID3D11Device>& device);
 	void UnloadChunks();
 	void UpdateChunkList(Vector3 cameraOffset);
 
 private:
-
-	ComPtr<ID3D11Device> m_device;
 	static const int CHUNK_SIZE = 7;
 	std::map<std::tuple<int, int, int>, Chunk> m_chunks;
+
 	std::vector<Vector3> m_loadChunkList;
 	std::vector<Vector3> m_unloadChunkList;
+
 	std::future<void> m_loadFuture;
 };
