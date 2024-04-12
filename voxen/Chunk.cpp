@@ -38,7 +38,7 @@ Chunk::~Chunk()
 		m_constantBuffer = nullptr;
 	}
 
-	m_isLoaded = false;
+	//m_isLoaded = false;
 }
 
 bool Chunk::Initialize(ComPtr<ID3D11Device>& device)

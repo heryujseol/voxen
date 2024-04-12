@@ -11,12 +11,12 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 }
 
 App::App()
-	: m_width(1920), m_height(1080), m_hwnd(), m_viewport(), m_map(), m_camera(), m_mouseNdcX(0.0f),
+	: m_width(1920), m_height(1080), m_hwnd(), m_viewport(), /*m_map(),*/ m_camera(), m_mouseNdcX(0.0f),
 	  m_mouseNdcY(0.0f)
 {
 	g_app = this;
 
-	m_loadFuture = std::async(std::launch::async, &App::LoadChunks, this);
+	//m_loadFuture = std::async(std::launch::async, &App::LoadChunks, this);
 }
 
 App::~App()
@@ -27,7 +27,7 @@ App::~App()
 
 	DestroyWindow(m_hwnd);
 
-	m_map.clear();
+	//m_map.clear();
 }
 
 LRESULT App::EventHandler(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -73,7 +73,11 @@ bool App::Initialize()
 	if (!InitGUI())
 		return false;
 
-	InitMesh();
+	//ChunkManager manager = ChunkManager(m_device);
+	m_manager.Initialize(m_device, m_camera.GetChunkPosition());
+	//InitMesh();
+
+	m_skybox.Initialize(m_device);
 
 	return true;
 }
@@ -124,6 +128,8 @@ void App::Update(float dt)
 		m_camera.OffConstantDirtyFlag();
 	}
 
+	m_manager.update(m_camera);
+	/*
 	if (m_camera.IsOnChunkDirtyFlag()) {
 		UpdateChunkList();
 		m_camera.OffChunkDirtyFlag();
@@ -137,6 +143,7 @@ void App::Update(float dt)
 			m_loadFuture = std::async(std::launch::async, &App::LoadChunks, this);
 		}
 	}
+	*/
 }
 
 void App::Render()
@@ -162,13 +169,8 @@ void App::Render()
 	std::vector<ID3D11ShaderResourceView*> pptr = { m_textureSRV1.Get(), m_textureSRV2.Get(),
 		m_textureSRV3.Get(), m_textureSRV4.Get() };
 	m_context->PSSetShaderResources(0, 4, pptr.data());
-	
-	for (auto& p : m_map) {
-		if (p.second.IsEmpty() || !p.second.IsLoaded())
-			continue;
 
-		p.second.Render(m_context);
-	}
+	m_manager.render(m_context);
 
 	// skybox
 	m_context->VSSetShader(m_skyboxVS.Get(), 0, 0);
@@ -361,83 +363,85 @@ bool App::InitGUI()
 	return true;
 }
 
-void App::InitMesh()
-{
-	Vector3 cameraOffset = m_camera.GetChunkPosition();
-
-	for (int i = 0; i < CHUNK_SIZE; ++i) {
-		for (int j = 0; j < CHUNK_SIZE; ++j) {
-			for (int k = 0; k < CHUNK_SIZE; ++k) {
-				int x = (int)cameraOffset.x + Chunk::BLOCK_SIZE * (i - CHUNK_SIZE / 2);
-				int y = (int)cameraOffset.y + Chunk::BLOCK_SIZE * (j - CHUNK_SIZE / 2);
-				int z = (int)cameraOffset.z + Chunk::BLOCK_SIZE * (k - CHUNK_SIZE / 2);
-
-				m_map[std::make_tuple(x, y, z)] = Chunk(x, y, z);
-				m_map[std::make_tuple(x, y, z)].Initialize(m_device);
-			}
-		}
-	}
-
-	m_skybox.Initialize(m_device);
-}
-
-void App::UpdateChunkList()
-{
-	Vector3 cameraOffset = m_camera.GetChunkPosition();
-
-	std::map<std::tuple<int, int, int>, bool> loadedChunkMap;
-	for (int i = 0; i < CHUNK_SIZE; ++i) {
-		for (int j = 0; j < CHUNK_SIZE; ++j) {
-			for (int k = 0; k < CHUNK_SIZE; ++k) {
-				int x = (int)cameraOffset.x + Chunk::BLOCK_SIZE * (i - CHUNK_SIZE / 2);
-				int y = (int)cameraOffset.y + Chunk::BLOCK_SIZE * (j - CHUNK_SIZE / 2);
-				int z = (int)cameraOffset.z + Chunk::BLOCK_SIZE * (k - CHUNK_SIZE / 2);
-
-				if (m_map.find(std::make_tuple(x, y, z)) == m_map.end())
-					m_loadChunkList.push_back(Vector3((float)x, (float)y, (float)z)); // will be loaded
-				else
-					loadedChunkMap[std::make_tuple(x, y, z)] = true;
-			}
-		}
-	}
-
-	for (auto& p : m_map) { // {1 , 2, 3} -> {1, 2}
-		if (loadedChunkMap.find(p.first) == loadedChunkMap.end() && m_map[p.first].IsLoaded()) {
-			int x = std::get<0>(p.first);
-			int y = std::get<1>(p.first);
-			int z = std::get<2>(p.first);
-
-			m_unloadChunkList.push_back(Vector3((float)x, (float)y, (float)z));
-		}
-	}
-}
-
-void App::LoadChunks()
-{
-	int count = 0;
-	while (!m_loadChunkList.empty()) {
-		Vector3 pos = m_loadChunkList.back();
-		m_loadChunkList.pop_back();
-
-		int x = (int)pos.x;
-		int y = (int)pos.y;
-		int z = (int)pos.z;
-		m_map[std::make_tuple(x, y, z)] = Chunk(x, y, z);
-		m_map[std::make_tuple(x, y, z)].Initialize(m_device);
-		count++;
-
-		if (count == 3) //  chunks loading per each frame
-			return;
-	}
-}
-
-void App::UnloadChunks()
-{
-	for (int i = 0; i < m_unloadChunkList.size(); ++i) 
-	{
-		Vector3 pos = m_unloadChunkList[i];
-
-		m_map.erase(std::make_tuple((int)pos.x, (int)pos.y, (int)pos.z));
-	}
-	m_unloadChunkList.clear();
-}
+//void App::InitMesh()
+//{
+//	Vector3 cameraOffset = m_camera.GetChunkPosition();
+//
+//	for (int i = 0; i < CHUNK_SIZE; ++i) {
+//		for (int j = 0; j < CHUNK_SIZE; ++j) {
+//			for (int k = 0; k < CHUNK_SIZE; ++k) {
+//				int x = (int)cameraOffset.x + Chunk::BLOCK_SIZE * (i - CHUNK_SIZE / 2);
+//				int y = (int)cameraOffset.y + Chunk::BLOCK_SIZE * (j - CHUNK_SIZE / 2);
+//				int z = (int)cameraOffset.z + Chunk::BLOCK_SIZE * (k - CHUNK_SIZE / 2);
+//
+//				m_map[std::make_tuple(x, y, z)] = Chunk(x, y, z);
+//				m_map[std::make_tuple(x, y, z)].Initialize(m_device);
+//			}
+//		}
+//	}
+//}
+//
+//void App::UpdateChunkList()
+//{
+//	Vector3 cameraOffset = m_camera.GetChunkPosition();
+//
+//	std::map<std::tuple<int, int, int>, bool> loadedChunkMap;
+//	for (int i = 0; i < CHUNK_SIZE; ++i) {
+//		for (int j = 0; j < CHUNK_SIZE; ++j) {
+//			for (int k = 0; k < CHUNK_SIZE; ++k) {
+//				int x = (int)cameraOffset.x + Chunk::BLOCK_SIZE * (i - CHUNK_SIZE / 2);
+//				int y = (int)cameraOffset.y + Chunk::BLOCK_SIZE * (j - CHUNK_SIZE / 2);
+//				int z = (int)cameraOffset.z + Chunk::BLOCK_SIZE * (k - CHUNK_SIZE / 2);
+//
+//				if (m_map.find(std::make_tuple(x, y, z)) == m_map.end())
+//					m_loadChunkList.push_back(Vector3((float)x, (float)y, (float)z)); // will be loaded
+//				else
+//					loadedChunkMap[std::make_tuple(x, y, z)] = true;
+//			}
+//		}
+//	}
+//
+//	for (auto& p : m_map) { // {1 , 2, 3} -> {1, 2}
+//		if (loadedChunkMap.find(p.first) == loadedChunkMap.end() && m_map[p.first].IsLoaded()) {
+//			int x = std::get<0>(p.first);
+//			int y = std::get<1>(p.first);
+//			int z = std::get<2>(p.first);
+//
+//			m_unloadChunkList.push_back(Vector3((float)x, (float)y, (float)z));
+//		}
+//	}
+//}
+//
+//void App::LoadChunks()
+//{
+//	int count = 0;
+//	while (!m_loadChunkList.empty()) {
+//		Vector3 pos = m_loadChunkList.back();
+//		m_loadChunkList.pop_back();
+//
+//		int x = (int)pos.x;
+//		int y = (int)pos.y;
+//		int z = (int)pos.z;
+//		m_map[std::make_tuple(x, y, z)] = Chunk(x, y, z);
+//		m_map[std::make_tuple(x, y, z)].Initialize(m_device);
+//		count++;
+//
+//		if (count == 3) //  chunks loading per each frame
+//			return;
+//	}
+//}
+//
+//void App::UnloadChunks()
+//{
+//	for (int i = 0; i < m_unloadChunkList.size(); ++i) 
+//	{
+//		Vector3 pos = m_unloadChunkList[i];
+//		auto position = std::make_tuple((int)pos.x, (int)pos.y, (int)pos.z);
+//
+//		// Chunk를 지워야하잖아
+//		// 메모리 초기화
+//		m_map[position].~Chunk();
+//		m_map.erase(position);
+//	}
+//	m_unloadChunkList.clear();
+//}
