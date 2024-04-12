@@ -73,6 +73,7 @@ bool App::Initialize()
 	if (!InitGUI())
 		return false;
 
+	//ChunkManager manager = ChunkManager(m_device);
 	m_manager.Initialize(m_device, m_camera.GetChunkPosition());
 	//InitMesh();
 

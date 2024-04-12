@@ -12,14 +12,13 @@ class ChunkManager {
 
 public:
 	ChunkManager();
-	ChunkManager(ComPtr<ID3D11Device>& device);
 	~ChunkManager();
 
 	void Initialize(ComPtr<ID3D11Device>& device, Vector3 cameraOffset);
 	void update(Camera& camera);
 	void render(ComPtr<ID3D11DeviceContext>& m_context);
 
-	void LoadChunks(ComPtr<ID3D11Device>& device);
+	void LoadChunks();
 	void UnloadChunks();
 	void UpdateChunkList(Vector3 cameraOffset);
 
