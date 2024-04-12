@@ -6,7 +6,7 @@ Camera::Camera()
 	  m_eyePos(16.0f, 50.0f, 16.0f), m_chunkPos(0.0f, 0.0f, 0.0f),
 	  m_to(0.0f, 0.0f, 1.0f),
 	  m_up(0.0f, 1.0f, 0.0f), m_right(1.0f, 0.0f, 0.0f), m_viewNdcX(0.0f), m_viewNdcY(0.0f),
-	  m_speed(10.0f), m_constantDirtyFlag(false), m_chunkDirtyFlag(false)
+	  m_speed(20.0f), m_constantDirtyFlag(false), m_chunkDirtyFlag(false)
 {
 	m_chunkPos = Utils::CalcChunkOffset(m_eyePos);
 }

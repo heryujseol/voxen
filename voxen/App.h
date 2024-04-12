@@ -18,14 +18,13 @@
 //#include "Chunk.h"
 #include "ChunkManager.h"
 #include "Camera.h"
+#include "Skybox.h"
 
 using namespace Microsoft::WRL;
 using namespace DirectX;
 using namespace DirectX::SimpleMath;
 
-
-class App
-{
+class App {
 public:
 	App();
 	~App();
@@ -58,7 +57,7 @@ private:
 
 	ComPtr<ID3D11InputLayout> m_inputLayout;
 	ComPtr<ID3D11VertexShader> m_vertexShader;
-	
+
 	ComPtr<ID3D11RasterizerState> m_rasterizerState;
 	D3D11_VIEWPORT m_viewport;
 
@@ -98,6 +97,10 @@ private:
 	ComPtr<ID3D11ShaderResourceView> m_textureSRV4;
 
 	ComPtr<ID3D11SamplerState> m_samplerState;
+	ComPtr<ID3D11SamplerState> m_samplerStateLinear;
+
+	Skybox m_skybox;
+	ComPtr<ID3D11VertexShader> m_skyboxVS;
+	ComPtr<ID3D11PixelShader> m_skyboxPS;
+	ComPtr<ID3D11ShaderResourceView> m_skyboxSRV;
 };
-
-

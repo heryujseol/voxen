@@ -47,7 +47,7 @@ bool Chunk::Initialize(ComPtr<ID3D11Device>& device)
 		for (int z = 0; z < BLOCK_SIZE; ++z) {
 			int height = Utils::GetHeight((int)m_position.x + x, (int)m_position.z + z);
 			for (int y = 0; y < BLOCK_SIZE; ++y) {
-				if (m_position.y + y <= height) {
+				if (0 <= m_position.y + y && m_position.y + y <= height) {
 					m_blocks[x][y][z].SetActive(true);
 				}
 			}
