@@ -15,7 +15,7 @@
 #include <map>
 
 #include "Utils.h"
-//#include "Chunk.h"
+
 #include "ChunkManager.h"
 #include "Camera.h"
 #include "Skybox.h"
@@ -41,11 +41,6 @@ private:
 	bool InitWindow();
 	bool InitDirectX();
 	bool InitGUI();
-	//void InitMesh();
-
-	//void LoadChunks();
-	//void UnloadChunks();
-	//void UpdateChunkList();
 
 	HWND m_hwnd;
 	UINT m_width;
@@ -78,11 +73,6 @@ private:
 
 	
 	ChunkManager m_manager;
-	//static const int CHUNK_SIZE = 7;
-	//std::map<std::tuple<int, int, int>, Chunk> m_map;
-	//std::vector<Vector3> m_loadChunkList;
-	//std::vector<Vector3> m_unloadChunkList;
-	//std::future<void> m_loadFuture;
 	
 	Camera m_camera;
 

@@ -3,7 +3,6 @@
 
 ChunkManager::ChunkManager()
 {	
-	//m_loadFuture = std::async(std::launch::async, &ChunkManager::LoadChunks, std::ref(m_device);
 	m_loadFuture = std::async(std::launch::async, []() {});
 }
 
@@ -11,7 +10,6 @@ ChunkManager::~ChunkManager() {}
 
 void ChunkManager::Initialize(ComPtr<ID3D11Device>& device, Vector3 cameraOffset)
 {
-	m_device = device;
 
 	for (int i = 0; i < CHUNK_SIZE; ++i) {
 		for (int j = 0; j < CHUNK_SIZE; ++j) {
@@ -27,7 +25,7 @@ void ChunkManager::Initialize(ComPtr<ID3D11Device>& device, Vector3 cameraOffset
 	}
 }
 
-void ChunkManager::update(Camera& camera)
+void ChunkManager::Update(ComPtr<ID3D11Device>& device, Camera& camera)
 {
 	if (camera.IsOnChunkDirtyFlag()) {
 		UpdateChunkList(camera.GetChunkPosition());
@@ -38,17 +36,13 @@ void ChunkManager::update(Camera& camera)
 	}
 
 	if (!m_loadChunkList.empty()) {
-		//LoadChunks(m_device);
 		if (m_loadFuture.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) {
-			m_loadFuture =
-				std::async(std::launch::async, &ChunkManager::LoadChunks, this);
-			//m_loadFuture = std::async(
-			//	std::launch::async, std::async([this, device]() { LoadChunks(device); }));
+			m_loadFuture = std::async(std::launch::async, &ChunkManager::LoadChunks, this, std::ref(device));
 		}
 	}
 }
 
-void ChunkManager::render(ComPtr<ID3D11DeviceContext>& context)
+void ChunkManager::Render(ComPtr<ID3D11DeviceContext>& context)
 {
 	for (auto& c : m_chunks) {
 		if (c.second.IsEmpty() || !c.second.IsLoaded())
@@ -58,7 +52,7 @@ void ChunkManager::render(ComPtr<ID3D11DeviceContext>& context)
 	}
 }
 
-void ChunkManager::LoadChunks()
+void ChunkManager::LoadChunks(ComPtr<ID3D11Device>& device)
 {
 	int count = 0;
 	while (!m_loadChunkList.empty()) {
@@ -69,7 +63,7 @@ void ChunkManager::LoadChunks()
 		int y = (int)pos.y;
 		int z = (int)pos.z;
 		m_chunks[std::make_tuple(x, y, z)] = Chunk(x, y, z);
-		m_chunks[std::make_tuple(x, y, z)].Initialize(m_device);
+		m_chunks[std::make_tuple(x, y, z)].Initialize(device);
 		count++;
 
 		if (count == 3) //  chunks loading per each frame
@@ -83,8 +77,6 @@ void ChunkManager::UnloadChunks()
 		Vector3 pos = m_unloadChunkList[i];
 		auto position = std::make_tuple((int)pos.x, (int)pos.y, (int)pos.z);
 
-		// Chunk를 지워야하잖아
-		// 메모리 초기화
 		m_chunks[position].~Chunk();
 		m_chunks.erase(position);
 	}
