@@ -162,13 +162,20 @@ void App::Render()
 	std::vector<ID3D11ShaderResourceView*> pptr = { m_textureSRV1.Get(), m_textureSRV2.Get(),
 		m_textureSRV3.Get(), m_textureSRV4.Get() };
 	m_context->PSSetShaderResources(0, 4, pptr.data());
-
+	
 	for (auto& p : m_map) {
 		if (p.second.IsEmpty() || !p.second.IsLoaded())
 			continue;
 
 		p.second.Render(m_context);
 	}
+
+	// skybox
+	m_context->VSSetShader(m_skyboxVS.Get(), 0, 0);
+	m_context->PSSetShader(m_skyboxPS.Get(), 0, 0);
+	m_context->PSSetSamplers(0, 1, m_samplerStateLinear.GetAddressOf());
+	m_context->PSSetShaderResources(0, 1, m_skyboxSRV.GetAddressOf());
+	m_skybox.Render(m_context);
 }
 
 bool App::InitWindow()
@@ -312,6 +319,24 @@ bool App::InitDirectX()
 		return false;
 	}
 
+	
+	if (!Utils::CreateVertexShader(m_device, L"SkyboxVS.hlsl", m_skyboxVS, m_inputLayout)) {
+		std::cout << "failed create skybox vertex shader" << std::endl;
+		return false;
+	}
+	if (!Utils::CreatePixelShader(m_device, L"SkyboxPS.hlsl", m_skyboxPS)) {
+		std::cout << "failed create skybox pixel shader" << std::endl;
+		return false;
+	}
+	if (!Utils::CreateDDSTexture(m_device, m_skyboxSRV, L"../assets/cubemap_bgra.dds", true)) {
+		std::cout << "failed create skybox dds texture" << std::endl;
+		return false;
+	}
+	if (!Utils::CreateSamplerStateLinear(m_device, m_samplerStateLinear)) {
+		std::cout << "failed create linear sampler state" << std::endl;
+		return false;
+	}
+
 	return true;
 }
 
@@ -352,6 +377,8 @@ void App::InitMesh()
 			}
 		}
 	}
+
+	m_skybox.Initialize(m_device);
 }
 
 void App::UpdateChunkList()
@@ -410,8 +437,6 @@ void App::UnloadChunks()
 	{
 		Vector3 pos = m_unloadChunkList[i];
 
-		// Chunk를 지워야하잖아
-		// 메모리 초기화
 		m_map.erase(std::make_tuple((int)pos.x, (int)pos.y, (int)pos.z));
 	}
 	m_unloadChunkList.clear();

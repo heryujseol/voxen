@@ -65,8 +65,8 @@ float Utils::GetPerlinNoise(float x, float y)
 int Utils::GetHeight(int x, int z)
 {
 	float noise = GetPerlinNoise((float)x / 32.0f, (float)z / 32.0f); // [-1.0, 1.0]
-
-	return (int)((noise + 1.0f) * 24.0f); // [0, 48]
+	
+	return (int)((noise + 1.0f) * 12.0f); // [0, 24]
 }
 
 bool Utils::CreateDeviceAndSwapChain(ComPtr<ID3D11Device>& device,
@@ -442,7 +442,8 @@ void Utils::UpdateConstantBuffer(ComPtr<ID3D11DeviceContext>& context,
 	context->Unmap(constantBuffer.Get(), NULL);
 }
 
-bool Utils::CreateTexture2DFromFile(ComPtr<ID3D11Device>& device, ComPtr<ID3D11Texture2D>& texture, std::string filename)
+bool Utils::CreateTexture2DFromFile(
+	ComPtr<ID3D11Device>& device, ComPtr<ID3D11Texture2D>& texture, std::string filename)
 {
 	int width, height, channel = 4;
 	std::vector<uint8_t> image;
@@ -498,6 +499,24 @@ bool Utils::CreateSamplerState(
 	return true;
 }
 
+bool Utils::CreateSamplerStateLinear(
+	ComPtr<ID3D11Device>& device, ComPtr<ID3D11SamplerState>& samplerState)
+{
+	D3D11_SAMPLER_DESC desc;
+	ZeroMemory(&desc, sizeof(desc));
+	desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	desc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+	desc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+	desc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+	desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+
+	HRESULT ret = device->CreateSamplerState(&desc, samplerState.GetAddressOf());
+	if (FAILED(ret))
+		return false;
+
+	return true;
+}
+
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 void Utils::ReadImage(
@@ -507,7 +526,7 @@ void Utils::ReadImage(
 	unsigned char* img = stbi_load(filename.c_str(), &width, &height, &channels, 0);
 
 	image.resize((size_t)width * height * 4);
-	
+
 
 	if (channels == 1) {
 		for (size_t i = 0; i < (size_t)width * height; i++) {
@@ -546,4 +565,23 @@ void Utils::ReadImage(
 	}
 
 	delete[] img;
+}
+
+bool Utils::CreateDDSTexture(ComPtr<ID3D11Device>& device, ComPtr<ID3D11ShaderResourceView>& srv,
+	const std::wstring& filename, bool isCubemap)
+{
+	ComPtr<ID3D11Texture2D> texture;
+
+	UINT miscFlags = 0;
+	if (isCubemap) {
+		miscFlags |= D3D11_RESOURCE_MISC_TEXTURECUBE;
+	}
+
+	HRESULT ret = CreateDDSTextureFromFileEx(device.Get(), filename.c_str(), 0, D3D11_USAGE_DEFAULT,
+		D3D11_BIND_SHADER_RESOURCE, 0, miscFlags, DDS_LOADER_DEFAULT,
+		(ID3D11Resource**)texture.GetAddressOf(), srv.GetAddressOf(), nullptr);
+	if (FAILED(ret))
+		return false;
+
+	return true;
 }

@@ -17,15 +17,13 @@
 #include "Utils.h"
 #include "Chunk.h"
 #include "Camera.h"
+#include "Skybox.h"
 
 using namespace Microsoft::WRL;
 using namespace DirectX;
 using namespace DirectX::SimpleMath;
 
-
-
-class App
-{
+class App {
 public:
 	App();
 	~App();
@@ -58,7 +56,7 @@ private:
 
 	ComPtr<ID3D11InputLayout> m_inputLayout;
 	ComPtr<ID3D11VertexShader> m_vertexShader;
-	
+
 	ComPtr<ID3D11RasterizerState> m_rasterizerState;
 	D3D11_VIEWPORT m_viewport;
 
@@ -77,12 +75,12 @@ private:
 	GlobalConstantData m_globalConstantData;
 	ComPtr<ID3D11Buffer> m_globalConstantBuffer;
 
-	static const int CHUNK_SIZE = 3;
+	static const int CHUNK_SIZE = 5;
 	std::map<std::tuple<int, int, int>, Chunk> m_map;
 	std::vector<Vector3> m_loadChunkList;
 	std::vector<Vector3> m_unloadChunkList;
 	std::future<void> m_loadFuture;
-	
+
 	Camera m_camera;
 
 	bool m_keyPressed[256];
@@ -96,6 +94,10 @@ private:
 	ComPtr<ID3D11ShaderResourceView> m_textureSRV4;
 
 	ComPtr<ID3D11SamplerState> m_samplerState;
+	ComPtr<ID3D11SamplerState> m_samplerStateLinear;
+
+	Skybox m_skybox;
+	ComPtr<ID3D11VertexShader> m_skyboxVS;
+	ComPtr<ID3D11PixelShader> m_skyboxPS;
+	ComPtr<ID3D11ShaderResourceView> m_skyboxSRV;
 };
-
-
