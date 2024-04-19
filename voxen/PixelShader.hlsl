@@ -27,7 +27,8 @@ float4 main(vsOutput input) : SV_TARGET
         if (color.a == 0.0)
             color += g_dirt.Sample(g_sampler, input.texcoord);
     }
-        
+       
+    //float4 color = float4(1.0, 1.0, 1.0,  0.0);
         
     return color;
 }

@@ -42,14 +42,19 @@ void ChunkManager::Update(ComPtr<ID3D11Device>& device, Camera& camera)
 	}
 }
 
-void ChunkManager::Render(ComPtr<ID3D11DeviceContext>& context)
+void ChunkManager::Render(ComPtr<ID3D11DeviceContext>& context, Camera& camera)
 {
+	int i = 0;
 	for (auto& c : m_chunks) {
 		if (c.second.IsEmpty() || !c.second.IsLoaded())
 			continue;
 
+		if (!FrustumCulling(c.second.GetPosition(), camera))
+			continue;
+		i++;
 		c.second.Render(context);
 	}
+	std::cout << "drawcall : " << i << std::endl;
 }
 
 void ChunkManager::LoadChunks(ComPtr<ID3D11Device>& device)
@@ -66,7 +71,7 @@ void ChunkManager::LoadChunks(ComPtr<ID3D11Device>& device)
 		m_chunks[std::make_tuple(x, y, z)].Initialize(device);
 		count++;
 
-		if (count == 3) //  chunks loading per each frame
+		if (count == 1) //  chunks loading per each frame
 			return;
 	}
 }
@@ -111,4 +116,50 @@ void ChunkManager::UpdateChunkList(Vector3 cameraOffset)
 			m_unloadChunkList.push_back(Vector3((float)x, (float)y, (float)z));
 		}
 	}
+}
+
+bool ChunkManager::FrustumCulling(Vector3 position, Camera& camera) {
+	
+	Matrix invMat = camera.GetProjectionMatrix().Invert() * camera.GetViewMatrix().Invert();
+
+	std::vector<Vector3> worldPos = {
+		Vector3::Transform(Vector3(-1.0f, 1.0f, 0.0f), invMat),
+		Vector3::Transform(Vector3(1.0f, 1.0f, 0.0f), invMat),
+		Vector3::Transform(Vector3(1.0f, -1.0f, 0.0f), invMat),
+		Vector3::Transform(Vector3(-1.0f, -1.0f, 0.0f), invMat),
+		Vector3::Transform(Vector3(-1.0f, 1.0f, 1.0f), invMat),
+		Vector3::Transform(Vector3(1.0f, 1.0f, 1.0f), invMat),
+		Vector3::Transform(Vector3(1.0f, -1.0f, 1.0f), invMat),
+		Vector3::Transform(Vector3(-1.0f, -1.0f, 1.0f), invMat)
+	};
+
+	std::vector<Vector4> planes = { 
+		DirectX::XMPlaneFromPoints(worldPos[0], worldPos[1], worldPos[2]),
+		DirectX::XMPlaneFromPoints(worldPos[7], worldPos[6], worldPos[5]),
+		DirectX::XMPlaneFromPoints(worldPos[4], worldPos[5], worldPos[1]),
+		DirectX::XMPlaneFromPoints(worldPos[3], worldPos[2], worldPos[6]),
+		DirectX::XMPlaneFromPoints(worldPos[4], worldPos[0], worldPos[3]),
+		DirectX::XMPlaneFromPoints(worldPos[1], worldPos[5], worldPos[6])
+	};
+
+	for (int i = 0; i < 6; ++i) {
+		if (XMVectorGetX(XMPlaneDotCoord(planes[i], position)) < 0.0f)
+			continue;
+		if (XMVectorGetX(XMPlaneDotCoord(planes[i], position + Vector3(32.0f, 0.0f, 0.0f))) <= 0.0f)
+			continue;
+		if (XMVectorGetX(XMPlaneDotCoord(planes[i], position + Vector3(0.0f, 32.f, 0.0f))) <= 0.0f)
+			continue;
+		if (XMVectorGetX(XMPlaneDotCoord(planes[i], position + Vector3(32.0f, 32.0f, 0.0f))) <= 0.0f)
+			continue;
+		if (XMVectorGetX(XMPlaneDotCoord(planes[i], position + Vector3(0.0f, 0.0f, 32.0f))) <= 0.0f)
+			continue;
+		if (XMVectorGetX(XMPlaneDotCoord(planes[i], position + Vector3(32.0f, 0.0f, 32.0f))) <= 0.0f)
+			continue;
+		if (XMVectorGetX(XMPlaneDotCoord(planes[i], position + Vector3(0.0f, 32.f, 32.0f))) <= 0.0f)
+			continue;
+		if (XMVectorGetX(XMPlaneDotCoord(planes[i], position + Vector3(32.0f, 32.0f, 32.0f))) <= 0.0f)
+			continue;
+		return false;
+	}
+	return true;
 }
