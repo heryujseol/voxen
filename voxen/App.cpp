@@ -149,7 +149,7 @@ void App::Render()
 		m_textureSRV3.Get(), m_textureSRV4.Get() };
 	m_context->PSSetShaderResources(0, 4, pptr.data());
 
-	m_manager.Render(m_context);
+	m_manager.Render(m_context, m_camera);
 
 	// skybox
 	m_context->VSSetShader(m_skyboxVS.Get(), 0, 0);
