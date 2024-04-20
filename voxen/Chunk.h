@@ -1,8 +1,16 @@
 #pragma once
 
 #include "Block.h"
-#include "Utils.h"
-#include <iostream>
+#include "Structure.h"
+
+#include <d3d11.h>
+#include <wrl.h>
+#include <vector>
+#include <directxtk/SimpleMath.h>
+
+using namespace Microsoft::WRL; 
+using namespace DirectX::SimpleMath;
+
 
 class Chunk {
 
@@ -11,9 +19,9 @@ public:
 	Chunk(int x, int y, int z);
 	~Chunk();
 
-	bool Initialize(ComPtr<ID3D11Device>& device);
-	void Update(ComPtr<ID3D11DeviceContext>& context, float dt);
-	void Render(ComPtr<ID3D11DeviceContext>& context);
+	bool Initialize();
+	void Update(float dt);
+	void Render();
 	
 	bool IsLoaded();
 	bool IsEmpty();

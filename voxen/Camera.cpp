@@ -1,62 +1,78 @@
 #include "Camera.h"
-
+#include "DXUtils.h"
 
 Camera::Camera()
 	: m_projFovAngleY(80.0f), m_nearZ(0.01f), m_farZ(360.0f), m_aspectRatio(16.0f / 9.0f),
-	  m_eyePos(16.0f, 50.0f, 16.0f), m_chunkPos(0.0f, 0.0f, 0.0f),
-	  m_to(0.0f, 0.0f, 1.0f),
+	  m_eyePos(0.0f, 0.0f, 0.0f), m_chunkPos(0.0f, 0.0f, 0.0f), m_to(0.0f, 0.0f, 1.0f),
 	  m_up(0.0f, 1.0f, 0.0f), m_right(1.0f, 0.0f, 0.0f), m_viewNdcX(0.0f), m_viewNdcY(0.0f),
-	  m_speed(20.0f), m_constantDirtyFlag(false), m_chunkDirtyFlag(false)
+	  m_speed(20.0f), m_isOnConstantDirtyFlag(false), m_isOnChunkDirtyFlag(false)
 {
-	m_chunkPos = Utils::CalcChunkOffset(m_eyePos);
+	m_constantData.view = Matrix();
+	m_constantData.proj = Matrix();
 }
 
 Camera::~Camera() {}
 
-Vector3 Camera::GetPosition() { return m_eyePos; }
-
-Vector3 Camera::GetChunkPosition() { return m_chunkPos; }
-
-float Camera::GetDistance() { return m_farZ; }
-
-Matrix Camera::GetViewMatrix() { return XMMatrixLookToLH(m_eyePos, m_to, m_up); }
-
-Matrix Camera::GetProjectionMatrix()
+bool Camera::Initialize(Vector3 pos)
 {
-	return XMMatrixPerspectiveFovLH(
-		XMConvertToRadians(m_projFovAngleY), m_aspectRatio, m_nearZ, m_farZ);
+	m_eyePos = pos;
+	m_chunkPos = Utils::CalcChunkOffset(m_eyePos);
+
+	m_constantData.view = GetViewMatrix();
+	m_constantData.proj = GetProjectionMatrix();
+	m_constantData.eyePos = m_eyePos;
+
+	CameraConstantData tempConstantData;
+	tempConstantData.view = m_constantData.view.Transpose();
+	tempConstantData.proj = m_constantData.proj.Transpose();
+	tempConstantData.eyePos = m_constantData.eyePos;
+	if (!DXUtils::CreateConstantBuffer(m_constantBuffer, tempConstantData)) {
+		std::cout << "failed create constant buffer" << std::endl;
+		return false;
+	}
+
+	return true;
 }
 
-void Camera::SetPosition(Vector3 newPos) { m_eyePos = newPos; }
+void Camera::Update(float dt, bool keyPressed[256], float mouseX, float mouseY)
+{
+	UpdatePosition(keyPressed, dt);
+	UpdateViewDirection(mouseX, mouseY);
 
-void Camera::MoveForward(float dt) { m_eyePos += m_to * m_speed * dt; }
+	if (m_isOnConstantDirtyFlag) {
+		CameraConstantData tempConstantData;
+		tempConstantData.view = GetViewMatrix().Transpose();
+		tempConstantData.proj = GetProjectionMatrix().Transpose();
+		DXUtils::UpdateConstantBuffer(m_constantBuffer, tempConstantData);
 
-void Camera::MoveRight(float dt) { m_eyePos += m_right * m_speed * dt; }
+		m_isOnConstantDirtyFlag = false;
+	}
+}
 
 void Camera::UpdatePosition(bool keyPressed[256], float dt)
 {
 	if (keyPressed['W']) {
 		MoveForward(dt);
-		m_constantDirtyFlag = true;
+		m_isOnConstantDirtyFlag = true;
 	}
 	if (keyPressed['S']) {
 		MoveForward(-dt);
-		m_constantDirtyFlag = true;
+		m_isOnConstantDirtyFlag = true;
 	}
 	if (keyPressed['D']) {
 		MoveRight(dt);
-		m_constantDirtyFlag = true;
+		m_isOnConstantDirtyFlag = true;
 	}
 	if (keyPressed['A']) {
 		MoveRight(-dt);
-		m_constantDirtyFlag = true;
+		m_isOnConstantDirtyFlag = true;
 	}
 
-	if (m_constantDirtyFlag) {
+	if (m_isOnConstantDirtyFlag) {
 		Vector3 newChunkOffset = Utils::CalcChunkOffset(m_eyePos);
 		if (newChunkOffset != m_chunkPos) {
 			m_chunkPos = newChunkOffset;
-			m_chunkDirtyFlag = true;
+			m_isOnChunkDirtyFlag = true;
 		}
 	}
 }
@@ -66,7 +82,7 @@ void Camera::UpdateViewDirection(float ndcX, float ndcY)
 	if (m_viewNdcX == ndcX && m_viewNdcY == ndcY)
 		return;
 
-	m_constantDirtyFlag = true;
+	m_isOnConstantDirtyFlag = true;
 
 	m_viewNdcX = ndcX;
 	m_viewNdcY = ndcY;
@@ -88,10 +104,26 @@ void Camera::UpdateViewDirection(float ndcX, float ndcY)
 	m_up = Vector3::Transform(basisY, Matrix::CreateFromQuaternion(q));
 }
 
-bool Camera::IsOnConstantDirtyFlag() { return m_constantDirtyFlag; }
+Vector3 Camera::GetPosition() { return m_eyePos; }
 
-void Camera::OffConstantDirtyFlag() { m_constantDirtyFlag = false; }
+Vector3 Camera::GetChunkPosition() { return m_chunkPos; }
 
-bool Camera::IsOnChunkDirtyFlag() { return m_chunkDirtyFlag; }
+float Camera::GetDistance() { return m_farZ; }
 
-void Camera::OffChunkDirtyFlag() { m_chunkDirtyFlag = false; }
+Matrix Camera::GetViewMatrix() { return XMMatrixLookToLH(m_eyePos, m_to, m_up); }
+
+Matrix Camera::GetProjectionMatrix()
+{
+	return XMMatrixPerspectiveFovLH(
+		XMConvertToRadians(m_projFovAngleY), m_aspectRatio, m_nearZ, m_farZ);
+}
+
+ComPtr<ID3D11Buffer> Camera::GetConstantBuffer() { return m_constantBuffer; }
+
+void Camera::MoveForward(float dt) { m_eyePos += m_to * m_speed * dt; }
+
+void Camera::MoveRight(float dt) { m_eyePos += m_right * m_speed * dt; }
+
+bool Camera::IsOnChunkDirtyFlag() { return m_isOnChunkDirtyFlag; }
+
+void Camera::OffChunkDirtyFlag() { m_isOnChunkDirtyFlag = false; }

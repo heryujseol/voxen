@@ -1,5 +1,7 @@
 #include "ChunkManager.h"
+#include "Graphics.h"
 
+#include <iostream>
 
 ChunkManager::ChunkManager()
 {	
@@ -8,9 +10,8 @@ ChunkManager::ChunkManager()
 
 ChunkManager::~ChunkManager() {}
 
-void ChunkManager::Initialize(ComPtr<ID3D11Device>& device, Vector3 cameraOffset)
+bool ChunkManager::Initialize(Vector3 cameraOffset)
 {
-
 	for (int i = 0; i < CHUNK_SIZE; ++i) {
 		for (int j = 0; j < CHUNK_SIZE; ++j) {
 			for (int k = 0; k < CHUNK_SIZE; ++k) {
@@ -19,17 +20,21 @@ void ChunkManager::Initialize(ComPtr<ID3D11Device>& device, Vector3 cameraOffset
 				int z = (int)cameraOffset.z + Chunk::BLOCK_SIZE * (k - CHUNK_SIZE / 2);
 
 				m_chunks[std::make_tuple(x, y, z)] = Chunk(x, y, z);
-				m_chunks[std::make_tuple(x, y, z)].Initialize(device);
+				if (!m_chunks[std::make_tuple(x, y, z)].Initialize())
+					return false;
 			}
 		}
 	}
+
+	return true;
 }
 
-void ChunkManager::Update(ComPtr<ID3D11Device>& device, Camera& camera)
+void ChunkManager::Update(Camera& camera)
 {
 	if (camera.IsOnChunkDirtyFlag()) {
 		UpdateChunkList(camera.GetChunkPosition());
 		camera.OffChunkDirtyFlag();
+
 		if (!m_unloadChunkList.empty()) {
 			UnloadChunks();
 		}
@@ -37,27 +42,24 @@ void ChunkManager::Update(ComPtr<ID3D11Device>& device, Camera& camera)
 
 	if (!m_loadChunkList.empty()) {
 		if (m_loadFuture.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) {
-			m_loadFuture = std::async(std::launch::async, &ChunkManager::LoadChunks, this, std::ref(device));
+			m_loadFuture = std::async(std::launch::async, &ChunkManager::LoadChunks, this);
 		}
 	}
 }
 
-void ChunkManager::Render(ComPtr<ID3D11DeviceContext>& context, Camera& camera)
+void ChunkManager::Render(Camera& camera)
 {
-	int i = 0;
 	for (auto& c : m_chunks) {
 		if (c.second.IsEmpty() || !c.second.IsLoaded())
 			continue;
 
 		if (!FrustumCulling(c.second.GetPosition(), camera))
 			continue;
-		i++;
-		c.second.Render(context);
+		c.second.Render();
 	}
-	std::cout << "drawcall : " << i << std::endl;
 }
 
-void ChunkManager::LoadChunks(ComPtr<ID3D11Device>& device)
+void ChunkManager::LoadChunks()
 {
 	int count = 0;
 	while (!m_loadChunkList.empty()) {
@@ -68,7 +70,7 @@ void ChunkManager::LoadChunks(ComPtr<ID3D11Device>& device)
 		int y = (int)pos.y;
 		int z = (int)pos.z;
 		m_chunks[std::make_tuple(x, y, z)] = Chunk(x, y, z);
-		m_chunks[std::make_tuple(x, y, z)].Initialize(device);
+		m_chunks[std::make_tuple(x, y, z)].Initialize();
 		count++;
 
 		if (count == 1) //  chunks loading per each frame
@@ -82,7 +84,6 @@ void ChunkManager::UnloadChunks()
 		Vector3 pos = m_unloadChunkList[i];
 		auto position = std::make_tuple((int)pos.x, (int)pos.y, (int)pos.z);
 
-		m_chunks[position].~Chunk();
 		m_chunks.erase(position);
 	}
 	m_unloadChunkList.clear();

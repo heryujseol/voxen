@@ -1,6 +1,8 @@
+#define STB_IMAGE_IMPLEMENTATION
+
 #include <iostream>
 #include "App.h"
-#include <vector>
+
 int main(void) {
 	App app;
 	
@@ -9,5 +11,6 @@ int main(void) {
 		return -1;
 	}
 	app.Run();
+
 	return 0;
 }

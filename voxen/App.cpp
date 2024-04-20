@@ -1,4 +1,12 @@
 #include "App.h"
+#include "Graphics.h"
+#include "DXUtils.h"
+
+#include <iostream>
+#include <imgui.h>
+#include <imgui_impl_dx11.h>
+#include <imgui_impl_win32.h>
+
 
 App* g_app = nullptr;
 
@@ -11,8 +19,10 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 }
 
 App::App()
-	: m_width(1920), m_height(1080), m_hwnd(), m_viewport(), m_camera(), m_mouseNdcX(0.0f),
-	  m_mouseNdcY(0.0f)
+	: m_width(1920), m_height(1080), m_hwnd(), m_chunkManager(), m_camera(), m_skybox(),
+	  m_mouseNdcX(0.0f), m_mouseNdcY(0.0f), m_keyPressed{
+		  0,
+	  }
 {
 	g_app = this;
 }
@@ -69,9 +79,7 @@ bool App::Initialize()
 	if (!InitGUI())
 		return false;
 
-	m_manager.Initialize(m_device, m_camera.GetChunkPosition());
-
-	m_skybox.Initialize(m_device);
+	InitScene();
 
 	return true;
 }
@@ -98,65 +106,59 @@ void App::Run()
 			Update(ImGui::GetIO().DeltaTime);
 			Render(); // 우리가 구현한 렌더링
 
+			Graphics::context->OMSetRenderTargets(
+				1, Graphics::backBufferRTV.GetAddressOf(), nullptr);
 			ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData()); // GUI 렌더링
 
-			m_swapChain->Present(1, 0);
+			Graphics::swapChain->Present(1, 0);
 		}
 	}
 }
 
 void App::Update(float dt)
 {
-	m_camera.UpdatePosition(m_keyPressed, dt);
-	m_camera.UpdateViewDirection(m_mouseNdcX, m_mouseNdcY);
-
-	if (m_camera.IsOnConstantDirtyFlag()) {
-		m_globalConstantData.view = m_camera.GetViewMatrix();
-		m_globalConstantData.proj = m_camera.GetProjectionMatrix();
-
-		GlobalConstantData tempConstantData;
-		tempConstantData.view = m_globalConstantData.view.Transpose();
-		tempConstantData.proj = m_globalConstantData.proj.Transpose();
-		Utils::UpdateConstantBuffer(m_context, m_globalConstantBuffer, tempConstantData);
-
-		m_camera.OffConstantDirtyFlag();
-	}
-
-	m_manager.Update(m_device, m_camera);
+	m_camera.Update(dt, m_keyPressed, m_mouseNdcX, m_mouseNdcY);
+	m_chunkManager.Update(m_camera);
 }
 
 void App::Render()
 {
 	const FLOAT clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-	m_context->ClearRenderTargetView(m_backBufferRTV.Get(), clearColor);
-	m_context->ClearDepthStencilView(
-		m_depthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+	Graphics::context->ClearRenderTargetView(Graphics::basicRTV.Get(), clearColor);
+	Graphics::context->ClearDepthStencilView(
+		Graphics::basicDSV.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
-	m_context->OMSetDepthStencilState(m_depthStencilState.Get(), 0);
-	m_context->OMSetRenderTargets(1, m_backBufferRTV.GetAddressOf(), m_depthStencilView.Get());
+	Graphics::context->OMSetDepthStencilState(Graphics::basicDSS.Get(), 0);
+	Graphics::context->OMSetRenderTargets(
+		1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
 
-	m_context->IASetInputLayout(m_inputLayout.Get());
-	m_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	m_context->VSSetConstantBuffers(1, 1, m_globalConstantBuffer.GetAddressOf());
-	m_context->VSSetShader(m_vertexShader.Get(), 0, 0);
+	Graphics::context->IASetInputLayout(Graphics::basicIL.Get());
+	Graphics::context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-	m_context->RSSetState(m_rasterizerState.Get());
-	m_context->RSSetViewports(1, &m_viewport);
+	Graphics::context->VSSetShader(Graphics::basicVS.Get(), 0, 0);
+	Graphics::context->VSSetConstantBuffers(1, 1, m_camera.GetConstantBuffer().GetAddressOf());
 
-	m_context->PSSetShader(m_pixelShader.Get(), 0, 0);
-	m_context->PSSetSamplers(0, 1, m_samplerState.GetAddressOf());
-	std::vector<ID3D11ShaderResourceView*> pptr = { m_textureSRV1.Get(), m_textureSRV2.Get(),
-		m_textureSRV3.Get(), m_textureSRV4.Get() };
-	m_context->PSSetShaderResources(0, 4, pptr.data());
+	Graphics::context->RSSetState(Graphics::solidRS.Get());
+	DXUtils::UpdateViewport(Graphics::basicViewport, 0, 0, m_width, m_height);
+	Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
 
-	m_manager.Render(m_context, m_camera);
+	Graphics::context->PSSetShader(Graphics::basicPS.Get(), 0, 0);
+	Graphics::context->PSSetSamplers(0, 1, Graphics::pointClampSS.GetAddressOf());
+	Graphics::context->PSSetConstantBuffers(1, 1, m_camera.GetConstantBuffer().GetAddressOf());
+
+	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::atlasMapSRV.Get(),
+		Graphics::biomeColorMapSRV.Get(), Graphics::topSRV.Get(), Graphics::sideSRV.Get(),
+		Graphics::dirtSRV.Get() };
+	Graphics::context->PSSetShaderResources(0, 5, pptr.data());
+	m_chunkManager.Render(m_camera);
 
 	// skybox
-	m_context->VSSetShader(m_skyboxVS.Get(), 0, 0);
-	m_context->PSSetShader(m_skyboxPS.Get(), 0, 0);
-	m_context->PSSetSamplers(0, 1, m_samplerStateLinear.GetAddressOf());
-	m_context->PSSetShaderResources(0, 1, m_skyboxSRV.GetAddressOf());
-	m_skybox.Render(m_context);
+	Graphics::context->VSSetShader(Graphics::skyboxVS.Get(), 0, 0);
+	Graphics::context->PSSetShader(Graphics::skyboxPS.Get(), 0, 0);
+	m_skybox.Render();
+
+	Graphics::context->ResolveSubresource(Graphics::backBuffer.Get(), 0,
+		Graphics::basicRenderBuffer.Get(), 0, DXGI_FORMAT_R8G8B8A8_UNORM);
 }
 
 bool App::InitWindow()
@@ -190,131 +192,16 @@ bool App::InitWindow()
 
 bool App::InitDirectX()
 {
-	if (!Utils::CreateDeviceAndSwapChain(
-			m_device, m_context, m_swapChain, m_hwnd, m_width, m_height)) {
-		std::cout << "failed create device" << std::endl;
+	DXGI_FORMAT pixelFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+	if (!Graphics::InitGraphicsCore(pixelFormat, m_hwnd, m_width, m_height)) {
 		return false;
 	}
 
-	if (!Utils::CreateVertexShader(m_device, L"VertexShader.hlsl", m_vertexShader, m_inputLayout)) {
-		std::cout << "failed create vs" << std::endl;
+	if (!Graphics::InitGraphicsBuffer(m_width, m_height)) {
 		return false;
 	}
 
-	if (!Utils::CreatePixelShader(m_device, L"PixelShader.hlsl", m_pixelShader)) {
-		std::cout << "failed create ps" << std::endl;
-		return false;
-	}
-
-	if (!Utils::CreateRasterizerState(m_device, m_rasterizerState)) {
-		std::cout << "failed create rasterizer state" << std::endl;
-		return false;
-	}
-
-	if (!Utils::CreateRenderTargetBuffer(m_device, m_renderTargetBuffer, m_width, m_height)) {
-		std::cout << "failed create render target buffer" << std::endl;
-		return false;
-	}
-
-	if (!Utils::CreateRenderTargetView(m_device, m_renderTargetBuffer, m_renderTargetView)) {
-		std::cout << "failed create render target view" << std::endl;
-		return false;
-	}
-
-	if (!Utils::CreateDepthStencilBuffer(m_device, m_depthStencilBuffer, m_width, m_height)) {
-		std::cout << "failed create depth stencil buffer" << std::endl;
-		return false;
-	}
-
-	if (!Utils::CreateDepthStencilView(m_device, m_depthStencilBuffer, m_depthStencilView)) {
-		std::cout << "failed create depth stencil view" << std::endl;
-		return false;
-	}
-
-	if (!Utils::CreateDepthStencilState(m_device, m_depthStencilState)) {
-		std::cout << "failed create depth stencil state" << std::endl;
-		return false;
-	}
-
-	m_globalConstantData.view = m_camera.GetViewMatrix();
-	m_globalConstantData.proj = m_camera.GetProjectionMatrix();
-	GlobalConstantData tempConstantData;
-	tempConstantData.view = m_globalConstantData.view.Transpose();
-	tempConstantData.proj = m_globalConstantData.proj.Transpose();
-	if (!Utils::CreateConstantBuffer(m_device, m_globalConstantBuffer, tempConstantData)) {
-		std::cout << "failed create constant buffer" << std::endl;
-		return false;
-	}
-
-	HRESULT ret = m_swapChain->GetBuffer(0, IID_PPV_ARGS(m_backBuffer.GetAddressOf()));
-	if (FAILED(ret)) {
-		std::cout << "failed get back buffer" << std::endl;
-		return false;
-	}
-	if (!Utils::CreateRenderTargetView(m_device, m_backBuffer, m_backBufferRTV)) {
-		std::cout << "failed create back buffer RTV" << std::endl;
-		return false;
-	}
-
-	Utils::UpdateViewport(m_viewport, 0, 0, (FLOAT)m_width, (FLOAT)m_height);
-
-	if (!Utils::CreateSamplerState(m_device, m_samplerState)) {
-		std::cout << "failed create sampler state" << std::endl;
-		return false;
-	}
-
-	if (!Utils::CreateTexture2DFromFile(
-			m_device, m_texture, "../assets/grass_block_side_overlay.png")) {
-		std::cout << "failed create texture" << std::endl;
-		return false;
-	}
-	if (!Utils::CreateShaderResourceView(m_device, m_texture, m_textureSRV1)) {
-		std::cout << "failed create shader resource view" << std::endl;
-		return false;
-	}
-
-	if (!Utils::CreateTexture2DFromFile(m_device, m_texture, "../assets/grass_block_top.png")) {
-		std::cout << "failed create texture" << std::endl;
-		return false;
-	}
-	if (!Utils::CreateShaderResourceView(m_device, m_texture, m_textureSRV2)) {
-		std::cout << "failed create shader resource view" << std::endl;
-		return false;
-	}
-
-	if (!Utils::CreateTexture2DFromFile(m_device, m_texture, "../assets/dirt.png")) {
-		std::cout << "failed create texture" << std::endl;
-		return false;
-	}
-	if (!Utils::CreateShaderResourceView(m_device, m_texture, m_textureSRV3)) {
-		std::cout << "failed create shader resource view" << std::endl;
-		return false;
-	}
-
-	if (!Utils::CreateTexture2DFromFile(m_device, m_texture, "../assets/grass_color_map.png")) {
-		std::cout << "failed create texture" << std::endl;
-		return false;
-	}
-	if (!Utils::CreateShaderResourceView(m_device, m_texture, m_textureSRV4)) {
-		std::cout << "failed create shader resource view" << std::endl;
-		return false;
-	}
-
-	
-	if (!Utils::CreateVertexShader(m_device, L"SkyboxVS.hlsl", m_skyboxVS, m_inputLayout)) {
-		std::cout << "failed create skybox vertex shader" << std::endl;
-		return false;
-	}
-	if (!Utils::CreatePixelShader(m_device, L"SkyboxPS.hlsl", m_skyboxPS)) {
-		std::cout << "failed create skybox pixel shader" << std::endl;
-		return false;
-	}
-	if (!Utils::CreateDDSTexture(m_device, m_skyboxSRV, L"../assets/cubemap_bgra.dds", true)) {
-		std::cout << "failed create skybox dds texture" << std::endl;
-		return false;
-	}
-	if (!Utils::CreateSamplerStateLinear(m_device, m_samplerStateLinear)) {
-		std::cout << "failed create linear sampler state" << std::endl;
+	if (!Graphics::InitGraphicsState()) {
 		return false;
 	}
 
@@ -331,13 +218,27 @@ bool App::InitGUI()
 	ImGui::StyleColorsLight();
 
 	// Setup Platform/Renderer backends
-	if (!ImGui_ImplDX11_Init(m_device.Get(), m_context.Get())) {
+	if (!ImGui_ImplDX11_Init(Graphics::device.Get(), Graphics::context.Get())) {
 		return false;
 	}
 
 	if (!ImGui_ImplWin32_Init(m_hwnd)) {
 		return false;
 	}
+
+	return true;
+}
+
+bool App::InitScene()
+{
+	if (!m_camera.Initialize(Vector3(16.0f, 50.0f, 16.0f)))
+		return false;
+
+	if (!m_chunkManager.Initialize(m_camera.GetChunkPosition()))
+		return false;
+
+	if (!m_skybox.Initialize())
+		return false;
 
 	return true;
 }

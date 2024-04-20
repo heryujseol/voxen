@@ -9,9 +9,11 @@ struct Vertex {
 	Vector3 normal;
 };
 
-struct GlobalConstantData {
+struct CameraConstantData {
 	Matrix view;
 	Matrix proj;
+	Vector3 eyePos;
+	float dummy;
 };
 
 struct ChunkConstantData {

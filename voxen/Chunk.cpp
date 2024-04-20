@@ -1,4 +1,5 @@
 #include "Chunk.h"
+#include "DXUtils.h"
 
 Chunk::Chunk()
 	: m_position(0.0f, 0.0f, 0.0f), m_stride(0), m_offset(0), m_indexCount(0),
@@ -41,7 +42,7 @@ Chunk::~Chunk()
 	//m_isLoaded = false;
 }
 
-bool Chunk::Initialize(ComPtr<ID3D11Device>& device)
+bool Chunk::Initialize()
 {
 	for (int x = 0; x < BLOCK_SIZE; ++x) {
 		for (int z = 0; z < BLOCK_SIZE; ++z) {
@@ -80,18 +81,18 @@ bool Chunk::Initialize(ComPtr<ID3D11Device>& device)
 
 	m_indexCount = m_indices.size();
 	if (m_indexCount != 0) {
-		if (!Utils::CreateVertexBuffer(device, m_vertexBuffer, m_vertices, m_stride, m_offset)) {
+		if (!DXUtils::CreateVertexBuffer(m_vertexBuffer, m_vertices, m_stride, m_offset)) {
 			std::cout << "failed create vertex buffer in chunk" << std::endl;
 			return false;
 		}
 
-		if (!Utils::CreateIndexBuffer(device, m_indexBuffer, m_indices)) {
+		if (!DXUtils::CreateIndexBuffer(m_indexBuffer, m_indices)) {
 			std::cout << "failed create index buffer in chunk" << std::endl;
 			return false;
 		}
 
 		m_constantData.world = Matrix::CreateTranslation(m_position).Transpose();
-		if (!Utils::CreateConstantBuffer(device, m_constantBuffer, m_constantData)) {
+		if (!DXUtils::CreateConstantBuffer(m_constantBuffer, m_constantData)) {
 			std::cout << "failed create constant buffer in chunk" << std::endl;
 			return false;
 		}
@@ -102,22 +103,23 @@ bool Chunk::Initialize(ComPtr<ID3D11Device>& device)
 	return true;
 }
 
-void Chunk::Update(ComPtr<ID3D11DeviceContext>& context, float dt)
+void Chunk::Update(float dt)
 {
 	m_constantData.world *= Matrix::CreateRotationY(dt);
 
 	ChunkConstantData transposedConstantData = m_constantData;
 	transposedConstantData.world = transposedConstantData.world.Transpose();
-	Utils::UpdateConstantBuffer(context, m_constantBuffer, transposedConstantData);
+	DXUtils::UpdateConstantBuffer(m_constantBuffer, transposedConstantData);
 }
 
-void Chunk::Render(ComPtr<ID3D11DeviceContext>& context)
+void Chunk::Render()
 {
-	context->IASetIndexBuffer(m_indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
-	context->IASetVertexBuffers(0, 1, m_vertexBuffer.GetAddressOf(), &m_stride, &m_offset);
-	context->VSSetConstantBuffers(0, 1, m_constantBuffer.GetAddressOf());
+	Graphics::context->IASetIndexBuffer(m_indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
+	Graphics::context->IASetVertexBuffers(
+		0, 1, m_vertexBuffer.GetAddressOf(), &m_stride, &m_offset);
+	Graphics::context->VSSetConstantBuffers(0, 1, m_constantBuffer.GetAddressOf());
 
-	context->DrawIndexed((UINT)m_indexCount, 0, 0);
+	Graphics::context->DrawIndexed((UINT)m_indexCount, 0, 0);
 }
 
 void Chunk::CreateBlock(
