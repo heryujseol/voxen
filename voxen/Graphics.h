@@ -3,6 +3,8 @@
 #include <d3d11.h>
 #include <wrl.h>
 
+#include "GraphicsPSO.h"
+
 using namespace Microsoft::WRL;
 
 namespace Graphics {
@@ -91,4 +93,11 @@ namespace Graphics {
 	extern bool InitRasterizerStates();
 	extern bool InitSamplerStates();
 	extern bool InitDepthStencilStates();
+
+
+	// PSO
+	extern void InitGraphicsPSO();
+	extern void SetPipelineStates(GraphicsPSO& pso);
+	extern GraphicsPSO basicPSO;
+	extern GraphicsPSO skyboxPSO;
 }

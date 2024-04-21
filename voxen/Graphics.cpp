@@ -64,6 +64,14 @@ namespace Graphics {
 
 	// Viewport
 	D3D11_VIEWPORT basicViewport;
+
+
+	// PSO
+	void InitGraphicsPSO();
+	void SetPipelineStates(GraphicsPSO& pso);
+
+	GraphicsPSO basicPSO;
+	GraphicsPSO skyboxPSO;
 }
 
 
@@ -355,3 +363,35 @@ bool Graphics::InitDepthStencilStates()
 	return true;
 }
 
+void Graphics::InitGraphicsPSO() 
+{
+	// basicPSO
+	basicPSO.inputLayout = basicIL;
+	basicPSO.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	basicPSO.vertexShader = basicVS;
+	basicPSO.rasterizerState = solidRS;
+	basicPSO.pixelShader = basicPS;
+	basicPSO.samplerStates.push_back(pointClampSS.Get());
+	basicPSO.depthStencilState = basicDSS;
+
+	// skyboxPSO
+	skyboxPSO = basicPSO;
+	skyboxPSO.vertexShader = skyboxVS;
+	skyboxPSO.pixelShader = skyboxPS;
+}
+
+void Graphics::SetPipelineStates(GraphicsPSO& pso)
+{ 
+	context->IASetInputLayout(pso.inputLayout.Get());
+	context->IASetPrimitiveTopology(pso.topology);
+
+	context->VSSetShader(pso.vertexShader.Get(), nullptr, 0);
+	
+	context->RSSetState(pso.rasterizerState.Get());
+
+	context->PSSetShader(pso.pixelShader.Get(), nullptr, 0);
+
+	context->PSSetSamplers(0, (UINT)pso.samplerStates.size(), pso.samplerStates.data());
+
+	context->OMSetDepthStencilState(pso.depthStencilState.Get(), 0);
+}

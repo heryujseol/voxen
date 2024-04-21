@@ -107,9 +107,6 @@ void App::Run()
 			Update(ImGui::GetIO().DeltaTime);
 			Render(); // 우리가 구현한 렌더링
 
-			// GUI 렌더링을 위한 RTV 재설정
-			Graphics::context->OMSetRenderTargets(
-				1, Graphics::backBufferRTV.GetAddressOf(), nullptr);
 			ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData()); // GUI 렌더링
 
 			Graphics::swapChain->Present(1, 0);
@@ -125,42 +122,41 @@ void App::Update(float dt)
 
 void App::Render()
 {
+	// 공통 로직
+	DXUtils::UpdateViewport(Graphics::basicViewport, 0, 0, m_width, m_height);
+	Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
+
 	const FLOAT clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	Graphics::context->ClearRenderTargetView(Graphics::basicRTV.Get(), clearColor);
 	Graphics::context->ClearDepthStencilView(
 		Graphics::basicDSV.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
-	Graphics::context->OMSetDepthStencilState(Graphics::basicDSS.Get(), 0);
 	Graphics::context->OMSetRenderTargets(
 		1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
 
-	Graphics::context->IASetInputLayout(Graphics::basicIL.Get());
-	Graphics::context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-	Graphics::context->VSSetShader(Graphics::basicVS.Get(), 0, 0);
 	Graphics::context->VSSetConstantBuffers(1, 1, m_camera.GetConstantBuffer().GetAddressOf());
-
-	Graphics::context->RSSetState(Graphics::solidRS.Get());
-	DXUtils::UpdateViewport(Graphics::basicViewport, 0, 0, m_width, m_height);
-	Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
-
-	Graphics::context->PSSetShader(Graphics::basicPS.Get(), 0, 0);
-	Graphics::context->PSSetSamplers(0, 1, Graphics::pointClampSS.GetAddressOf());
 	Graphics::context->PSSetConstantBuffers(1, 1, m_camera.GetConstantBuffer().GetAddressOf());
+	
 
+	// basic
+	Graphics::SetPipelineStates(Graphics::basicPSO);
 	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::atlasMapSRV.Get(),
 		Graphics::biomeColorMapSRV.Get(), Graphics::topSRV.Get(), Graphics::sideSRV.Get(),
 		Graphics::dirtSRV.Get() };
 	Graphics::context->PSSetShaderResources(0, 5, pptr.data());
 	m_chunkManager.Render(m_camera);
 
+
 	// skybox
-	Graphics::context->VSSetShader(Graphics::skyboxVS.Get(), 0, 0);
-	Graphics::context->PSSetShader(Graphics::skyboxPS.Get(), 0, 0);
+	Graphics::SetPipelineStates(Graphics::skyboxPSO);
 	m_skybox.Render();
 
+
+	// RTV -> backBuffer
 	Graphics::context->ResolveSubresource(Graphics::backBuffer.Get(), 0,
 		Graphics::basicRenderBuffer.Get(), 0, DXGI_FORMAT_R8G8B8A8_UNORM);
+	// GUI 렌더링을 위한 RTV 재설정
+	Graphics::context->OMSetRenderTargets(1, Graphics::backBufferRTV.GetAddressOf(), nullptr);
 }
 
 bool App::InitWindow()
@@ -206,6 +202,8 @@ bool App::InitDirectX()
 	if (!Graphics::InitGraphicsState()) {
 		return false;
 	}
+
+	Graphics::InitGraphicsPSO();
 
 	return true;
 }
