@@ -64,6 +64,14 @@ namespace Graphics {
 
 	// Viewport
 	D3D11_VIEWPORT basicViewport;
+
+
+	// PSO
+	void InitGraphicsPSO();
+	void SetPipelineStates(GraphicsPSO& pso);
+
+	GraphicsPSO basicPSO;
+	GraphicsPSO skyboxPSO;
 }
 
 
@@ -84,13 +92,12 @@ bool Graphics::InitGraphicsCore(DXGI_FORMAT pixelFormat, HWND& hwnd, UINT width,
 	D3D_FEATURE_LEVEL featureLevel;
 
 	HRESULT ret = D3D11CreateDevice(0, driverType, 0, deviceFlags, levels, ARRAYSIZE(levels),
-		D3D11_SDK_VERSION, device.GetAddressOf(), &featureLevel,
-		context.GetAddressOf());
+		D3D11_SDK_VERSION, device.GetAddressOf(), &featureLevel, context.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create device and context" << std::endl;
 		return false;
 	}
-	
+
 	DXGI_SWAP_CHAIN_DESC desc;
 	ZeroMemory(&desc, sizeof(desc));
 	desc.BufferDesc.Width = width;
@@ -108,8 +115,8 @@ bool Graphics::InitGraphicsCore(DXGI_FORMAT pixelFormat, HWND& hwnd, UINT width,
 	desc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
 
 	ret = D3D11CreateDeviceAndSwapChain(NULL, driverType, 0, deviceFlags, levels, ARRAYSIZE(levels),
-		D3D11_SDK_VERSION, &desc, swapChain.GetAddressOf(),
-		device.GetAddressOf(), &featureLevel, context.GetAddressOf());
+		D3D11_SDK_VERSION, &desc, swapChain.GetAddressOf(), device.GetAddressOf(), &featureLevel,
+		context.GetAddressOf());
 
 	if (FAILED(ret)) {
 		std::cout << "failed create swapchain" << std::endl;
@@ -137,8 +144,8 @@ bool Graphics::InitRenderTargetBuffers(UINT width, UINT height)
 {
 	// backBuffer
 	swapChain->GetBuffer(0, IID_PPV_ARGS(backBuffer.GetAddressOf()));
-	HRESULT ret = Graphics::device->CreateRenderTargetView(
-		backBuffer.Get(), nullptr, backBufferRTV.GetAddressOf());
+	HRESULT ret =
+		device->CreateRenderTargetView(backBuffer.Get(), nullptr, backBufferRTV.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create render target view" << std::endl;
 		return false;
@@ -164,7 +171,9 @@ bool Graphics::InitRenderTargetBuffers(UINT width, UINT height)
 bool Graphics::InitDepthStencilBuffers(UINT width, UINT height)
 {
 	// basic DSV
-	if (!DXUtils::CreateDepthStencilBuffer(basicDepthBuffer, width, height, true)) {
+	DXGI_FORMAT format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	D3D11_BIND_FLAG bindFlag = D3D11_BIND_DEPTH_STENCIL;
+	if (!DXUtils::CreateTextureBuffer(basicDepthBuffer, width, height, true, format, bindFlag)) {
 		std::cout << "failed create depth stencil buffer" << std::endl;
 		return false;
 	}
@@ -192,8 +201,7 @@ bool Graphics::InitShaderResourceBuffers()
 		return false;
 	}
 
-	if (!DXUtils::CreateTextureFromFile(
-			topBuffer, topSRV, "../assets/grass_block_top.png")) {
+	if (!DXUtils::CreateTextureFromFile(topBuffer, topSRV, "../assets/grass_block_top.png")) {
 		std::cout << "failed create texture from file" << std::endl;
 		return false;
 	}
@@ -204,8 +212,7 @@ bool Graphics::InitShaderResourceBuffers()
 		return false;
 	}
 
-	if (!DXUtils::CreateTextureFromFile(
-			dirtBuffer, dirtSRV, "../assets/dirt.png")) {
+	if (!DXUtils::CreateTextureFromFile(dirtBuffer, dirtSRV, "../assets/dirt.png")) {
 		std::cout << "failed create texture from file" << std::endl;
 		return false;
 	}
@@ -353,3 +360,39 @@ bool Graphics::InitDepthStencilStates()
 	return true;
 }
 
+void Graphics::InitGraphicsPSO()
+{
+	// basicPSO
+	basicPSO.inputLayout = basicIL;
+	basicPSO.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	basicPSO.vertexShader = basicVS;
+	basicPSO.rasterizerState = solidRS;
+	basicPSO.pixelShader = basicPS;
+	basicPSO.samplerStates.push_back(pointClampSS.Get());
+	basicPSO.depthStencilState = basicDSS;
+
+	// skyboxPSO
+	skyboxPSO = basicPSO;
+	skyboxPSO.vertexShader = skyboxVS;
+	skyboxPSO.pixelShader = skyboxPS;
+	skyboxPSO.samplerStates.clear();
+}
+
+void Graphics::SetPipelineStates(GraphicsPSO& pso)
+{
+	context->IASetInputLayout(pso.inputLayout.Get());
+	context->IASetPrimitiveTopology(pso.topology);
+
+	context->VSSetShader(pso.vertexShader.Get(), nullptr, 0);
+
+	context->RSSetState(pso.rasterizerState.Get());
+
+	context->PSSetShader(pso.pixelShader.Get(), nullptr, 0);
+
+	if (pso.samplerStates.empty())
+		context->PSSetSamplers(0, 0, nullptr);
+	else
+		context->PSSetSamplers(0, (UINT)pso.samplerStates.size(), pso.samplerStates.data());
+
+	context->OMSetDepthStencilState(pso.depthStencilState.Get(), 0);
+}

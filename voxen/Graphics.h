@@ -3,6 +3,8 @@
 #include <d3d11.h>
 #include <wrl.h>
 
+#include "GraphicsPSO.h"
+
 using namespace Microsoft::WRL;
 
 namespace Graphics {
@@ -77,7 +79,7 @@ namespace Graphics {
 	extern bool InitGraphicsCore(DXGI_FORMAT pixelFormat, HWND& hwnd, UINT width, UINT height);
 	
 
-	// RTV(+viewport), DSV, SRV (+ UAV ...)
+	// RTV, DSV, SRV (+ UAV ...)
 	extern bool InitGraphicsBuffer(UINT width, UINT height);
 	extern bool InitRenderTargetBuffers(UINT width, UINT height);
 	extern bool InitDepthStencilBuffers(UINT width, UINT height);
@@ -91,4 +93,11 @@ namespace Graphics {
 	extern bool InitRasterizerStates();
 	extern bool InitSamplerStates();
 	extern bool InitDepthStencilStates();
+
+
+	// PSO
+	extern void InitGraphicsPSO();
+	extern void SetPipelineStates(GraphicsPSO& pso);
+	extern GraphicsPSO basicPSO;
+	extern GraphicsPSO skyboxPSO;
 }
