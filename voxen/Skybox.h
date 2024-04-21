@@ -15,8 +15,8 @@ public:
 	Skybox();
 	~Skybox();
 
-	bool Initialize(ComPtr<ID3D11Device>& device);
-	void Render(ComPtr<ID3D11DeviceContext>& context);
+	bool Initialize();
+	void Render();
 
 private:
 	void CreateBox(float scale);

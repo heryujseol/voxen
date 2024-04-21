@@ -1,3 +1,17 @@
+
+cbuffer ConstantBuffer : register(b0)
+{
+    matrix world;
+}
+
+cbuffer ConstantBuffer : register(b1)
+{
+    matrix view;
+    matrix proj;
+    float3 eyePos;
+    float dummy;
+}
+
 struct vsInput
 {
     float3 pos : POSITION;
@@ -11,17 +25,6 @@ struct vsOutput
     float3 normalWorld : NORMAL;
     float2 texcoord : TEXCOORD;
 };
-
-cbuffer ConstantBuffer : register(b0)
-{
-    matrix world;
-}
-
-cbuffer ConstantBuffer : register(b1)
-{
-    matrix view;
-    matrix proj;
-}
 
 vsOutput main(vsInput input, uint vID: SV_VertexID)
 {

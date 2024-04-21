@@ -1,21 +1,23 @@
 #include "Skybox.h"
+#include "Graphics.h"
+#include "DXUtils.h"
 
 Skybox::Skybox() : m_stride(0), m_offset(0), m_indexCount(0) {}
 
 Skybox::~Skybox() {}
 
-bool Skybox::Initialize(ComPtr<ID3D11Device>& device)
+bool Skybox::Initialize()
 {
 	// make block
 	CreateBox(160.0f);
 
-	if (!Utils::CreateVertexBuffer(device, m_vertexBuffer, m_vertices, m_stride, m_offset)) {
+	if (!DXUtils::CreateVertexBuffer(m_vertexBuffer, m_vertices, m_stride, m_offset)) {
 		std::cout << "failed create vertex buffer in chunk" << std::endl;
 		return false;
 	}
 
 	m_indexCount = m_indices.size();
-	if (!Utils::CreateIndexBuffer(device, m_indexBuffer, m_indices)) {
+	if (!DXUtils::CreateIndexBuffer(m_indexBuffer, m_indices)) {
 		std::cout << "failed create index buffer in chunk" << std::endl;
 		return false;
 	}
@@ -23,12 +25,13 @@ bool Skybox::Initialize(ComPtr<ID3D11Device>& device)
 	return true;
 }
 
-void Skybox::Render(ComPtr<ID3D11DeviceContext>& context) 
+void Skybox::Render() 
 {
-	context->IASetIndexBuffer(m_indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
-	context->IASetVertexBuffers(0, 1, m_vertexBuffer.GetAddressOf(), &m_stride, &m_offset);
+	Graphics::context->IASetIndexBuffer(m_indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
+	Graphics::context->IASetVertexBuffers(
+		0, 1, m_vertexBuffer.GetAddressOf(), &m_stride, &m_offset);
 
-	context->DrawIndexed((UINT)m_indexCount, 0, 0);
+	Graphics::context->DrawIndexed((UINT)m_indexCount, 0, 0);
 }
 
 void Skybox::CreateBox(float scale)

@@ -14,28 +14,27 @@ public:
 	Camera();
 	~Camera();
 
+	bool Initialize(Vector3 pos);
+
+	void Update(float dt, bool keyPressed[256], float mouseX, float mouseY);
+
 	Vector3 GetPosition();
 	Vector3 GetChunkPosition();
-
 	float GetDistance();
 	Matrix GetViewMatrix();
 	Matrix GetProjectionMatrix();
-
-	void SetPosition(Vector3 newPos);
-
-	void MoveForward(float dt);
-	void MoveRight(float dt);
-
-	void UpdatePosition(bool keyPressed[256], float dt);
-	void UpdateViewDirection(float mouseX, float mouseY);
-
-	bool IsOnConstantDirtyFlag();
-	void OffConstantDirtyFlag();
+	ComPtr<ID3D11Buffer> GetConstantBuffer();
 
 	bool IsOnChunkDirtyFlag();
 	void OffChunkDirtyFlag();
 
 private:
+	void UpdatePosition(bool keyPressed[256], float dt);
+	void UpdateViewDirection(float mouseX, float mouseY);
+
+	void MoveForward(float dt);
+	void MoveRight(float dt);
+
 	float m_projFovAngleY;
 	float m_nearZ;
 	float m_farZ;
@@ -47,12 +46,14 @@ private:
 	Vector3 m_up;
 	Vector3 m_right;
 
-
 	float m_viewNdcX;
 	float m_viewNdcY;
 
 	float m_speed;
 
-	bool m_constantDirtyFlag;
-	bool m_chunkDirtyFlag;
+	bool m_isOnConstantDirtyFlag;
+	bool m_isOnChunkDirtyFlag;
+
+	CameraConstantData m_constantData;
+	ComPtr<ID3D11Buffer> m_constantBuffer;
 };

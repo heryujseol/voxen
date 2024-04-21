@@ -17,18 +17,17 @@ public:
 	ChunkManager();
 	~ChunkManager();
 
-	void Initialize(ComPtr<ID3D11Device>& device, Vector3 cameraOffset);
-	void Update(ComPtr<ID3D11Device>& device, Camera& camera);
-	void Render(ComPtr<ID3D11DeviceContext>& m_context, Camera& camera);
-
-	void LoadChunks(ComPtr<ID3D11Device>& device);
-	void UnloadChunks();
-	void UpdateChunkList(Vector3 cameraOffset);
-
-	bool FrustumCulling(Vector3 position, Camera& camera);
+	bool Initialize(Vector3 cameraOffset);
+	void Update(Camera& camera);
+	void Render(Camera& camera);
 
 private:
-	static const int CHUNK_SIZE = 11;
+	void LoadChunks();
+	void UnloadChunks();
+	void UpdateChunkList(Vector3 cameraOffset);
+	bool FrustumCulling(Vector3 position, Camera& camera);
+
+	static const int CHUNK_SIZE = 7;
 	std::map<std::tuple<int, int, int>, Chunk> m_chunks;
 
 	std::vector<Vector3> m_loadChunkList;
