@@ -77,7 +77,7 @@ namespace Graphics {
 	extern bool InitGraphicsCore(DXGI_FORMAT pixelFormat, HWND& hwnd, UINT width, UINT height);
 	
 
-	// RTV(+viewport), DSV, SRV (+ UAV ...)
+	// RTV, DSV, SRV (+ UAV ...)
 	extern bool InitGraphicsBuffer(UINT width, UINT height);
 	extern bool InitRenderTargetBuffers(UINT width, UINT height);
 	extern bool InitDepthStencilBuffers(UINT width, UINT height);

@@ -219,42 +219,6 @@ public:
 		return true;
 	}
 
-	static bool CreateDepthStencilBuffer(
-		ComPtr<ID3D11Texture2D>& buffer, UINT width, UINT height, bool isMSAA)
-	{
-		D3D11_TEXTURE2D_DESC desc;
-		ZeroMemory(&desc, sizeof(desc));
-
-		desc.Width = width;
-		desc.Height = height;
-		desc.MipLevels = desc.ArraySize = 1;
-		desc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-		if (isMSAA) {
-			UINT qualityLevel = 0;
-			HRESULT ret = Graphics::device->CheckMultisampleQualityLevels(
-				DXGI_FORMAT_D24_UNORM_S8_UINT, 4, &qualityLevel);
-			if (FAILED(ret)) {
-				std::cout << "failed check MSSA" << std::endl;
-				return false;
-			}
-
-			desc.SampleDesc.Count = 4;
-			desc.SampleDesc.Quality = qualityLevel - 1;
-		}
-		else {
-			desc.SampleDesc.Count = 1;
-			desc.SampleDesc.Quality = 0;
-		}
-
-		desc.Usage = D3D11_USAGE_DEFAULT;
-		desc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-		HRESULT ret = Graphics::device->CreateTexture2D(&desc, nullptr, buffer.GetAddressOf());
-		if (FAILED(ret))
-			return false;
-
-		return true;
-	}
-
 	static ComPtr<ID3D11Texture2D> CreateStagingTexture(UINT width, UINT height,
 		std::vector<uint8_t>& image, UINT mipLevels = 1, UINT arraySize = 1,
 		DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM, size_t pixelSize = sizeof(uint8_t) * 4)

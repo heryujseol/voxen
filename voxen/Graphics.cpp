@@ -137,7 +137,7 @@ bool Graphics::InitRenderTargetBuffers(UINT width, UINT height)
 {
 	// backBuffer
 	swapChain->GetBuffer(0, IID_PPV_ARGS(backBuffer.GetAddressOf()));
-	HRESULT ret = Graphics::device->CreateRenderTargetView(
+	HRESULT ret = device->CreateRenderTargetView(
 		backBuffer.Get(), nullptr, backBufferRTV.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create render target view" << std::endl;
@@ -164,7 +164,9 @@ bool Graphics::InitRenderTargetBuffers(UINT width, UINT height)
 bool Graphics::InitDepthStencilBuffers(UINT width, UINT height)
 {
 	// basic DSV
-	if (!DXUtils::CreateDepthStencilBuffer(basicDepthBuffer, width, height, true)) {
+	DXGI_FORMAT format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	D3D11_BIND_FLAG bindFlag = D3D11_BIND_DEPTH_STENCIL;
+	if (!DXUtils::CreateTextureBuffer(basicDepthBuffer, width, height, true, format, bindFlag)) {
 		std::cout << "failed create depth stencil buffer" << std::endl;
 		return false;
 	}

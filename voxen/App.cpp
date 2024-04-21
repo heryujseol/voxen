@@ -79,7 +79,8 @@ bool App::Initialize()
 	if (!InitGUI())
 		return false;
 
-	InitScene();
+	if (!InitScene())
+		return false;
 
 	return true;
 }
@@ -106,6 +107,7 @@ void App::Run()
 			Update(ImGui::GetIO().DeltaTime);
 			Render(); // 우리가 구현한 렌더링
 
+			// GUI 렌더링을 위한 RTV 재설정
 			Graphics::context->OMSetRenderTargets(
 				1, Graphics::backBufferRTV.GetAddressOf(), nullptr);
 			ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData()); // GUI 렌더링
