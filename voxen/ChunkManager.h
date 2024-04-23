@@ -1,7 +1,7 @@
 #pragma once
 
 #include <map>
-#include <vector>
+#include <queue>
 #include <thread>
 #include <future>
 
@@ -17,21 +17,23 @@ public:
 	ChunkManager();
 	~ChunkManager();
 
-	bool Initialize(Vector3 cameraOffset);
+	bool Initialize(Vector3 cameraChunkPos);
 	void Update(Camera& camera);
 	void Render(Camera& camera);
 
 private:
 	void LoadChunks();
 	void UnloadChunks();
-	void UpdateChunkList(Vector3 cameraOffset);
+	void UpdateChunkList(Vector3 cameraChunkPos, int moveDirX, int moveDirZ);
 	bool FrustumCulling(Vector3 position, Camera& camera);
 
-	static const int CHUNK_SIZE = 7;
-	std::map<std::tuple<int, int, int>, Chunk> m_chunks;
+	static const int CHUNK_SIZE = 11;
+	static const int MAX_HEIGHT = 256;
+	static const int MAX_HEIGHT_CHUNK_SIZE = MAX_HEIGHT / Chunk::BLOCK_SIZE;
+	std::map<std::tuple<int, int, int>, Chunk*> m_chunks;
 
-	std::vector<Vector3> m_loadChunkList;
-	std::vector<Vector3> m_unloadChunkList;
+	std::queue<Vector3> m_loadChunkList;
+	std::queue<Vector3> m_unloadChunkList;
 
 	std::future<void> m_loadFuture;
 };

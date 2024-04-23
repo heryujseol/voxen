@@ -15,7 +15,7 @@ using namespace DirectX::SimpleMath;
 class Chunk {
 
 public:
-	Chunk();
+	
 	Chunk(int x, int y, int z);
 	~Chunk();
 
@@ -30,6 +30,7 @@ public:
 	static const int BLOCK_SIZE = 32;
 
 private:
+	Chunk();
 	void CreateBlock(
 		int x, int y, int z, bool x_n, bool x_p, bool y_n, bool y_p, bool z_n, bool z_p);
 
@@ -48,4 +49,6 @@ private:
 	ComPtr<ID3D11Buffer> m_vertexBuffer;
 	ComPtr<ID3D11Buffer> m_indexBuffer;
 	ComPtr<ID3D11Buffer> m_constantBuffer;
+
+	std::vector<std::tuple<int, int, int>> m_activeBlocks;
 };

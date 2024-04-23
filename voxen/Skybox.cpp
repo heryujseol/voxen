@@ -9,7 +9,7 @@ Skybox::~Skybox() {}
 bool Skybox::Initialize()
 {
 	// make block
-	CreateBox(160.0f);
+	CreateBox(400.0f);
 
 	if (!DXUtils::CreateVertexBuffer(m_vertexBuffer, m_vertices, m_stride, m_offset)) {
 		std::cout << "failed create vertex buffer in chunk" << std::endl;

@@ -13,7 +13,7 @@ using namespace DirectX::SimpleMath;
 
 class Utils {
 public:
-	static Vector3 CalcChunkOffset(Vector3 pos)
+	static Vector3 CalcChunkPos(Vector3 pos)
 	{
 		int floorX = (int)floor(pos.x);
 		int floorY = (int)floor(pos.y);
@@ -79,7 +79,7 @@ public:
 	{
 		float noise = GetPerlinNoise((float)x / 32.0f, (float)z / 32.0f); // [-1.0, 1.0]
 
-		return (int)((noise + 1.0f) * 12.0f); // [0, 24]
+		return (int)((noise + 1.0f) * 24.0f); // [0, 48]
 	}
 
 

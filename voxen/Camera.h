@@ -24,9 +24,7 @@ public:
 	Matrix GetViewMatrix();
 	Matrix GetProjectionMatrix();
 	ComPtr<ID3D11Buffer> GetConstantBuffer();
-
-	bool IsOnChunkDirtyFlag();
-	void OffChunkDirtyFlag();
+	Vector3 GetDiffChunkPos();
 
 private:
 	void UpdatePosition(bool keyPressed[256], float dt);
@@ -52,7 +50,8 @@ private:
 	float m_speed;
 
 	bool m_isOnConstantDirtyFlag;
-	bool m_isOnChunkDirtyFlag;
+
+	Vector3 m_diffChunkPos;
 
 	CameraConstantData m_constantData;
 	ComPtr<ID3D11Buffer> m_constantBuffer;
