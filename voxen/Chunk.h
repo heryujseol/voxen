@@ -49,6 +49,4 @@ private:
 	ComPtr<ID3D11Buffer> m_vertexBuffer;
 	ComPtr<ID3D11Buffer> m_indexBuffer;
 	ComPtr<ID3D11Buffer> m_constantBuffer;
-
-	std::vector<std::tuple<int, int, int>> m_activeBlocks;
 };
