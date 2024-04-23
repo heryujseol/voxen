@@ -77,7 +77,8 @@ void ChunkManager::UpdateChunkList(Vector3 cameraChunkPos, int moveDirX, int mov
 			for (int y = 0; y < MAX_HEIGHT_CHUNK_SIZE; ++y) {
 				int ny = Chunk::BLOCK_SIZE * y;
 
-				m_unloadChunkList.push(Vector3((float)nx, (float)ny, (float)nz));
+				if (m_chunks.find(std::make_tuple(nx, ny, nz)) != m_chunks.end())
+					m_unloadChunkList.push(Vector3((float)nx, (float)ny, (float)nz));
 			}
 		}
 
@@ -114,7 +115,8 @@ void ChunkManager::UpdateChunkList(Vector3 cameraChunkPos, int moveDirX, int mov
 			for (int y = 0; y < MAX_HEIGHT_CHUNK_SIZE; ++y) {
 				int ny = Chunk::BLOCK_SIZE * y;
 
-				m_unloadChunkList.push(Vector3((float)nx, (float)ny, (float)nz));
+				if (m_chunks.find(std::make_tuple(nx, ny, nz)) != m_chunks.end())
+					m_unloadChunkList.push(Vector3((float)nx, (float)ny, (float)nz));
 			}
 		}
 

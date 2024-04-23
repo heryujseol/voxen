@@ -27,7 +27,7 @@ private:
 	void UpdateChunkList(Vector3 cameraChunkPos, int moveDirX, int moveDirZ);
 	bool FrustumCulling(Vector3 position, Camera& camera);
 
-	static const int CHUNK_SIZE = 11;
+	static const int CHUNK_SIZE = 7;
 	static const int MAX_HEIGHT = 256;
 	static const int MAX_HEIGHT_CHUNK_SIZE = MAX_HEIGHT / Chunk::BLOCK_SIZE;
 	std::map<std::tuple<int, int, int>, Chunk*> m_chunks;
