@@ -1,74 +1,54 @@
 #include "Chunk.h"
 #include "DXUtils.h"
 
-Chunk::Chunk(int x, int y, int z)
-	: m_position((float)x, (float)y, (float)z), m_stride(0), m_offset(0), m_indexCount(0),
-	  m_vertexBuffer(nullptr), m_indexBuffer(nullptr), m_constantBuffer(nullptr), m_isLoaded(false)
+#include <future>
+
+Chunk::Chunk()
+	: m_position(0.0, 0.0, 0.0), m_stride(0), m_offset(0), m_indexCount(0), m_vertexBuffer(nullptr),
+	  m_indexBuffer(nullptr), m_constantBuffer(nullptr), m_isLoaded(false)
 {
 }
 
-Chunk::~Chunk()
-{
-	m_blocks.clear();
-	m_vertices.clear();
-	m_indices.clear();
-
-	if (m_vertexBuffer) {
-		m_vertexBuffer.Reset();
-		m_vertexBuffer = nullptr;
-	}
-	if (m_indexBuffer) {
-		m_vertexBuffer.Reset();
-		m_indexBuffer = nullptr;
-	}
-	if (m_constantBuffer) {
-		m_vertexBuffer.Reset();
-		m_constantBuffer = nullptr;
-	}
-}
+Chunk::~Chunk() { Clear(); }
 
 bool Chunk::Initialize()
 {
-	m_blocks.resize(BLOCK_SIZE);
-	for (int i = 0; i < BLOCK_SIZE; ++i) {
-		m_blocks[i].resize(BLOCK_SIZE);
-		for (int j = 0; j < BLOCK_SIZE; ++j) {
-			m_blocks[i][j].resize(BLOCK_SIZE);
-		}
-	}
-
+	std::vector<Vector3> activeBlocks;
 	for (int x = 0; x < BLOCK_SIZE; ++x) {
 		for (int z = 0; z < BLOCK_SIZE; ++z) {
 			int height = Utils::GetHeight((int)m_position.x + x, (int)m_position.z + z);
-			for (int y = 0; y < BLOCK_SIZE && m_position.y + y <= height; ++y) {
-				m_blocks[x][y][z].SetActive(true);
-			}
-		}
-	}
-
-	for (int x = 0; x < BLOCK_SIZE; ++x) {
-		for (int y = 0; y < BLOCK_SIZE; ++y) {
-			for (int z = 0; z < BLOCK_SIZE; ++z) {
-				if (m_blocks[x][y][z].IsActive()) {
-					bool x_n = true, x_p = true, y_n = true, y_p = true, z_n = true, z_p = true;
-					if (x > 0 && m_blocks[x - 1][y][z].IsActive())
-						x_n = false;
-					if (x < BLOCK_SIZE - 1 && m_blocks[x + 1][y][z].IsActive())
-						x_p = false;
-					if (y - 1 >= 0 && m_blocks[x][y - 1][z].IsActive())
-						y_n = false;
-					if (y < BLOCK_SIZE - 1 && m_blocks[x][y + 1][z].IsActive())
-						y_p = false;
-					if (z > 0 && m_blocks[x][y][z - 1].IsActive())
-						z_n = false;
-					if (z < BLOCK_SIZE - 1 && m_blocks[x][y][z + 1].IsActive())
-						z_p = false;
-					CreateBlock(x, y, z, x_n, x_p, y_n, y_p, z_n, z_p);
+			for (int y = 0; y < BLOCK_SIZE; ++y) {
+				if (m_position.y + y <= height) {
+					m_blocks[x][y][z].SetActive(true);
+					activeBlocks.push_back(Vector3((float)x, (float)y, (float)z));
+				}
+				else {
+					m_blocks[x][y][z].SetActive(false);
 				}
 			}
 		}
 	}
 
+	for (auto it = activeBlocks.begin(); it != activeBlocks.end(); ++it) {
+		int x = (int)it->x;
+		int y = (int)it->y;
+		int z = (int)it->z;
+
+		bool x_n = true, x_p = true, y_n = true, y_p = true, z_n = true, z_p = true;
+		if (x > 0 && m_blocks[x - 1][y][z].IsActive())
+			x_n = false;
+		if (x < BLOCK_SIZE - 1 && m_blocks[x + 1][y][z].IsActive())
+			x_p = false;
+		if (y - 1 >= 0 && m_blocks[x][y - 1][z].IsActive())
+			y_n = false;
+		if (y < BLOCK_SIZE - 1 && m_blocks[x][y + 1][z].IsActive())
+			y_p = false;
+		if (z > 0 && m_blocks[x][y][z - 1].IsActive())
+			z_n = false;
+		if (z < BLOCK_SIZE - 1 && m_blocks[x][y][z + 1].IsActive())
+			z_p = false;
+		CreateBlock(x, y, z, x_n, x_p, y_n, y_p, z_n, z_p);
+	}
 
 	m_indexCount = m_indices.size();
 	if (m_indexCount != 0) {
@@ -111,6 +91,27 @@ void Chunk::Render()
 	Graphics::context->VSSetConstantBuffers(0, 1, m_constantBuffer.GetAddressOf());
 
 	Graphics::context->DrawIndexed((UINT)m_indexCount, 0, 0);
+}
+
+void Chunk::Clear()
+{
+	m_isLoaded = false;
+
+	std::vector<Vertex>().swap(m_vertices); // clear container reallocating 
+	std::vector<uint32_t>().swap(m_indices);
+
+	if (m_vertexBuffer) {
+		m_vertexBuffer.ReleaseAndGetAddressOf();
+		m_vertexBuffer = nullptr;
+	}
+	if (m_indexBuffer) {
+		m_vertexBuffer.ReleaseAndGetAddressOf();
+		m_indexBuffer = nullptr;
+	}
+	if (m_constantBuffer) {
+		m_vertexBuffer.ReleaseAndGetAddressOf();
+		m_constantBuffer = nullptr;
+	}
 }
 
 void Chunk::CreateBlock(
@@ -232,7 +233,6 @@ void Chunk::CreateBlock(
 	}
 
 	int newVertexCount = (int)m_vertices.size() - originVertexSize;
-	std::vector<uint32_t> indices;
 	for (int i = 0; i < newVertexCount; i += 4) {
 		m_indices.push_back(originVertexSize + i);
 		m_indices.push_back(originVertexSize + i + 1);
@@ -249,3 +249,5 @@ bool Chunk::IsLoaded() { return m_isLoaded; }
 bool Chunk::IsEmpty() { return m_indexCount == 0; }
 
 Vector3 Chunk::GetPosition() { return m_position; }
+
+void Chunk::SetPosition(Vector3 position) { m_position = position; }

@@ -15,31 +15,33 @@ using namespace DirectX::SimpleMath;
 class Chunk {
 
 public:
-	
-	Chunk(int x, int y, int z);
+	Chunk();
 	~Chunk();
 
 	bool Initialize();
 	void Update(float dt);
 	void Render();
-	
+	void Clear();
+
 	bool IsLoaded();
 	bool IsEmpty();
+
 	Vector3 GetPosition();
+	void SetPosition(Vector3 position);
 
 	static const int BLOCK_SIZE = 32;
 
 private:
-	Chunk();
 	void CreateBlock(
 		int x, int y, int z, bool x_n, bool x_p, bool y_n, bool y_p, bool z_n, bool z_p);
-
-	bool m_isLoaded;
+	
 	UINT m_stride;
 	UINT m_offset;
 
+	bool m_isLoaded;
 	Vector3 m_position;
-	std::vector<std::vector<std::vector<Block>>> m_blocks;
+
+	Block m_blocks[BLOCK_SIZE][BLOCK_SIZE][BLOCK_SIZE];
 
 	std::vector<Vertex> m_vertices;
 	std::vector<uint32_t> m_indices;

@@ -2,7 +2,6 @@
 
 #include <map>
 #include <queue>
-#include <thread>
 #include <future>
 
 #include "Chunk.h"
@@ -22,18 +21,24 @@ public:
 	void Render(Camera& camera);
 
 private:
-	void LoadChunks();
-	void UnloadChunks();
-	void UpdateChunkList(Vector3 cameraChunkPos, int moveDirX, int moveDirZ);
+	void UpdateChunkList(Vector3 cameraChunkPos);
+	void UpdateLoadChunks();
+	void UpdateUnloadChunks();
+	
 	bool FrustumCulling(Vector3 position, Camera& camera);
 
-	static const int CHUNK_SIZE = 7;
+	Chunk* GetChunkFromPool();
+	void ReleaseChunkToPool(Chunk* chunk);
+
+	static const int CHUNK_SIZE = 21;
 	static const int MAX_HEIGHT = 256;
 	static const int MAX_HEIGHT_CHUNK_SIZE = MAX_HEIGHT / Chunk::BLOCK_SIZE;
-	std::map<std::tuple<int, int, int>, Chunk*> m_chunks;
+	static const int MAX_ASYNC_LOAD_COUNT = 4;
 
-	std::queue<Vector3> m_loadChunkList;
-	std::queue<Vector3> m_unloadChunkList;
+	std::vector<Chunk*> m_chunkPool;
+	std::map<std::tuple<int, int, int>, Chunk*> m_chunkMap;
+	std::vector<Chunk*> m_loadChunkList;
+	std::vector<Chunk*> m_unloadChunkList;
 
-	std::future<void> m_loadFuture;
+	std::vector<std::future<bool>> m_loadFutures;
 };

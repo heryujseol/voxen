@@ -5,7 +5,7 @@ Camera::Camera()
 	: m_projFovAngleY(80.0f), m_nearZ(0.01f), m_farZ(800.0f), m_aspectRatio(16.0f / 9.0f),
 	  m_eyePos(0.0f, 0.0f, 0.0f), m_chunkPos(0.0f, 0.0f, 0.0f), m_to(0.0f, 0.0f, 1.0f),
 	  m_up(0.0f, 1.0f, 0.0f), m_right(1.0f, 0.0f, 0.0f), m_viewNdcX(0.0f), m_viewNdcY(0.0f),
-	  m_speed(20.0f), m_isOnConstantDirtyFlag(false)
+	  m_speed(20.0f), m_isOnConstantDirtyFlag(false), m_isOnChunkDirtyFlag(false)
 {
 	m_constantData.view = Matrix();
 	m_constantData.proj = Matrix();
@@ -68,9 +68,13 @@ void Camera::UpdatePosition(bool keyPressed[256], float dt)
 		m_isOnConstantDirtyFlag = true;
 	}
 
-	Vector3 newChunkPos = Utils::CalcChunkPos(m_eyePos);
-	m_diffChunkPos = newChunkPos - m_chunkPos;
-	m_chunkPos = newChunkPos;
+	if (m_isOnConstantDirtyFlag) {
+		Vector3 newChunkPos = Utils::CalcChunkPos(m_eyePos);
+		if (newChunkPos != m_chunkPos) {
+			m_isOnChunkDirtyFlag = true;
+			m_chunkPos = newChunkPos;
+		}
+	}
 }
 
 void Camera::UpdateViewDirection(float ndcX, float ndcY)
@@ -115,8 +119,6 @@ Matrix Camera::GetProjectionMatrix()
 }
 
 ComPtr<ID3D11Buffer> Camera::GetConstantBuffer() { return m_constantBuffer; }
-
-Vector3 Camera::GetDiffChunkPos() { return m_diffChunkPos; }
 
 void Camera::MoveForward(float dt) { m_eyePos += m_to * m_speed * dt; }
 
