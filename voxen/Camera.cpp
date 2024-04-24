@@ -2,7 +2,7 @@
 #include "DXUtils.h"
 
 Camera::Camera()
-	: m_projFovAngleY(80.0f), m_nearZ(0.01f), m_farZ(360.0f), m_aspectRatio(16.0f / 9.0f),
+	: m_projFovAngleY(80.0f), m_nearZ(0.01f), m_farZ(800.0f), m_aspectRatio(16.0f / 9.0f),
 	  m_eyePos(0.0f, 0.0f, 0.0f), m_chunkPos(0.0f, 0.0f, 0.0f), m_to(0.0f, 0.0f, 1.0f),
 	  m_up(0.0f, 1.0f, 0.0f), m_right(1.0f, 0.0f, 0.0f), m_viewNdcX(0.0f), m_viewNdcY(0.0f),
 	  m_speed(20.0f), m_isOnConstantDirtyFlag(false), m_isOnChunkDirtyFlag(false)
@@ -16,7 +16,7 @@ Camera::~Camera() {}
 bool Camera::Initialize(Vector3 pos)
 {
 	m_eyePos = pos;
-	m_chunkPos = Utils::CalcChunkOffset(m_eyePos);
+	m_chunkPos = Utils::CalcChunkPos(m_eyePos);
 
 	m_constantData.view = GetViewMatrix();
 	m_constantData.proj = GetProjectionMatrix();
@@ -69,10 +69,10 @@ void Camera::UpdatePosition(bool keyPressed[256], float dt)
 	}
 
 	if (m_isOnConstantDirtyFlag) {
-		Vector3 newChunkOffset = Utils::CalcChunkOffset(m_eyePos);
-		if (newChunkOffset != m_chunkPos) {
-			m_chunkPos = newChunkOffset;
+		Vector3 newChunkPos = Utils::CalcChunkPos(m_eyePos);
+		if (newChunkPos != m_chunkPos) {
 			m_isOnChunkDirtyFlag = true;
+			m_chunkPos = newChunkPos;
 		}
 	}
 }
@@ -123,7 +123,3 @@ ComPtr<ID3D11Buffer> Camera::GetConstantBuffer() { return m_constantBuffer; }
 void Camera::MoveForward(float dt) { m_eyePos += m_to * m_speed * dt; }
 
 void Camera::MoveRight(float dt) { m_eyePos += m_right * m_speed * dt; }
-
-bool Camera::IsOnChunkDirtyFlag() { return m_isOnChunkDirtyFlag; }
-
-void Camera::OffChunkDirtyFlag() { m_isOnChunkDirtyFlag = false; }

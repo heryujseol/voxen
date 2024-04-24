@@ -1,147 +1,139 @@
 #include "ChunkManager.h"
 #include "Graphics.h"
+#include "Utils.h"
 
 #include <iostream>
 
-ChunkManager::ChunkManager()
-{	
-	m_loadFuture = std::async(std::launch::async, []() {});
-}
+ChunkManager::ChunkManager() {}
 
 ChunkManager::~ChunkManager() {}
 
-bool ChunkManager::Initialize(Vector3 cameraOffset)
+bool ChunkManager::Initialize(Vector3 cameraChunkPos)
 {
-	for (int i = 0; i < CHUNK_SIZE; ++i) {
-		for (int j = 0; j < CHUNK_SIZE; ++j) {
-			for (int k = 0; k < CHUNK_SIZE; ++k) {
-				int x = (int)cameraOffset.x + Chunk::BLOCK_SIZE * (i - CHUNK_SIZE / 2);
-				int y = (int)cameraOffset.y + Chunk::BLOCK_SIZE * (j - CHUNK_SIZE / 2);
-				int z = (int)cameraOffset.z + Chunk::BLOCK_SIZE * (k - CHUNK_SIZE / 2);
-
-				m_chunks[std::make_tuple(x, y, z)] = Chunk(x, y, z);
-				if (!m_chunks[std::make_tuple(x, y, z)].Initialize())
-					return false;
-			}
-		}
+	for (int i = 0; i < (CHUNK_SIZE + 1) * (CHUNK_SIZE + 1) * (MAX_HEIGHT_CHUNK_SIZE + 1); ++i) {
+		m_chunkPool.push_back(new Chunk());
 	}
+
+	UpdateChunkList(cameraChunkPos);
 
 	return true;
 }
 
 void ChunkManager::Update(Camera& camera)
 {
-	if (camera.IsOnChunkDirtyFlag()) {
+	if (camera.m_isOnChunkDirtyFlag) {
 		UpdateChunkList(camera.GetChunkPosition());
-		camera.OffChunkDirtyFlag();
-
-		if (!m_unloadChunkList.empty()) {
-			UnloadChunks();
-		}
+		camera.m_isOnChunkDirtyFlag = false;
 	}
 
-	if (!m_loadChunkList.empty()) {
-		if (m_loadFuture.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) {
-			m_loadFuture = std::async(std::launch::async, &ChunkManager::LoadChunks, this);
-		}
-	}
+	UpdateLoadChunks();
+	UpdateUnloadChunks();
 }
 
 void ChunkManager::Render(Camera& camera)
 {
-	for (auto& c : m_chunks) {
-		if (c.second.IsEmpty() || !c.second.IsLoaded())
+	for (auto& c : m_chunkMap) {
+		if (!c.second->IsLoaded())
 			continue;
 
-		if (!FrustumCulling(c.second.GetPosition(), camera))
+		if (c.second->IsEmpty())
 			continue;
-		c.second.Render();
+
+		if (!FrustumCulling(c.second->GetPosition(), camera))
+			continue;
+
+		c.second->Render();
 	}
 }
 
-void ChunkManager::LoadChunks()
-{
-	int count = 0;
-	while (!m_loadChunkList.empty()) {
-		Vector3 pos = m_loadChunkList.back();
-		m_loadChunkList.pop_back();
-
-		int x = (int)pos.x;
-		int y = (int)pos.y;
-		int z = (int)pos.z;
-		m_chunks[std::make_tuple(x, y, z)] = Chunk(x, y, z);
-		m_chunks[std::make_tuple(x, y, z)].Initialize();
-		count++;
-
-		if (count == 1) //  chunks loading per each frame
-			return;
-	}
-}
-
-void ChunkManager::UnloadChunks()
-{
-	for (int i = 0; i < m_unloadChunkList.size(); ++i) {
-		Vector3 pos = m_unloadChunkList[i];
-		auto position = std::make_tuple((int)pos.x, (int)pos.y, (int)pos.z);
-
-		m_chunks.erase(position);
-	}
-	m_unloadChunkList.clear();
-}
-
-void ChunkManager::UpdateChunkList(Vector3 cameraOffset)
+void ChunkManager::UpdateChunkList(Vector3 cameraChunkPos)
 {
 	std::map<std::tuple<int, int, int>, bool> loadedChunkMap;
-	for (int i = 0; i < CHUNK_SIZE; ++i) {
+	for (int i = 0; i < MAX_HEIGHT_CHUNK_SIZE; ++i) {
 		for (int j = 0; j < CHUNK_SIZE; ++j) {
 			for (int k = 0; k < CHUNK_SIZE; ++k) {
-				int x = (int)cameraOffset.x + Chunk::BLOCK_SIZE * (i - CHUNK_SIZE / 2);
-				int y = (int)cameraOffset.y + Chunk::BLOCK_SIZE * (j - CHUNK_SIZE / 2);
-				int z = (int)cameraOffset.z + Chunk::BLOCK_SIZE * (k - CHUNK_SIZE / 2);
+				int y = Chunk::BLOCK_SIZE * i;
+				int x = (int)cameraChunkPos.x + Chunk::BLOCK_SIZE * (j - CHUNK_SIZE / 2);
+				int z = (int)cameraChunkPos.z + Chunk::BLOCK_SIZE * (k - CHUNK_SIZE / 2);
 
-				if (m_chunks.find(std::make_tuple(x, y, z)) == m_chunks.end())
-					m_loadChunkList.push_back(
-						Vector3((float)x, (float)y, (float)z)); // will be loaded
+				if (m_chunkMap.find(std::make_tuple(x, y, z)) == m_chunkMap.end()) { // loading
+					Chunk* chunk = GetChunkFromPool();
+					if (chunk) {
+						chunk->SetPosition(Vector3((float)x, (float)y, (float)z));
+
+						m_chunkMap[std::make_tuple(x, y, z)] = chunk;
+						m_loadChunkList.push_back(chunk);
+					}
+				}
 				else
 					loadedChunkMap[std::make_tuple(x, y, z)] = true;
 			}
 		}
 	}
 
-	for (auto& p : m_chunks) { // {1 , 2, 3} -> {1, 2}
-		if (loadedChunkMap.find(p.first) == loadedChunkMap.end() && m_chunks[p.first].IsLoaded()) {
-			int x = std::get<0>(p.first);
-			int y = std::get<1>(p.first);
-			int z = std::get<2>(p.first);
+	for (auto& p : m_chunkMap) { // {1 , 2, 3} -> {1, 2}
+		if (loadedChunkMap.find(p.first) == loadedChunkMap.end() &&
+			m_chunkMap[p.first]->IsLoaded()) {
 
-			m_unloadChunkList.push_back(Vector3((float)x, (float)y, (float)z));
+			m_unloadChunkList.push_back(p.second);
 		}
 	}
 }
 
-bool ChunkManager::FrustumCulling(Vector3 position, Camera& camera) {
-	
+void ChunkManager::UpdateLoadChunks()
+{
+	for (auto it = m_loadFutures.begin(); it != m_loadFutures.end();) {
+		if (it->wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+			it = m_loadFutures.erase(it);
+		else
+			++it;
+	}
+
+	while (!m_loadChunkList.empty() && m_loadFutures.size() < MAX_ASYNC_LOAD_COUNT) {
+		Chunk* chunk = m_loadChunkList.back();
+		m_loadChunkList.pop_back();
+
+		m_loadFutures.push_back(std::async(std::launch::async, &Chunk::Initialize, chunk));
+	}
+}
+
+void ChunkManager::UpdateUnloadChunks()
+{
+	while (!m_unloadChunkList.empty()) {
+		Chunk* chunk = m_unloadChunkList.back();
+		m_unloadChunkList.pop_back();
+
+		Vector3 pos = chunk->GetPosition();
+		int x = (int)pos.x;
+		int y = (int)pos.y;
+		int z = (int)pos.z;
+
+		chunk->Clear();
+		m_chunkMap.erase(std::make_tuple(x, y, z));
+		ReleaseChunkToPool(chunk);
+	}
+}
+
+bool ChunkManager::FrustumCulling(Vector3 position, Camera& camera)
+{
 	Matrix invMat = camera.GetProjectionMatrix().Invert() * camera.GetViewMatrix().Invert();
 
-	std::vector<Vector3> worldPos = {
-		Vector3::Transform(Vector3(-1.0f, 1.0f, 0.0f), invMat),
+	std::vector<Vector3> worldPos = { Vector3::Transform(Vector3(-1.0f, 1.0f, 0.0f), invMat),
 		Vector3::Transform(Vector3(1.0f, 1.0f, 0.0f), invMat),
 		Vector3::Transform(Vector3(1.0f, -1.0f, 0.0f), invMat),
 		Vector3::Transform(Vector3(-1.0f, -1.0f, 0.0f), invMat),
 		Vector3::Transform(Vector3(-1.0f, 1.0f, 1.0f), invMat),
 		Vector3::Transform(Vector3(1.0f, 1.0f, 1.0f), invMat),
 		Vector3::Transform(Vector3(1.0f, -1.0f, 1.0f), invMat),
-		Vector3::Transform(Vector3(-1.0f, -1.0f, 1.0f), invMat)
-	};
+		Vector3::Transform(Vector3(-1.0f, -1.0f, 1.0f), invMat) };
 
-	std::vector<Vector4> planes = { 
-		DirectX::XMPlaneFromPoints(worldPos[0], worldPos[1], worldPos[2]),
+	std::vector<Vector4> planes = { DirectX::XMPlaneFromPoints(
+										worldPos[0], worldPos[1], worldPos[2]),
 		DirectX::XMPlaneFromPoints(worldPos[7], worldPos[6], worldPos[5]),
 		DirectX::XMPlaneFromPoints(worldPos[4], worldPos[5], worldPos[1]),
 		DirectX::XMPlaneFromPoints(worldPos[3], worldPos[2], worldPos[6]),
 		DirectX::XMPlaneFromPoints(worldPos[4], worldPos[0], worldPos[3]),
-		DirectX::XMPlaneFromPoints(worldPos[1], worldPos[5], worldPos[6])
-	};
+		DirectX::XMPlaneFromPoints(worldPos[1], worldPos[5], worldPos[6]) };
 
 	for (int i = 0; i < 6; ++i) {
 		if (XMVectorGetX(XMPlaneDotCoord(planes[i], position)) < 0.0f)
@@ -150,17 +142,32 @@ bool ChunkManager::FrustumCulling(Vector3 position, Camera& camera) {
 			continue;
 		if (XMVectorGetX(XMPlaneDotCoord(planes[i], position + Vector3(0.0f, 32.f, 0.0f))) <= 0.0f)
 			continue;
-		if (XMVectorGetX(XMPlaneDotCoord(planes[i], position + Vector3(32.0f, 32.0f, 0.0f))) <= 0.0f)
+		if (XMVectorGetX(XMPlaneDotCoord(planes[i], position + Vector3(32.0f, 32.0f, 0.0f))) <=
+			0.0f)
 			continue;
 		if (XMVectorGetX(XMPlaneDotCoord(planes[i], position + Vector3(0.0f, 0.0f, 32.0f))) <= 0.0f)
 			continue;
-		if (XMVectorGetX(XMPlaneDotCoord(planes[i], position + Vector3(32.0f, 0.0f, 32.0f))) <= 0.0f)
+		if (XMVectorGetX(XMPlaneDotCoord(planes[i], position + Vector3(32.0f, 0.0f, 32.0f))) <=
+			0.0f)
 			continue;
 		if (XMVectorGetX(XMPlaneDotCoord(planes[i], position + Vector3(0.0f, 32.f, 32.0f))) <= 0.0f)
 			continue;
-		if (XMVectorGetX(XMPlaneDotCoord(planes[i], position + Vector3(32.0f, 32.0f, 32.0f))) <= 0.0f)
+		if (XMVectorGetX(XMPlaneDotCoord(planes[i], position + Vector3(32.0f, 32.0f, 32.0f))) <=
+			0.0f)
 			continue;
 		return false;
 	}
 	return true;
 }
+
+Chunk* ChunkManager::GetChunkFromPool()
+{
+	if (!m_chunkPool.empty()) {
+		Chunk* chunk = m_chunkPool.back();
+		m_chunkPool.pop_back();
+		return chunk;
+	}
+	return nullptr;
+}
+
+void ChunkManager::ReleaseChunkToPool(Chunk* chunk) { m_chunkPool.push_back(chunk); }
