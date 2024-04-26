@@ -38,6 +38,7 @@ private:
 	Skybox m_skybox;
 
 	bool m_keyPressed[256];
+	bool m_keyToggle[256];
 	float m_mouseNdcX;
 	float m_mouseNdcY;
 };

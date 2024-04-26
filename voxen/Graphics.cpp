@@ -71,6 +71,7 @@ namespace Graphics {
 	void SetPipelineStates(GraphicsPSO& pso);
 
 	GraphicsPSO basicPSO;
+	GraphicsPSO basicWirePSO;
 	GraphicsPSO skyboxPSO;
 }
 
@@ -370,6 +371,10 @@ void Graphics::InitGraphicsPSO()
 	basicPSO.pixelShader = basicPS;
 	basicPSO.samplerStates.push_back(pointClampSS.Get());
 	basicPSO.depthStencilState = basicDSS;
+
+	// basic wire PSO
+	basicWirePSO = basicPSO;
+	basicWirePSO.rasterizerState = wireRS;
 
 	// skyboxPSO
 	skyboxPSO = basicPSO;

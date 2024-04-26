@@ -19,9 +19,9 @@ public:
 		int floorY = (int)floor(pos.y);
 		int floorZ = (int)floor(pos.z);
 
-		int modX = ((floorX % Chunk::BLOCK_SIZE) + Chunk::BLOCK_SIZE) % Chunk::BLOCK_SIZE;
-		int modY = ((floorY % Chunk::BLOCK_SIZE) + Chunk::BLOCK_SIZE) % Chunk::BLOCK_SIZE;
-		int modZ = ((floorZ % Chunk::BLOCK_SIZE) + Chunk::BLOCK_SIZE) % Chunk::BLOCK_SIZE;
+		int modX = ((floorX % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+		int modY = ((floorY % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+		int modZ = ((floorZ % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
 
 		return Vector3((float)(floorX - modX), (float)(floorY - modY), (float)(floorZ - modZ));
 	}
@@ -72,6 +72,7 @@ public:
 		float inter_x0 = CubicLerp(n0, n1, p.x - (float)x0);
 		float inter_x1 = CubicLerp(n2, n3, p.x - (float)x0);
 		float inter_y = CubicLerp(inter_x0, inter_x1, p.y - (float)y0);
+
 		return inter_y;
 	}
 

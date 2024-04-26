@@ -10,7 +10,7 @@ ChunkManager::~ChunkManager() {}
 
 bool ChunkManager::Initialize(Vector3 cameraChunkPos)
 {
-	for (int i = 0; i < (CHUNK_SIZE + 1) * (CHUNK_SIZE + 1) * (MAX_HEIGHT_CHUNK_SIZE + 1); ++i) {
+	for (int i = 0; i < (CHUNK_COUNT + 1) * (CHUNK_COUNT + 1) * (MAX_HEIGHT_CHUNK_COUNT + 1); ++i) {
 		m_chunkPool.push_back(new Chunk());
 	}
 
@@ -49,12 +49,12 @@ void ChunkManager::Render(Camera& camera)
 void ChunkManager::UpdateChunkList(Vector3 cameraChunkPos)
 {
 	std::map<std::tuple<int, int, int>, bool> loadedChunkMap;
-	for (int i = 0; i < MAX_HEIGHT_CHUNK_SIZE; ++i) {
-		for (int j = 0; j < CHUNK_SIZE; ++j) {
-			for (int k = 0; k < CHUNK_SIZE; ++k) {
-				int y = Chunk::BLOCK_SIZE * i;
-				int x = (int)cameraChunkPos.x + Chunk::BLOCK_SIZE * (j - CHUNK_SIZE / 2);
-				int z = (int)cameraChunkPos.z + Chunk::BLOCK_SIZE * (k - CHUNK_SIZE / 2);
+	for (int i = 0; i < MAX_HEIGHT_CHUNK_COUNT; ++i) {
+		for (int j = 0; j < CHUNK_COUNT; ++j) {
+			for (int k = 0; k < CHUNK_COUNT; ++k) {
+				int y = CHUNK_SIZE * i;
+				int x = (int)cameraChunkPos.x + CHUNK_SIZE * (j - CHUNK_COUNT / 2);
+				int z = (int)cameraChunkPos.z + CHUNK_SIZE * (k - CHUNK_COUNT / 2);
 
 				if (m_chunkMap.find(std::make_tuple(x, y, z)) == m_chunkMap.end()) { // loading
 					Chunk* chunk = GetChunkFromPool();
