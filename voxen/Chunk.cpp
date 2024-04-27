@@ -28,75 +28,10 @@ inline int TrailingOnes(uint64_t num)
 	return (int)log2((num & ~(num + 1)) + 1); // __builtin_ctzll or _BitScanForward64}
 }
 
-bool Chunk::Initialize_NO_OPT()
-{
-	auto start_time = std::chrono::steady_clock::now();
-	std::vector<Vector3> activeBlocks;
-	for (int x = 0; x < CHUNK_SIZE; ++x) {
-		for (int z = 0; z < CHUNK_SIZE; ++z) {
-			int height = Utils::GetHeight((int)m_position.x + x, (int)m_position.z + z);
-			for (int y = 0; y < CHUNK_SIZE; ++y) {
-				if (0 <= m_position.y + y && m_position.y + y <= height) {
-					m_blocks[x][y][z].SetActive(true);
-					activeBlocks.push_back(Vector3((float)x, (float)y, (float)z));
-				}
-				else {
-					m_blocks[x][y][z].SetActive(false);
-				}
-			}
-		}
-	}
-
-	for (auto it = activeBlocks.begin(); it != activeBlocks.end(); ++it) {
-		int x = (int)it->x;
-		int y = (int)it->y;
-		int z = (int)it->z;
-
-		bool x_n = true, x_p = true, y_n = true, y_p = true, z_n = true, z_p = true;
-		if (x > 0 && m_blocks[x - 1][y][z].IsActive())
-			x_n = false;
-		if (x < CHUNK_SIZE - 1 && m_blocks[x + 1][y][z].IsActive())
-			x_p = false;
-		if (y - 1 >= 0 && m_blocks[x][y - 1][z].IsActive())
-			y_n = false;
-		if (y < CHUNK_SIZE - 1 && m_blocks[x][y + 1][z].IsActive())
-			y_p = false;
-		if (z > 0 && m_blocks[x][y][z - 1].IsActive())
-			z_n = false;
-		if (z < CHUNK_SIZE - 1 && m_blocks[x][y][z + 1].IsActive())
-			z_p = false;
-		CreateBlock(x, y, z, x_n, x_p, y_n, y_p, z_n, z_p);
-	}
-
-	m_indexCount = m_indices.size();
-	if (m_indexCount != 0) {
-		if (!DXUtils::CreateVertexBuffer(m_vertexBuffer, m_vertices, m_stride, m_offset)) {
-			std::cout << "failed create vertex buffer in chunk" << std::endl;
-			return false;
-		}
-
-		if (!DXUtils::CreateIndexBuffer(m_indexBuffer, m_indices)) {
-			std::cout << "failed create index buffer in chunk" << std::endl;
-			return false;
-		}
-
-		m_constantData.world = Matrix::CreateTranslation(m_position).Transpose();
-		if (!DXUtils::CreateConstantBuffer(m_constantBuffer, m_constantData)) {
-			std::cout << "failed create constant buffer in chunk" << std::endl;
-			return false;
-		}
-		m_constantData.world = m_constantData.world.Transpose();
-	}
-
-	m_isLoaded = true;
-	auto end_time = std::chrono::steady_clock::now();
-	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
-	std::cout << "Function duration: " << duration.count() << " microseconds" << std::endl;
-	return true;
-}
-
 bool Chunk::Initialize()
 {
+	static long long sum = 0;
+	static long long count = 0;
 	auto start_time = std::chrono::steady_clock::now();
 
 	// 1. make axis column bit data
@@ -245,7 +180,9 @@ bool Chunk::Initialize()
 
 	auto end_time = std::chrono::steady_clock::now();
 	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
-	std::cout << "Function duration: " << duration.count() << " microseconds" << std::endl;
+	sum += duration.count();
+	count++;
+	std::cout << "Function Average duration: " << (double)sum / (double)count << " microseconds" << std::endl;
 
 	return true;
 }
