@@ -102,7 +102,6 @@ float4 main(vsOutput input) : SV_TARGET
     
     // atlas test
     // 2048 2048 -> 텍스쳐당 128x128, 그게 16x16
-    uint tex_size = 128; // 실제 하나의 텍스쳐 조각 당 크기
     uint tex_count = 16;  // 한 줄의 텍스쳐 개수
     
     // [type * 6 + side] => 1차원 인덱스를 2차원 인덱스 좌표로 변경
