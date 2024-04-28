@@ -131,4 +131,21 @@ public:
 
 		delete[] img;
 	}
+
+	static inline int GetIndexFrom3D(int axis, int y, int x, int length)
+	{
+		return (length * length) * axis + length * y + x;
+	}
+
+	static inline int TrailingZeros(uint64_t num)
+	{
+		if (num == 0)
+			return 64;
+		return (int)log2(num & ((~num) + 1)); // __builtin_ctzll or _BitScanForward64
+	}
+
+	static inline int TrailingOnes(uint64_t num)
+	{
+		return (int)log2((num & ~(num + 1)) + 1); // __builtin_ctzll or _BitScanForward64}
+	}
 };

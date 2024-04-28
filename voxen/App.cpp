@@ -245,7 +245,7 @@ bool App::InitScene()
 	if (!m_chunkManager.Initialize(m_camera.GetChunkPosition()))
 		return false;
 
-	if (!m_skybox.Initialize())
+	if (!m_skybox.Initialize(400.0f))
 		return false;
 
 	return true;

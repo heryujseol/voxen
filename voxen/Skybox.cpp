@@ -2,21 +2,23 @@
 #include "Graphics.h"
 #include "DXUtils.h"
 
-Skybox::Skybox() : m_stride(0), m_offset(0), m_indexCount(0) {}
+Skybox::Skybox()
+	: m_stride(sizeof(Vertex)), m_offset(0), m_vertexBuffer(nullptr), m_indexBuffer(nullptr)
+{
+}
 
 Skybox::~Skybox() {}
 
-bool Skybox::Initialize()
+bool Skybox::Initialize(float scale)
 {
 	// make block
-	CreateBox(400.0f);
+	CreateBox(scale);
 
-	if (!DXUtils::CreateVertexBuffer(m_vertexBuffer, m_vertices, m_stride, m_offset)) {
+	if (!DXUtils::CreateVertexBuffer(m_vertexBuffer, m_vertices)) {
 		std::cout << "failed create vertex buffer in chunk" << std::endl;
 		return false;
 	}
 
-	m_indexCount = m_indices.size();
 	if (!DXUtils::CreateIndexBuffer(m_indexBuffer, m_indices)) {
 		std::cout << "failed create index buffer in chunk" << std::endl;
 		return false;
@@ -25,13 +27,13 @@ bool Skybox::Initialize()
 	return true;
 }
 
-void Skybox::Render() 
+void Skybox::Render()
 {
 	Graphics::context->IASetIndexBuffer(m_indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
 	Graphics::context->IASetVertexBuffers(
 		0, 1, m_vertexBuffer.GetAddressOf(), &m_stride, &m_offset);
 
-	Graphics::context->DrawIndexed((UINT)m_indexCount, 0, 0);
+	Graphics::context->DrawIndexed((UINT)m_indices.size(), 0, 0);
 }
 
 void Skybox::CreateBox(float scale)

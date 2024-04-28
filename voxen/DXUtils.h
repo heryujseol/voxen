@@ -21,11 +21,8 @@ class DXUtils {
 public:
 	template <typename Vertex>
 	static bool CreateVertexBuffer(ComPtr<ID3D11Buffer>& vertexBuffer,
-		std::vector<Vertex>& vertices, UINT& stride, UINT& offset)
+		std::vector<Vertex>& vertices)
 	{
-		stride = sizeof(Vertex);
-		offset = 0;
-
 		D3D11_BUFFER_DESC desc;
 		ZeroMemory(&desc, sizeof(desc));
 		desc.ByteWidth = UINT(sizeof(Vertex) * vertices.size());

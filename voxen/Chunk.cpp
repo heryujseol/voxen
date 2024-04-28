@@ -4,29 +4,12 @@
 #include <future>
 
 Chunk::Chunk()
-	: m_position(0.0, 0.0, 0.0), m_stride(0), m_offset(0), m_indexCount(0), m_vertexBuffer(nullptr),
+	: m_position(0.0, 0.0, 0.0), m_stride(sizeof(Vertex)), m_offset(0), m_vertexBuffer(nullptr),
 	  m_indexBuffer(nullptr), m_constantBuffer(nullptr), m_isLoaded(false)
 {
 }
 
 Chunk::~Chunk() { Clear(); }
-
-inline int GetIndexFrom3D(int axis, int y, int x, int length)
-{
-	return (length * length) * axis + length * y + x;
-}
-
-inline int TrailingZeros(uint64_t num)
-{
-	if (num == 0)
-		return 64;
-	return (int)log2(num & ((~num) + 1)); // __builtin_ctzll or _BitScanForward64
-}
-
-inline int TrailingOnes(uint64_t num)
-{
-	return (int)log2((num & ~(num + 1)) + 1); // __builtin_ctzll or _BitScanForward64}
-}
 
 bool Chunk::Initialize()
 {
@@ -45,11 +28,11 @@ bool Chunk::Initialize()
 
 				if (m_blocks[x][y][z].IsActive()) {
 					// x dir column
-					axisColBit[GetIndexFrom3D(0, y, z, CHUNK_SIZE_P)] |= (1ULL << x);
+					axisColBit[Utils::Utils::GetIndexFrom3D(0, y, z, CHUNK_SIZE_P)] |= (1ULL << x);
 					// y dir column
-					axisColBit[GetIndexFrom3D(1, z, x, CHUNK_SIZE_P)] |= (1ULL << y);
+					axisColBit[Utils::Utils::GetIndexFrom3D(1, z, x, CHUNK_SIZE_P)] |= (1ULL << y);
 					// z dir column
-					axisColBit[GetIndexFrom3D(2, y, x, CHUNK_SIZE_P)] |= (1ULL << z);
+					axisColBit[Utils::Utils::GetIndexFrom3D(2, y, x, CHUNK_SIZE_P)] |= (1ULL << z);
 				}
 			}
 		}
@@ -67,11 +50,11 @@ bool Chunk::Initialize()
 	for (int axis = 0; axis < 3; ++axis) {
 		for (int h = 1; h < CHUNK_SIZE_P - 1; ++h) {
 			for (int w = 1; w < CHUNK_SIZE_P - 1; ++w) {
-				uint64_t colBit = axisColBit[GetIndexFrom3D(axis, h, w, CHUNK_SIZE_P)];
+				uint64_t colBit = axisColBit[Utils::GetIndexFrom3D(axis, h, w, CHUNK_SIZE_P)];
 
-				cullColBit[GetIndexFrom3D(axis * 2 + 0, h, w, CHUNK_SIZE_P)] =
+				cullColBit[Utils::GetIndexFrom3D(axis * 2 + 0, h, w, CHUNK_SIZE_P)] =
 					colBit & ~(colBit << 1);
-				cullColBit[GetIndexFrom3D(axis * 2 + 1, h, w, CHUNK_SIZE_P)] =
+				cullColBit[Utils::GetIndexFrom3D(axis * 2 + 1, h, w, CHUNK_SIZE_P)] =
 					colBit & ~(colBit >> 1);
 			}
 		}
@@ -93,16 +76,17 @@ bool Chunk::Initialize()
 	std::vector<uint64_t> faceColbit(CHUNK_SIZE2 * 6, 0);
 	for (int face = 0; face < 6; ++face) {
 		for (int h = 0; h < CHUNK_SIZE; ++h) {
-			for (int w = 0; w < CHUNK_SIZE; ++w) { // 34bit: P,CHUNK_SIZE,P
-				uint64_t culledBit = cullColBit[GetIndexFrom3D(face, h + 1, w + 1, CHUNK_SIZE_P)];
+			for (int w = 0; w < CHUNK_SIZE; ++w) {
+				uint64_t culledBit = // 34bit: P,CHUNK_SIZE,P
+					cullColBit[Utils::GetIndexFrom3D(face, h + 1, w + 1, CHUNK_SIZE_P)];
 				culledBit = culledBit >> 1;					   // 33bit: P,CHUNK_SIZE
 				culledBit = culledBit & ~(1ULL << CHUNK_SIZE); // 32bit: CHUNK_SIZE
 
 				while (culledBit) {
-					int bitPos = TrailingZeros(culledBit);		// 1110001000 -> trailing zero : 3
-					culledBit = culledBit & (culledBit - 1ULL); // 1110000000
+					int bitPos = Utils::TrailingZeros(culledBit); // 1110001000 -> trailing zero : 3
+					culledBit = culledBit & (culledBit - 1ULL);	  // 1110000000
 
-					faceColbit[GetIndexFrom3D(face, bitPos, w, CHUNK_SIZE)] |= (1ULL << h);
+					faceColbit[Utils::GetIndexFrom3D(face, bitPos, w, CHUNK_SIZE)] |= (1ULL << h);
 				}
 			}
 		}
@@ -116,22 +100,24 @@ bool Chunk::Initialize()
 	for (int face = 0; face < 6; ++face) {
 		for (int s = 0; s < CHUNK_SIZE; ++s) {
 			for (int i = 0; i < CHUNK_SIZE; ++i) {
-				uint64_t faceBit = faceColbit[GetIndexFrom3D(face, s, i, CHUNK_SIZE)];
+				uint64_t faceBit = faceColbit[Utils::GetIndexFrom3D(face, s, i, CHUNK_SIZE)];
 				int step = 0;
-				while (step < CHUNK_SIZE) {			  // 111100011100
-					step += TrailingZeros(faceBit >> step); // 1111000111|00| -> 2
+				while (step < CHUNK_SIZE) {						   // 111100011100
+					step += Utils::TrailingZeros(faceBit >> step); // 1111000111|00| -> 2
 					if (step >= CHUNK_SIZE)
-						break ;
-					
-					uint64_t ones = TrailingOnes((faceBit >> step)); // 1111000|111|00 -> 3
-					uint64_t submask = ((1ULL << ones) - 1ULL) << step;	 // 111 << 2 -> 11100
-					uint64_t w = 1;
+						break;
+
+					int ones = Utils::TrailingOnes((faceBit >> step)); // 1111000|111|00 -> 3
+					uint64_t submask = ((1ULL << ones) - 1ULL) << step;		// 111 << 2 -> 11100
+
+					int w = 1;
 					while (i + w < CHUNK_SIZE) {
-						uint64_t cb = faceColbit[GetIndexFrom3D(face, s, i + w, CHUNK_SIZE)] & submask;
+						uint64_t cb =
+							faceColbit[Utils::GetIndexFrom3D(face, s, i + w, CHUNK_SIZE)] & submask;
 						if (cb != submask)
 							break;
 
-						faceColbit[GetIndexFrom3D(face, s, i + w, CHUNK_SIZE)] &= (~submask);
+						faceColbit[Utils::GetIndexFrom3D(face, s, i + w, CHUNK_SIZE)] &= (~submask);
 						w++;
 					}
 
@@ -145,7 +131,7 @@ bool Chunk::Initialize()
 						CreateQuad(i, s + 1, step, w, ones, face);
 					else if (face == 4)
 						CreateQuad(i, step, s, w, ones, face);
-					else // face == 5 
+					else // face == 5
 						CreateQuad(i, step, s + 1, w, ones, face);
 
 					step += ones;
@@ -153,12 +139,11 @@ bool Chunk::Initialize()
 			}
 		}
 	}
-	
+
 
 	// 5. make GPU buffer from CPU buffer
-	m_indexCount = m_indices.size();
-	if (m_indexCount != 0) {
-		if (!DXUtils::CreateVertexBuffer(m_vertexBuffer, m_vertices, m_stride, m_offset)) {
+	if (!IsEmpty()) {
+		if (!DXUtils::CreateVertexBuffer(m_vertexBuffer, m_vertices)) {
 			std::cout << "failed create vertex buffer in chunk" << std::endl;
 			return false;
 		}
@@ -182,7 +167,8 @@ bool Chunk::Initialize()
 	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
 	sum += duration.count();
 	count++;
-	std::cout << "Function Average duration: " << (double)sum / (double)count << " microseconds" << std::endl;
+	std::cout << "Function Average duration: " << (double)sum / (double)count << " microseconds"
+			  << std::endl;
 
 	return true;
 }
@@ -203,7 +189,7 @@ void Chunk::Render()
 		0, 1, m_vertexBuffer.GetAddressOf(), &m_stride, &m_offset);
 	Graphics::context->VSSetConstantBuffers(0, 1, m_constantBuffer.GetAddressOf());
 
-	Graphics::context->DrawIndexed((UINT)m_indexCount, 0, 0);
+	Graphics::context->DrawIndexed((UINT)m_indices.size(), 0, 0);
 }
 
 void Chunk::Clear()
@@ -227,9 +213,13 @@ void Chunk::Clear()
 	}
 }
 
-void Chunk::CreateQuad(int x, int y, int z, int merged, int length, int face)
+void Chunk::CreateQuad(int ix, int iy, int iz, int merged, int length, int face)
 {
 	int originVertexSize = (int)m_vertices.size();
+
+	float x = (float)ix;
+	float y = (float)iy;
+	float z = (float)iz;
 
 	Vertex v;
 	if (face == 0) { // left -> right
@@ -262,7 +252,7 @@ void Chunk::CreateQuad(int x, int y, int z, int merged, int length, int face)
 		v.pos = Vector3(x, y, z + merged);
 		m_vertices.push_back(v);
 	}
-	else if (face == 2) {
+	else if (face == 2) { // bottom -> top
 		v.normal = Vector3(0.0f, -1.0f, 0.0f);
 
 		v.pos = Vector3(x, y, z);
@@ -277,7 +267,7 @@ void Chunk::CreateQuad(int x, int y, int z, int merged, int length, int face)
 		v.pos = Vector3(x, y, z + length);
 		m_vertices.push_back(v);
 	}
-	else if (face == 3) {
+	else if (face == 3) { // top -> bottom
 		v.normal = Vector3(0.0f, 1.0f, 0.0f);
 
 		v.pos = Vector3(x, y, z);
@@ -292,22 +282,22 @@ void Chunk::CreateQuad(int x, int y, int z, int merged, int length, int face)
 		v.pos = Vector3(x + merged, y, z);
 		m_vertices.push_back(v);
 	}
-	else if (face == 4) {
+	else if (face == 4) { // front -> back
 		v.normal = Vector3(0.0f, 0.0f, -1.0f);
 
 		v.pos = Vector3(x, y, z);
 		m_vertices.push_back(v);
 
-		v.pos = Vector3(x, y + length, z); // merged -> merged
+		v.pos = Vector3(x, y + length, z);
 		m_vertices.push_back(v);
 
-		v.pos = Vector3(x + merged, y + length, z); // h -> length
+		v.pos = Vector3(x + merged, y + length, z);
 		m_vertices.push_back(v);
 
 		v.pos = Vector3(x + merged, y, z);
 		m_vertices.push_back(v);
 	}
-	else if (face == 5) {
+	else if (face == 5) { // back -> front
 		v.normal = Vector3(0.0f, 0.0f, 1.0f);
 
 		v.pos = Vector3(x, y, z);
@@ -330,134 +320,4 @@ void Chunk::CreateQuad(int x, int y, int z, int merged, int length, int face)
 	m_indices.push_back(originVertexSize);
 	m_indices.push_back(originVertexSize + 2);
 	m_indices.push_back(originVertexSize + 3);
-}
-
-void Chunk::CreateBlock(
-	int x, int y, int z, bool x_n, bool x_p, bool y_n, bool y_p, bool z_n, bool z_p)
-{
-	// À­¸é
-	int originVertexSize = (int)m_vertices.size();
-
-	if (y_p) {
-		Vertex v;
-		v.normal = Vector3(0.0f, 1.0f, 0.0f);
-
-		v.pos = Vector3(x + 0.0f, y + 1.0f, z + 1.0f);
-		m_vertices.push_back(v);
-
-		v.pos = Vector3(x + 1.0f, y + 1.0f, z + 1.0f);
-		m_vertices.push_back(v);
-
-		v.pos = Vector3(x + 1.0f, y + 1.0f, z + 0.0f);
-		m_vertices.push_back(v);
-
-		v.pos = Vector3(x + 0.0f, y + 1.0f, z + 0.0f);
-		m_vertices.push_back(v);
-	}
-
-
-	// ¾Æ·§¸é
-	if (y_n) {
-		Vertex v;
-		v.normal = Vector3(0.0f, -1.0f, 0.0f);
-
-		v.pos = Vector3(x + 0.0f, y + 0.0f, z + 0.0f);
-		m_vertices.push_back(v);
-
-		v.pos = Vector3(x + 1.0f, y + 0.0f, z + 0.0f);
-		m_vertices.push_back(v);
-
-		v.pos = Vector3(x + 1.0f, y + 0.0f, z + 1.0f);
-		m_vertices.push_back(v);
-
-		v.pos = Vector3(x + 0.0f, y + 0.0f, z + 1.0f);
-		m_vertices.push_back(v);
-	}
-
-
-	// ¾Õ¸é
-	if (z_n) {
-		Vertex v;
-		v.normal = Vector3(0.0f, 0.0f, -1.0f);
-
-		v.pos = Vector3(x + 0.0f, y + 1.0f, z + 0.0f);
-		m_vertices.push_back(v);
-
-		v.pos = Vector3(x + 1.0f, y + 1.0f, z + 0.0f);
-		m_vertices.push_back(v);
-
-		v.pos = Vector3(x + 1.0f, y + 0.0f, z + 0.0f);
-		m_vertices.push_back(v);
-
-		v.pos = Vector3(x + 0.0f, y + 0.0f, z + 0.0f);
-		m_vertices.push_back(v);
-	}
-
-
-	// µÞ¸é
-	if (z_p) {
-		Vertex v;
-		v.normal = Vector3(0.0f, 0.0f, 1.0f);
-
-		v.pos = Vector3(x + 1.0f, y + 1.0f, z + 1.0f);
-		m_vertices.push_back(v);
-
-		v.pos = Vector3(x + 0.0f, y + 1.0f, z + 1.0f);
-		m_vertices.push_back(v);
-
-		v.pos = Vector3(x + 0.0f, y + 0.0f, z + 1.0f);
-		m_vertices.push_back(v);
-
-		v.pos = Vector3(x + 1.0f, y + 0.0f, z + 1.0f);
-		m_vertices.push_back(v);
-	}
-
-
-	// ¿ÞÂÊ
-	if (x_n) {
-		Vertex v;
-		v.normal = Vector3(-1.0f, 0.0f, 0.0f);
-
-		v.pos = Vector3(x + 0.0f, y + 1.0f, z + 1.0f);
-		m_vertices.push_back(v);
-
-		v.pos = Vector3(x + 0.0f, y + 1.0f, z + 0.0f);
-		m_vertices.push_back(v);
-
-		v.pos = Vector3(x + 0.0f, y + 0.0f, z + 0.0f);
-		m_vertices.push_back(v);
-
-		v.pos = Vector3(x + 0.0f, y + 0.0f, z + 1.0f);
-		m_vertices.push_back(v);
-	}
-
-
-	// ¿À¸¥ÂÊ
-	if (x_p) {
-		Vertex v;
-		v.normal = Vector3(1.0f, 0.0f, 0.0f);
-
-		v.pos = Vector3(x + 1.0f, y + 1.0f, z + 0.0f);
-		m_vertices.push_back(v);
-
-		v.pos = Vector3(x + 1.0f, y + 1.0f, z + 1.0f);
-		m_vertices.push_back(v);
-
-		v.pos = Vector3(x + 1.0f, y + 0.0f, z + 1.0f);
-		m_vertices.push_back(v);
-
-		v.pos = Vector3(x + 1.0f, y + 0.0f, z + 0.0f);
-		m_vertices.push_back(v);
-	}
-
-	int newVertexCount = (int)m_vertices.size() - originVertexSize;
-	for (int i = 0; i < newVertexCount; i += 4) {
-		m_indices.push_back(originVertexSize + i);
-		m_indices.push_back(originVertexSize + i + 1);
-		m_indices.push_back(originVertexSize + i + 2);
-
-		m_indices.push_back(originVertexSize + i);
-		m_indices.push_back(originVertexSize + i + 2);
-		m_indices.push_back(originVertexSize + i + 3);
-	}
 }
