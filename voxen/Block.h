@@ -3,10 +3,11 @@
 class Block 
 {
 public:
-	Block();
-	~Block();
-	bool IsActive();
-	void SetActive(bool active);
+	Block() : m_isActive(false) {}
+	~Block() {}
+
+	inline bool IsActive() { return m_isActive; }
+	inline void SetActive(bool active) { m_isActive = active; }
 
 private:
 	bool m_isActive;

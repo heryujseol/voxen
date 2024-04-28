@@ -23,7 +23,6 @@ struct vsOutput
     float4 posProj : SV_POSITION;
     float3 posWorld : POSITION;
     float3 normalWorld : NORMAL;
-    float2 texcoord : TEXCOORD;
 };
 
 vsOutput main(vsInput input, uint vID: SV_VertexID)
@@ -38,14 +37,5 @@ vsOutput main(vsInput input, uint vID: SV_VertexID)
     
     output.normalWorld = input.normal;
     
-    uint n = vID % 4;
-    if (n == 0)
-        output.texcoord = float2(0.0, 0.0);
-    else if (n == 1)
-        output.texcoord = float2(1.0, 0.0);
-    else if (n == 2)
-        output.texcoord = float2(1.0, 1.0);
-    else 
-        output.texcoord = float2(0.0, 1.0);
     return output;
 }

@@ -99,5 +99,6 @@ namespace Graphics {
 	extern void InitGraphicsPSO();
 	extern void SetPipelineStates(GraphicsPSO& pso);
 	extern GraphicsPSO basicPSO;
+	extern GraphicsPSO basicWirePSO;
 	extern GraphicsPSO skyboxPSO;
 }

@@ -20,8 +20,12 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 App::App()
 	: m_width(1920), m_height(1080), m_hwnd(), m_chunkManager(), m_camera(), m_skybox(),
-	  m_mouseNdcX(0.0f), m_mouseNdcY(0.0f), m_keyPressed{
-		  0,
+	  m_mouseNdcX(0.0f), m_mouseNdcY(0.0f),
+	  m_keyPressed{
+		  false,
+	  },
+	  m_keyToggle{
+		  false,
 	  }
 {
 	g_app = this;
@@ -52,6 +56,7 @@ LRESULT App::EventHandler(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			return 0;
 		}
 		m_keyPressed[UINT(wParam)] = true;
+		m_keyToggle[UINT(wParam)] = !m_keyToggle[UINT(wParam)];
 		break;
 
 	case WM_KEYUP:
@@ -136,10 +141,13 @@ void App::Render()
 
 	Graphics::context->VSSetConstantBuffers(1, 1, m_camera.GetConstantBuffer().GetAddressOf());
 	Graphics::context->PSSetConstantBuffers(1, 1, m_camera.GetConstantBuffer().GetAddressOf());
-	
+
 
 	// basic
-	Graphics::SetPipelineStates(Graphics::basicPSO);
+	if (m_keyToggle[9])
+		Graphics::SetPipelineStates(Graphics::basicWirePSO);
+	else
+		Graphics::SetPipelineStates(Graphics::basicPSO);
 	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::atlasMapSRV.Get(),
 		Graphics::biomeColorMapSRV.Get(), Graphics::topSRV.Get(), Graphics::sideSRV.Get(),
 		Graphics::dirtSRV.Get() };
@@ -237,7 +245,7 @@ bool App::InitScene()
 	if (!m_chunkManager.Initialize(m_camera.GetChunkPosition()))
 		return false;
 
-	if (!m_skybox.Initialize())
+	if (!m_skybox.Initialize(400.0f))
 		return false;
 
 	return true;
