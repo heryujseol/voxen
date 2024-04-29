@@ -101,6 +101,8 @@ void App::Run()
 			ImGui::Begin("Scene Control");
 			ImGui::Text("Average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate,
 				ImGui::GetIO().Framerate);
+			ImGui::Text("x : %.0f y : %.0f z : %.0f", m_camera.GetPosition().x,
+				m_camera.GetPosition().y, m_camera.GetPosition().z);
 			ImGui::End();
 			ImGui::Render(); // 렌더링할 것들 기록 끝
 

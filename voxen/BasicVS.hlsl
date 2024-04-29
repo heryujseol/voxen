@@ -33,7 +33,7 @@ vsOutput main(vsInput input, uint vID: SV_VertexID)
     output.posWorld = mul(float4(input.pos, 1.0), world).xyz;
   
     output.posProj = float4(output.posWorld, 1.0);
-    output.posProj = mul(output.posProj, view);
+    output.posProj = mul(output.posProj, view); 
     output.posProj = mul(output.posProj, proj);
     
     output.normalWorld = input.normal;

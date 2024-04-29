@@ -30,7 +30,7 @@ private:
 	Chunk* GetChunkFromPool();
 	void ReleaseChunkToPool(Chunk* chunk);
 
-	static const int CHUNK_SIZE = 21;
+	static const int CHUNK_SIZE = 11;
 	static const int MAX_HEIGHT = 256;
 	static const int MAX_HEIGHT_CHUNK_SIZE = MAX_HEIGHT / Chunk::BLOCK_SIZE;
 	static const int MAX_ASYNC_LOAD_COUNT = 4;
