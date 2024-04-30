@@ -1,10 +1,4 @@
-
-cbuffer ConstantBuffer : register(b0)
-{
-    matrix world;
-}
-
-cbuffer ConstantBuffer : register(b1)
+cbuffer CameraConstantBuffer : register(b0)
 {
     matrix view;
     matrix proj;
@@ -12,30 +6,38 @@ cbuffer ConstantBuffer : register(b1)
     float dummy;
 }
 
-struct vsInput
+cbuffer ChunkConstantBuffer : register(b1)
 {
-    float3 pos : POSITION;
-    float3 normal : NORMAL;
-};
+    matrix world;
+}
 
 struct vsOutput
 {
     float4 posProj : SV_POSITION;
     float3 posWorld : POSITION;
-    float3 normalWorld : NORMAL;
+    uint face : FACE;
+    uint type : TYPE;
 };
 
-vsOutput main(vsInput input, uint vID: SV_VertexID)
+vsOutput main(uint data : DATA)
 {
     vsOutput output;
     
-    output.posWorld = mul(float4(input.pos, 1.0), world).xyz;
+    int x = (data >> 23) & 63;
+    int y = (data >> 17) & 63;
+    int z = (data >> 11) & 63;
+    uint face = (data >> 8) & 7;
+    uint type = data & 255;
+    
+    float3 position = float3(float(x), float(y), float(z));
+    output.posWorld = mul(float4(position, 1.0), world).xyz;
   
     output.posProj = float4(output.posWorld, 1.0);
     output.posProj = mul(output.posProj, view); 
     output.posProj = mul(output.posProj, proj);
     
-    output.normalWorld = input.normal;
+    output.face = face;
+    output.type = type;
     
     return output;
 }

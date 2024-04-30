@@ -4,7 +4,8 @@
 #include <future>
 
 Chunk::Chunk()
-	: m_position(0.0, 0.0, 0.0), m_stride(sizeof(Vertex)), m_offset(0), m_vertexBuffer(nullptr),
+	: m_position(0.0, 0.0, 0.0), m_stride(sizeof(VoxelVertex)), m_offset(0),
+	  m_vertexBuffer(nullptr),
 	  m_indexBuffer(nullptr), m_constantBuffer(nullptr), m_isLoaded(false)
 {
 }
@@ -105,8 +106,8 @@ bool Chunk::Initialize()
 					if (step >= CHUNK_SIZE)
 						break;
 
-					int ones = Utils::TrailingOnes((faceBit >> step)); // 1111000|111|00 -> 3
-					uint64_t submask = ((1ULL << ones) - 1ULL) << step;		// 111 << 2 -> 11100
+					int ones = Utils::TrailingOnes((faceBit >> step));	// 1111000|111|00 -> 3
+					uint64_t submask = ((1ULL << ones) - 1ULL) << step; // 111 << 2 -> 11100
 
 					int w = 1;
 					while (i + w < CHUNK_SIZE) {
@@ -120,17 +121,17 @@ bool Chunk::Initialize()
 					}
 
 					if (face == 0)
-						CreateQuad(s, step, i, w, ones, face);
+						CreateQuad(s, step, i, w, ones, face, 0);
 					else if (face == 1)
-						CreateQuad(s + 1, step, i, w, ones, face);
+						CreateQuad(s + 1, step, i, w, ones, face, 0);
 					else if (face == 2)
-						CreateQuad(i, s, step, w, ones, face);
+						CreateQuad(i, s, step, w, ones, face, 0);
 					else if (face == 3)
-						CreateQuad(i, s + 1, step, w, ones, face);
+						CreateQuad(i, s + 1, step, w, ones, face, 0);
 					else if (face == 4)
-						CreateQuad(i, step, s, w, ones, face);
+						CreateQuad(i, step, s, w, ones, face, 0);
 					else // face == 5
-						CreateQuad(i, step, s + 1, w, ones, face);
+						CreateQuad(i, step, s + 1, w, ones, face, 0);
 
 					step += ones;
 				}
@@ -185,7 +186,7 @@ void Chunk::Render()
 	Graphics::context->IASetIndexBuffer(m_indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
 	Graphics::context->IASetVertexBuffers(
 		0, 1, m_vertexBuffer.GetAddressOf(), &m_stride, &m_offset);
-	Graphics::context->VSSetConstantBuffers(0, 1, m_constantBuffer.GetAddressOf());
+	Graphics::context->VSSetConstantBuffers(1, 1, m_constantBuffer.GetAddressOf());
 
 	Graphics::context->DrawIndexed((UINT)m_indices.size(), 0, 0);
 }
@@ -194,121 +195,70 @@ void Chunk::Clear()
 {
 	m_isLoaded = false;
 
-	std::vector<Vertex>().swap(m_vertices); // clear container reallocating
+	std::vector<VoxelVertex>().swap(m_vertices); // clear container reallocating
 	std::vector<uint32_t>().swap(m_indices);
 
 	if (m_vertexBuffer) {
-		m_vertexBuffer.ReleaseAndGetAddressOf();
+		m_vertexBuffer.Reset();
 		m_vertexBuffer = nullptr;
 	}
 	if (m_indexBuffer) {
-		m_vertexBuffer.ReleaseAndGetAddressOf();
+		m_vertexBuffer.Reset();
 		m_indexBuffer = nullptr;
 	}
 	if (m_constantBuffer) {
-		m_vertexBuffer.ReleaseAndGetAddressOf();
+		m_vertexBuffer.Reset();
 		m_constantBuffer = nullptr;
 	}
 }
 
-void Chunk::CreateQuad(int ix, int iy, int iz, int merged, int length, int face)
+
+VoxelVertex Chunk::MakeVertex(int x, int y, int z, int face, int type)
 {
-	int originVertexSize = (int)m_vertices.size();
+	//|x:6||y:6||z:6||face:3||type:8|
+	return ((uint32_t)x << 23) | ((uint32_t)y << 17) | ((uint32_t)z << 11) | ((uint32_t)face << 8) |
+		   (uint32_t)(type);
+}
 
-	float x = (float)ix;
-	float y = (float)iy;
-	float z = (float)iz;
+void Chunk::CreateQuad(int x, int y, int z, int merged, int length, int face, int type)
+{
+	uint32_t originVertexSize = (uint32_t)m_vertices.size();
 
-	Vertex v;
-	if (face == 0) { // left -> right
-		v.normal = Vector3(-1.0f, 0.0f, 0.0f);
-
-		v.pos = Vector3(x, y, z);
-		m_vertices.push_back(v);
-
-		v.pos = Vector3(x, y, z + merged);
-		m_vertices.push_back(v);
-
-		v.pos = Vector3(x, y + length, z + merged);
-		m_vertices.push_back(v);
-
-		v.pos = Vector3(x, y + length, z);
-		m_vertices.push_back(v);
+	if (face == 0) { // left
+		m_vertices.push_back(MakeVertex(x, y, z, face, type));
+		m_vertices.push_back(MakeVertex(x, y, z + merged, face, type));
+		m_vertices.push_back(MakeVertex(x, y + length, z + merged, face, type));
+		m_vertices.push_back(MakeVertex(x, y + length, z, face, type));
 	}
-	else if (face == 1) { // right -> left
-		v.normal = Vector3(1.0f, 0.0f, 0.0f);
-
-		v.pos = Vector3(x, y, z);
-		m_vertices.push_back(v);
-
-		v.pos = Vector3(x, y + length, z);
-		m_vertices.push_back(v);
-
-		v.pos = Vector3(x, y + length, z + merged);
-		m_vertices.push_back(v);
-
-		v.pos = Vector3(x, y, z + merged);
-		m_vertices.push_back(v);
+	else if (face == 1) { // right
+		m_vertices.push_back(MakeVertex(x, y, z, face, type));
+		m_vertices.push_back(MakeVertex(x, y + length, z, face, type));
+		m_vertices.push_back(MakeVertex(x, y + length, z + merged, face, type));
+		m_vertices.push_back(MakeVertex(x, y, z + merged, face, type));
 	}
-	else if (face == 2) { // bottom -> top
-		v.normal = Vector3(0.0f, -1.0f, 0.0f);
-
-		v.pos = Vector3(x, y, z);
-		m_vertices.push_back(v);
-
-		v.pos = Vector3(x + merged, y, z);
-		m_vertices.push_back(v);
-
-		v.pos = Vector3(x + merged, y, z + length);
-		m_vertices.push_back(v);
-
-		v.pos = Vector3(x, y, z + length);
-		m_vertices.push_back(v);
+	else if (face == 2) { // bottom
+		m_vertices.push_back(MakeVertex(x, y, z, face, type));
+		m_vertices.push_back(MakeVertex(x + merged, y, z, face, type));
+		m_vertices.push_back(MakeVertex(x + merged, y, z + length, face, type));
+		m_vertices.push_back(MakeVertex(x, y, z + length, face, type));
 	}
-	else if (face == 3) { // top -> bottom
-		v.normal = Vector3(0.0f, 1.0f, 0.0f);
-
-		v.pos = Vector3(x, y, z);
-		m_vertices.push_back(v);
-
-		v.pos = Vector3(x, y, z + length);
-		m_vertices.push_back(v);
-
-		v.pos = Vector3(x + merged, y, z + length);
-		m_vertices.push_back(v);
-
-		v.pos = Vector3(x + merged, y, z);
-		m_vertices.push_back(v);
+	else if (face == 3) { // top
+		m_vertices.push_back(MakeVertex(x, y, z, face, type));
+		m_vertices.push_back(MakeVertex(x, y, z + length, face, type));
+		m_vertices.push_back(MakeVertex(x + merged, y, z + length, face, type));
+		m_vertices.push_back(MakeVertex(x + merged, y, z, face, type));
 	}
-	else if (face == 4) { // front -> back
-		v.normal = Vector3(0.0f, 0.0f, -1.0f);
-
-		v.pos = Vector3(x, y, z);
-		m_vertices.push_back(v);
-
-		v.pos = Vector3(x, y + length, z);
-		m_vertices.push_back(v);
-
-		v.pos = Vector3(x + merged, y + length, z);
-		m_vertices.push_back(v);
-
-		v.pos = Vector3(x + merged, y, z);
-		m_vertices.push_back(v);
+	else if (face == 4) { // front
+		m_vertices.push_back(MakeVertex(x, y, z, face, type));
+		m_vertices.push_back(MakeVertex(x, y + length, z, face, type));
+		m_vertices.push_back(MakeVertex(x + merged, y + length, z, face, type));
+		m_vertices.push_back(MakeVertex(x + merged, y, z, face, type));
 	}
-	else if (face == 5) { // back -> front
-		v.normal = Vector3(0.0f, 0.0f, 1.0f);
-
-		v.pos = Vector3(x, y, z);
-		m_vertices.push_back(v);
-
-		v.pos = Vector3(x + merged, y, z);
-		m_vertices.push_back(v);
-
-		v.pos = Vector3(x + merged, y + length, z);
-		m_vertices.push_back(v);
-
-		v.pos = Vector3(x, y + length, z);
-		m_vertices.push_back(v);
+	else if (face == 5) { // back
+		m_vertices.push_back(MakeVertex(x, y, z, face, type));
+		m_vertices.push_back(MakeVertex(x + merged, y, z, face, type));
+		m_vertices.push_back(MakeVertex(x + merged, y + length, z, face, type));
+		m_vertices.push_back(MakeVertex(x, y + length, z, face, type));
 	}
 
 	m_indices.push_back(originVertexSize);

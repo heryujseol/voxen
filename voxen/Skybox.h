@@ -16,16 +16,19 @@ public:
 	~Skybox();
 
 	bool Initialize(float scale);
+	void Update(float dt);
 	void Render();
 
 private:
-	void CreateBox(float scale);
+	void CreateBox();
 
-	std::vector<Vertex> m_vertices;
+	std::vector<SkyboxVertex> m_vertices;
 	std::vector<uint32_t> m_indices;
+	SkyboxConstantData m_constantData;
 
 	UINT m_stride;
 	UINT m_offset;
 	ComPtr<ID3D11Buffer> m_vertexBuffer;
 	ComPtr<ID3D11Buffer> m_indexBuffer;
+	ComPtr<ID3D11Buffer> m_constantBuffer;
 };
