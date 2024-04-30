@@ -10,6 +10,7 @@ namespace Graphics {
 
 	// Input Layout
 	ComPtr<ID3D11InputLayout> basicIL;
+	ComPtr<ID3D11InputLayout> skyboxIL;
 
 
 	// Vertex Shader
@@ -52,14 +53,9 @@ namespace Graphics {
 	// SRV & Buffer
 	ComPtr<ID3D11Texture2D> atlasMapBuffer;
 	ComPtr<ID3D11ShaderResourceView> atlasMapSRV;
-	ComPtr<ID3D11Texture2D> biomeColorMapBuffer;
-	ComPtr<ID3D11ShaderResourceView> biomeColorMapSRV;
-	ComPtr<ID3D11Texture2D> topBuffer;
-	ComPtr<ID3D11ShaderResourceView> topSRV;
-	ComPtr<ID3D11Texture2D> sideBuffer;
-	ComPtr<ID3D11ShaderResourceView> sideSRV;
-	ComPtr<ID3D11Texture2D> dirtBuffer;
-	ComPtr<ID3D11ShaderResourceView> dirtSRV;
+
+	ComPtr<ID3D11Texture2D> grassColorMapBuffer;
+	ComPtr<ID3D11ShaderResourceView> grassColorMapSRV;
 
 
 	// Viewport
@@ -197,23 +193,7 @@ bool Graphics::InitShaderResourceBuffers()
 	}
 
 	if (!DXUtils::CreateTextureFromFile(
-			biomeColorMapBuffer, biomeColorMapSRV, "../assets/grass_color_map.png")) {
-		std::cout << "failed create texture from file" << std::endl;
-		return false;
-	}
-
-	if (!DXUtils::CreateTextureFromFile(topBuffer, topSRV, "../assets/grass_block_top.png")) {
-		std::cout << "failed create texture from file" << std::endl;
-		return false;
-	}
-
-	if (!DXUtils::CreateTextureFromFile(
-			sideBuffer, sideSRV, "../assets/grass_block_side_overlay.png")) {
-		std::cout << "failed create texture from file" << std::endl;
-		return false;
-	}
-
-	if (!DXUtils::CreateTextureFromFile(dirtBuffer, dirtSRV, "../assets/dirt.png")) {
+			grassColorMapBuffer, grassColorMapSRV, "../assets/grass_color_map.png")) {
 		std::cout << "failed create texture from file" << std::endl;
 		return false;
 	}
@@ -245,20 +225,23 @@ bool Graphics::InitVertexShaderAndInputLayouts()
 {
 	// BasicVS & BasicIL
 	std::vector<D3D11_INPUT_ELEMENT_DESC> elementDesc = {
-		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 4 * 3, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "DATA", 0, DXGI_FORMAT_R32_UINT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	};
 
 	if (!DXUtils::CreateVertexShaderAndInputLayout(
 			L"BasicVS.hlsl", basicVS, basicIL, elementDesc)) {
-		std::cout << "failed create vs" << std::endl;
+		std::cout << "failed create basic vs" << std::endl;
 		return false;
 	}
 
 	// SkyBox
+	std::vector<D3D11_INPUT_ELEMENT_DESC> elementDesc2 = {
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "FACE", 0, DXGI_FORMAT_R32_UINT, 0, 4*3, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+	};
 	if (!DXUtils::CreateVertexShaderAndInputLayout(
-			L"SkyboxVS.hlsl", skyboxVS, basicIL, elementDesc)) {
-		std::cout << "failed create vs" << std::endl;
+			L"SkyboxVS.hlsl", skyboxVS, skyboxIL, elementDesc2)) {
+		std::cout << "failed create skybox vs" << std::endl;
 		return false;
 	}
 
@@ -378,6 +361,7 @@ void Graphics::InitGraphicsPSO()
 
 	// skyboxPSO
 	skyboxPSO = basicPSO;
+	skyboxPSO.inputLayout = skyboxIL;
 	skyboxPSO.vertexShader = skyboxVS;
 	skyboxPSO.pixelShader = skyboxPS;
 	skyboxPSO.samplerStates.clear();

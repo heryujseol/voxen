@@ -30,15 +30,16 @@ public:
 	inline void SetPosition(Vector3 position) { m_position = position; }
 
 private:
-	void CreateQuad(int x, int y, int z, int w, int h, int face);
-	
+	void CreateQuad(int x, int y, int z, int merged, int length, int face, int type);
+	VoxelVertex MakeVertex(int x, int y, int z, int face, int type);
+
 	bool m_isLoaded;
 
 	Vector3 m_position;
 
 	Block m_blocks[CHUNK_SIZE_P][CHUNK_SIZE_P][CHUNK_SIZE_P];
 
-	std::vector<Vertex> m_vertices;
+	std::vector<VoxelVertex> m_vertices;
 	std::vector<uint32_t> m_indices;
 	ChunkConstantData m_constantData;
 
