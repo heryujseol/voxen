@@ -3,7 +3,7 @@
 #include "DXUtils.h"
 
 Skybox::Skybox()
-	: m_stride(sizeof(Vertex)), m_offset(0), m_vertexBuffer(nullptr), m_indexBuffer(nullptr)
+	: m_stride(sizeof(SkyboxVertex)), m_offset(0), m_vertexBuffer(nullptr), m_indexBuffer(nullptr)
 {
 }
 
@@ -12,19 +12,30 @@ Skybox::~Skybox() {}
 bool Skybox::Initialize(float scale)
 {
 	// make block
-	CreateBox(scale);
+	CreateBox();
 
 	if (!DXUtils::CreateVertexBuffer(m_vertexBuffer, m_vertices)) {
-		std::cout << "failed create vertex buffer in chunk" << std::endl;
+		std::cout << "failed create vertex buffer in skybox" << std::endl;
 		return false;
 	}
 
 	if (!DXUtils::CreateIndexBuffer(m_indexBuffer, m_indices)) {
-		std::cout << "failed create index buffer in chunk" << std::endl;
+		std::cout << "failed create index buffer in skybox" << std::endl;
+		return false;
+	}
+
+	m_constantData.scale = scale;
+	if (!DXUtils::CreateConstantBuffer(m_constantBuffer, m_constantData)) {
+		std::cout << "failed create constant buffer in skybox" << std::endl;
 		return false;
 	}
 
 	return true;
+}
+
+void Skybox::Update(float dt) 
+{
+
 }
 
 void Skybox::Render()
@@ -32,93 +43,83 @@ void Skybox::Render()
 	Graphics::context->IASetIndexBuffer(m_indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
 	Graphics::context->IASetVertexBuffers(
 		0, 1, m_vertexBuffer.GetAddressOf(), &m_stride, &m_offset);
+	Graphics::context->VSSetConstantBuffers(1, 1, m_constantBuffer.GetAddressOf());
 
 	Graphics::context->DrawIndexed((UINT)m_indices.size(), 0, 0);
 }
 
-void Skybox::CreateBox(float scale)
+void Skybox::CreateBox()
 {
-	std::vector<Vector3> positions;
-	std::vector<Vector3> normals;
+	SkyboxVertex v;
+	// ¿ÞÂÊ
+	v.face = 0;
+	v.position = Vector3(-1.0f, 1.0f, 1.0f);
+	m_vertices.push_back(v);
+	v.position = Vector3(-1.0f, 1.0f, -1.0f);
+	m_vertices.push_back(v);
+	v.position = Vector3(-1.0f, -1.0f, -1.0f);
+	m_vertices.push_back(v);
+	v.position = Vector3(-1.0f, -1.0f, 1.0f);
+	m_vertices.push_back(v);
 
-	// À­¸é
-	positions.push_back(Vector3(-1.0f, 1.0f, 1.0f) * scale);
-	positions.push_back(Vector3(1.0f, 1.0f, 1.0f) * scale);
-	positions.push_back(Vector3(1.0f, 1.0f, -1.0f) * scale);
-	positions.push_back(Vector3(-1.0f, 1.0f, -1.0f) * scale);
 
-	normals.push_back(Vector3(0.0f, 1.0f, 0.0f));
-	normals.push_back(Vector3(0.0f, 1.0f, 0.0f));
-	normals.push_back(Vector3(0.0f, 1.0f, 0.0f));
-	normals.push_back(Vector3(0.0f, 1.0f, 0.0f));
+	// ¿À¸¥ÂÊ
+	v.face = 1;
+	v.position = Vector3(1.0f, 1.0f, -1.0f);
+	m_vertices.push_back(v);
+	v.position = Vector3(1.0f, 1.0f, 1.0f);
+	m_vertices.push_back(v);
+	v.position = Vector3(1.0f, -1.0f, 1.0f);
+	m_vertices.push_back(v);
+	v.position = Vector3(1.0f, -1.0f, -1.0f);
+	m_vertices.push_back(v);
 
 
 	// ¾Æ·§¸é
-	positions.push_back(Vector3(-1.0f, -1.0f, -1.0f) * scale);
-	positions.push_back(Vector3(1.0f, -1.0f, -1.0f) * scale);
-	positions.push_back(Vector3(1.0f, -1.0f, 1.0f) * scale);
-	positions.push_back(Vector3(-1.0f, -1.0f, 1.0f) * scale);
+	v.face = 2;
+	v.position = Vector3(-1.0f, -1.0f, -1.0f);
+	m_vertices.push_back(v);
+	v.position = Vector3(1.0f, -1.0f, -1.0f);
+	m_vertices.push_back(v);
+	v.position = Vector3(1.0f, -1.0f, 1.0f);
+	m_vertices.push_back(v);
+	v.position = Vector3(-1.0f, -1.0f, 1.0f);
+	m_vertices.push_back(v);
 
-	normals.push_back(Vector3(0.0f, -1.0f, 0.0f));
-	normals.push_back(Vector3(0.0f, -1.0f, 0.0f));
-	normals.push_back(Vector3(0.0f, -1.0f, 0.0f));
-	normals.push_back(Vector3(0.0f, -1.0f, 0.0f));
-
+	// À­¸é
+	v.face = 3;
+	v.position = Vector3(-1.0f, 1.0f, 1.0f);
+	m_vertices.push_back(v);
+	v.position = Vector3(1.0f, 1.0f, 1.0f);
+	m_vertices.push_back(v);
+	v.position = Vector3(1.0f, 1.0f, -1.0f);
+	m_vertices.push_back(v);
+	v.position = Vector3(-1.0f, 1.0f, -1.0f);
+	m_vertices.push_back(v);
 
 	// ¾Õ¸é
-	positions.push_back(Vector3(-1.0f, 1.0f, -1.0f) * scale);
-	positions.push_back(Vector3(1.0f, 1.0f, -1.0f) * scale);
-	positions.push_back(Vector3(1.0f, -1.0f, -1.0f) * scale);
-	positions.push_back(Vector3(-1.0f, -1.0f, -1.0f) * scale);
-
-	normals.push_back(Vector3(0.0f, 0.0f, -1.0f));
-	normals.push_back(Vector3(0.0f, 0.0f, -1.0f));
-	normals.push_back(Vector3(0.0f, 0.0f, -1.0f));
-	normals.push_back(Vector3(0.0f, 0.0f, -1.0f));
-
+	v.face = 4;
+	v.position = Vector3(-1.0f, 1.0f, -1.0f);
+	m_vertices.push_back(v);
+	v.position = Vector3(1.0f, 1.0f, -1.0f);
+	m_vertices.push_back(v);
+	v.position = Vector3(1.0f, -1.0f, -1.0f);
+	m_vertices.push_back(v);
+	v.position = Vector3(-1.0f, -1.0f, -1.0f);
+	m_vertices.push_back(v);
 
 	// µÞ¸é
-	positions.push_back(Vector3(1.0f, 1.0f, 1.0f) * scale);
-	positions.push_back(Vector3(-1.0f, 1.0f, 1.0f) * scale);
-	positions.push_back(Vector3(-1.0f, -1.0f, 1.0f) * scale);
-	positions.push_back(Vector3(1.0f, -1.0f, 1.0f) * scale);
+	v.face = 5;
+	v.position = Vector3(1.0f, 1.0f, 1.0f);
+	m_vertices.push_back(v);
+	v.position = Vector3(-1.0f, 1.0f, 1.0f);
+	m_vertices.push_back(v);
+	v.position = Vector3(-1.0f, -1.0f, 1.0f);
+	m_vertices.push_back(v);
+	v.position = Vector3(1.0f, -1.0f, 1.0f);
+	m_vertices.push_back(v);
 
-	normals.push_back(Vector3(0.0f, 0.0f, 1.0f));
-	normals.push_back(Vector3(0.0f, 0.0f, 1.0f));
-	normals.push_back(Vector3(0.0f, 0.0f, 1.0f));
-	normals.push_back(Vector3(0.0f, 0.0f, 1.0f));
-
-
-	// ¿ÞÂÊ
-	positions.push_back(Vector3(-1.0f, 1.0f, 1.0f) * scale);
-	positions.push_back(Vector3(-1.0f, 1.0f, -1.0f) * scale);
-	positions.push_back(Vector3(-1.0f, -1.0f, -1.0f) * scale);
-	positions.push_back(Vector3(-1.0f, -1.0f, 1.0f) * scale);
-
-	normals.push_back(Vector3(-1.0f, 0.0f, 0.0f));
-	normals.push_back(Vector3(-1.0f, 0.0f, 0.0f));
-	normals.push_back(Vector3(-1.0f, 0.0f, 0.0f));
-	normals.push_back(Vector3(-1.0f, 0.0f, 0.0f));
-
-	// ¿À¸¥ÂÊ
-	positions.push_back(Vector3(1.0f, 1.0f, -1.0f) * scale);
-	positions.push_back(Vector3(1.0f, 1.0f, 1.0f) * scale);
-	positions.push_back(Vector3(1.0f, -1.0f, 1.0f) * scale);
-	positions.push_back(Vector3(1.0f, -1.0f, -1.0f) * scale);
-
-	normals.push_back(Vector3(1.0f, 0.0f, 0.0f));
-	normals.push_back(Vector3(1.0f, 0.0f, 0.0f));
-	normals.push_back(Vector3(1.0f, 0.0f, 0.0f));
-	normals.push_back(Vector3(1.0f, 0.0f, 0.0f));
-
-	for (int i = 0; i < positions.size(); ++i) {
-		Vertex v;
-		v.pos = positions[i];
-		v.normal = normals[i];
-		m_vertices.push_back(v);
-	}
-
-	for (int i = 0; i < positions.size(); i += 4) {
+	for (int i = 0; i < 24; i += 4) {
 		m_indices.push_back(i);
 		m_indices.push_back(i + 1);
 		m_indices.push_back(i + 2);

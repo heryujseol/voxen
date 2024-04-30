@@ -32,6 +32,10 @@ void ChunkManager::Update(Camera& camera)
 
 void ChunkManager::Render(Camera& camera)
 {
+	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::atlasMapSRV.Get(),
+		Graphics::grassColorMapSRV.Get() };
+	Graphics::context->PSSetShaderResources(0, 2, pptr.data());
+
 	for (auto& c : m_chunkMap) {
 		if (!c.second->IsLoaded())
 			continue;

@@ -15,6 +15,7 @@ namespace Graphics {
 
 	// Input Layout
 	extern ComPtr<ID3D11InputLayout> basicIL;
+	extern ComPtr<ID3D11InputLayout> skyboxIL;
 
 
 	// Vertex Shader
@@ -58,17 +59,8 @@ namespace Graphics {
 	extern ComPtr<ID3D11Texture2D> atlasMapBuffer;
 	extern ComPtr<ID3D11ShaderResourceView> atlasMapSRV;
 
-	extern ComPtr<ID3D11Texture2D> biomeColorMapBuffer;
-	extern ComPtr<ID3D11ShaderResourceView> biomeColorMapSRV;
-
-	extern ComPtr<ID3D11Texture2D> topBuffer;
-	extern ComPtr<ID3D11ShaderResourceView> topSRV;
-
-	extern ComPtr<ID3D11Texture2D> sideBuffer;
-	extern ComPtr<ID3D11ShaderResourceView> sideSRV;
-
-	extern ComPtr<ID3D11Texture2D> dirtBuffer;
-	extern ComPtr<ID3D11ShaderResourceView> dirtSRV;
+	extern ComPtr<ID3D11Texture2D> grassColorMapBuffer;
+	extern ComPtr<ID3D11ShaderResourceView> grassColorMapSRV;
 
 
 	// Viewport

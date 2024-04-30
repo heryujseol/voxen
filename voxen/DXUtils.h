@@ -19,17 +19,17 @@ using namespace DirectX;
 
 class DXUtils {
 public:
-	template <typename Vertex>
+	template <typename V>
 	static bool CreateVertexBuffer(ComPtr<ID3D11Buffer>& vertexBuffer,
-		std::vector<Vertex>& vertices)
+		std::vector<V>& vertices)
 	{
 		D3D11_BUFFER_DESC desc;
 		ZeroMemory(&desc, sizeof(desc));
-		desc.ByteWidth = UINT(sizeof(Vertex) * vertices.size());
+		desc.ByteWidth = UINT(sizeof(V) * vertices.size());
 		desc.Usage = D3D11_USAGE_IMMUTABLE;
 		desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 		desc.CPUAccessFlags = 0;
-		desc.StructureByteStride = sizeof(Vertex);
+		desc.StructureByteStride = sizeof(V);
 
 		D3D11_SUBRESOURCE_DATA data;
 		ZeroMemory(&data, sizeof(data));

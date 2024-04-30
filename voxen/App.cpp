@@ -139,19 +139,12 @@ void App::Render()
 	Graphics::context->OMSetRenderTargets(
 		1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
 
-	Graphics::context->VSSetConstantBuffers(1, 1, m_camera.GetConstantBuffer().GetAddressOf());
-	Graphics::context->PSSetConstantBuffers(1, 1, m_camera.GetConstantBuffer().GetAddressOf());
+	Graphics::context->VSSetConstantBuffers(0, 1, m_camera.GetConstantBuffer().GetAddressOf());
+	Graphics::context->PSSetConstantBuffers(0, 1, m_camera.GetConstantBuffer().GetAddressOf());
 
 
 	// basic
-	if (m_keyToggle[9])
-		Graphics::SetPipelineStates(Graphics::basicWirePSO);
-	else
-		Graphics::SetPipelineStates(Graphics::basicPSO);
-	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::atlasMapSRV.Get(),
-		Graphics::biomeColorMapSRV.Get(), Graphics::topSRV.Get(), Graphics::sideSRV.Get(),
-		Graphics::dirtSRV.Get() };
-	Graphics::context->PSSetShaderResources(0, 5, pptr.data());
+	Graphics::SetPipelineStates(m_keyToggle[9] ? Graphics::basicWirePSO : Graphics::basicPSO);
 	m_chunkManager.Render(m_camera);
 
 
