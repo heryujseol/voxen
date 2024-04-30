@@ -24,9 +24,6 @@
     <ClCompile Include="App.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="Block.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
     <ClCompile Include="Chunk.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>

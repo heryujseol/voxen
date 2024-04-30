@@ -71,6 +71,7 @@ namespace Graphics {
 	void SetPipelineStates(GraphicsPSO& pso);
 
 	GraphicsPSO basicPSO;
+	GraphicsPSO basicWirePSO;
 	GraphicsPSO skyboxPSO;
 }
 
@@ -190,7 +191,7 @@ bool Graphics::InitDepthStencilBuffers(UINT width, UINT height)
 bool Graphics::InitShaderResourceBuffers()
 {
 	if (!DXUtils::CreateTextureFromFile(
-			atlasMapBuffer, atlasMapSRV, "../assets/grass_block_top.png")) {
+			atlasMapBuffer, atlasMapSRV, "../assets/blender_uv_grid_2k.png")) {
 		std::cout << "failed create texture from file" << std::endl;
 		return false;
 	}
@@ -370,6 +371,10 @@ void Graphics::InitGraphicsPSO()
 	basicPSO.pixelShader = basicPS;
 	basicPSO.samplerStates.push_back(pointClampSS.Get());
 	basicPSO.depthStencilState = basicDSS;
+
+	// basic wire PSO
+	basicWirePSO = basicPSO;
+	basicWirePSO.rasterizerState = wireRS;
 
 	// skyboxPSO
 	skyboxPSO = basicPSO;
