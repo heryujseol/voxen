@@ -11,7 +11,6 @@
 using namespace Microsoft::WRL; 
 using namespace DirectX::SimpleMath;
 
-
 class Chunk {
 
 public:
@@ -28,6 +27,11 @@ public:
 
 	inline Vector3 GetPosition() { return m_position; }
 	inline void SetPosition(Vector3 position) { m_position = position; }
+
+	static const int CHUNK_SIZE = 32;
+	static const int CHUNK_SIZE2 = CHUNK_SIZE * CHUNK_SIZE;
+	static const int CHUNK_SIZE_P = CHUNK_SIZE + 2;
+	static const int CHUNK_SIZE_P2 = CHUNK_SIZE_P * CHUNK_SIZE_P;
 
 private:
 	void CreateQuad(int x, int y, int z, int merged, int length, int face, int type);

@@ -56,9 +56,9 @@ void ChunkManager::UpdateChunkList(Vector3 cameraChunkPos)
 	for (int i = 0; i < MAX_HEIGHT_CHUNK_COUNT; ++i) {
 		for (int j = 0; j < CHUNK_COUNT; ++j) {
 			for (int k = 0; k < CHUNK_COUNT; ++k) {
-				int y = CHUNK_SIZE * i;
-				int x = (int)cameraChunkPos.x + CHUNK_SIZE * (j - CHUNK_COUNT / 2);
-				int z = (int)cameraChunkPos.z + CHUNK_SIZE * (k - CHUNK_COUNT / 2);
+				int y = Chunk::CHUNK_SIZE * i;
+				int x = (int)cameraChunkPos.x + Chunk::CHUNK_SIZE * (j - CHUNK_COUNT / 2);
+				int z = (int)cameraChunkPos.z + Chunk::CHUNK_SIZE * (k - CHUNK_COUNT / 2);
 
 				if (m_chunkMap.find(std::make_tuple(x, y, z)) == m_chunkMap.end()) { // loading
 					Chunk* chunk = GetChunkFromPool();
@@ -86,18 +86,14 @@ void ChunkManager::UpdateChunkList(Vector3 cameraChunkPos)
 
 void ChunkManager::UpdateLoadChunks()
 {
-	for (auto it = m_loadFutures.begin(); it != m_loadFutures.end();) {
-		if (it->wait_for(std::chrono::seconds(0)) == std::future_status::ready)
-			it = m_loadFutures.erase(it);
-		else
-			++it;
-	}
+	int loadCount = 0;
 
-	while (!m_loadChunkList.empty() && m_loadFutures.size() < MAX_ASYNC_LOAD_COUNT) {
+	while (!m_loadChunkList.empty() && loadCount < MAX_ASYNC_LOAD_COUNT) {
 		Chunk* chunk = m_loadChunkList.back();
 		m_loadChunkList.pop_back();
 
-		m_loadFutures.push_back(std::async(std::launch::async, &Chunk::Initialize, chunk));
+		chunk->Initialize();
+		loadCount++;
 	}
 }
 
