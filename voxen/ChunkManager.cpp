@@ -56,7 +56,7 @@ void ChunkManager::UpdateChunkList(Vector3 cameraChunkPos)
 	for (int i = 0; i < MAX_HEIGHT_CHUNK_COUNT; ++i) {
 		for (int j = 0; j < CHUNK_COUNT; ++j) {
 			for (int k = 0; k < CHUNK_COUNT; ++k) {
-				int y = CHUNK_SIZE * i;
+				int y = CHUNK_SIZE * (i - 2);
 				int x = (int)cameraChunkPos.x + CHUNK_SIZE * (j - CHUNK_COUNT / 2);
 				int z = (int)cameraChunkPos.z + CHUNK_SIZE * (k - CHUNK_COUNT / 2);
 

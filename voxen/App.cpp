@@ -108,7 +108,6 @@ void App::Run()
 				ImGui::GetIO().Framerate);
 			ImGui::Text("x : %.0f y : %.0f z : %.0f", m_camera.GetPosition().x,
 				m_camera.GetPosition().y, m_camera.GetPosition().z);
-			ImGui::Text("e : %.2f", m_camera.GetPosition().y / 100.0f / 1.88f);
 			ImGui::End();
 			ImGui::Render(); // 렌더링할 것들 기록 끝
 
