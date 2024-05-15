@@ -4,11 +4,6 @@ cbuffer CameraConstantBuffer : register(b0)
     matrix proj;
 }
 
-cbuffer SkyboxConstantBuffer : register(b1)
-{
-    float scale;
-}
-
 struct vsInput
 {
     float3 position : POSITION;
@@ -25,7 +20,7 @@ vsOutput main(vsInput input)
 {
     vsOutput output;
     
-    output.posWorld = input.position * scale;
+    output.posWorld = input.position;
     
     output.posProj = mul(float4(output.posWorld, 0.0), view);
     output.posProj = mul(float4(output.posProj.xyz, 1.0), proj);

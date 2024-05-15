@@ -80,7 +80,7 @@ public:
 	{
 		float noise = GetPerlinNoise((float)x / 32.0f, (float)z / 32.0f); // [-1.0, 1.0]
 
-		return (int)((noise + 1.0f) * 48.0f); // [0, 48]
+		return (int)((noise + 1.0f) * 24.0f); // [0, 48]
 	}
 
 

@@ -17,7 +17,7 @@ bool Chunk::Initialize()
 	static long long sum = 0;
 	static long long count = 0;
 	auto start_time = std::chrono::steady_clock::now();
-
+	
 	// 1. make axis column bit data
 	std::vector<uint64_t> axisColBit(CHUNK_SIZE_P2 * 3, 0);
 	for (int x = 0; x < CHUNK_SIZE_P; ++x) {

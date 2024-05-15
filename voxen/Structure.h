@@ -36,6 +36,6 @@ struct ChunkConstantData {
 };
 
 struct SkyboxConstantData {
-	float scale;
-	Vector3 dummy;
+	Vector3 sunDir;
+	float dummy;
 };
