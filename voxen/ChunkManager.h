@@ -20,6 +20,12 @@ public:
 	void Update(Camera& camera);
 	void Render(Camera& camera);
 
+	// Chunk Manager
+	static const int CHUNK_COUNT = 21;
+	static const int MAX_HEIGHT = 256;
+	static const int MAX_HEIGHT_CHUNK_COUNT = MAX_HEIGHT / Chunk::CHUNK_SIZE;
+	static const int MAX_ASYNC_LOAD_COUNT = 4;
+
 private:
 	void UpdateChunkList(Vector3 cameraChunkPos);
 	void UpdateLoadChunks();
@@ -34,6 +40,4 @@ private:
 	std::map<std::tuple<int, int, int>, Chunk*> m_chunkMap;
 	std::vector<Chunk*> m_loadChunkList;
 	std::vector<Chunk*> m_unloadChunkList;
-
-	std::vector<std::future<bool>> m_loadFutures;
 };

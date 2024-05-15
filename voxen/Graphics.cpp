@@ -193,7 +193,7 @@ bool Graphics::InitShaderResourceBuffers()
 {
 	if (!DXUtils::CreateTextureFromFile(
 			atlasMapBuffer, atlasMapSRV, "../assets/blender_uv_grid_2k.png")) {
-		std::cout << "failed create texture from atlas file" << std::endl;
+		std::cout << "failed create texture from a file" << std::endl;
 		return false;
 	}
 
