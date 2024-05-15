@@ -62,6 +62,11 @@ namespace Graphics {
 	extern ComPtr<ID3D11Texture2D> grassColorMapBuffer;
 	extern ComPtr<ID3D11ShaderResourceView> grassColorMapSRV;
 
+	extern ComPtr<ID3D11Texture2D> sunBuffer;
+	extern ComPtr<ID3D11ShaderResourceView> sunSRV;
+	extern ComPtr<ID3D11Texture2D> moonBuffer;
+	extern ComPtr<ID3D11ShaderResourceView> moonSRV;
+
 
 	// Viewport
 	extern D3D11_VIEWPORT basicViewport;

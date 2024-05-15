@@ -58,14 +58,14 @@ float4 main(vsOutput input) : SV_TARGET
     // atlas test
     // 2048 2048 -> 텍스쳐당 128x128, 그게 16x16
     float2 texcoord = getVoxelTexcoord(input.posWorld, input.face);
-    uint tex_count = 16;  // 한 줄의 텍스쳐 개수
+    uint texCount = 16;  // 한 줄의 텍스쳐 개수
     
     // [type * 6 + side] => 1차원 인덱스를 2차원 인덱스 좌표로 변경
     uint index = input.type * 6 + input.face;
 
-    uint2 index_uv = uint2(index % tex_count, index / tex_count);
-    texcoord += index_uv; // x.u  y.v 
-    texcoord /= tex_count;
+    uint2 indexUV = uint2(index % texCount, index / texCount);
+    texcoord += indexUV; // x.u  y.v 
+    texcoord /= texCount;
     
     float4 color = atlasTexture.Sample(pointClampSS, texcoord);
     

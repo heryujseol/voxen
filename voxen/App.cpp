@@ -123,6 +123,8 @@ void App::Update(float dt)
 {
 	m_camera.Update(dt, m_keyPressed, m_mouseNdcX, m_mouseNdcY);
 	m_chunkManager.Update(m_camera);
+	if (!m_keyToggle['F'])
+		m_skybox.Update(dt);
 }
 
 void App::Render()
