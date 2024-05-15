@@ -4,14 +4,12 @@
 class Block 
 {
 public:
-	Block() : m_isActive(false), m_type(0) {}
+	Block() : m_type(0) {}
 	~Block() {}
-
-	inline bool IsActive() { return m_isActive; }
-	inline void SetActive(bool active) { m_isActive = active; }
 	
-	int m_type;
+	inline void SetType(unsigned char type) { m_type = type; }
+	inline unsigned char GetType() { return m_type; }
 
 private:
-	bool m_isActive;
+	unsigned char m_type;
 };

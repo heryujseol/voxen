@@ -14,9 +14,9 @@ Chunk::~Chunk() { Clear(); }
 
 bool Chunk::Initialize()
 {
-	//static long long sum = 0;
-	//static long long count = 0;
-	//auto start_time = std::chrono::steady_clock::now();
+	static long long sum = 0;
+	static long long count = 0;
+	auto start_time = std::chrono::steady_clock::now();
 
 	// 1. make axis column bit data
 	std::vector<uint64_t> axisColBit(CHUNK_SIZE_P2 * 3, 0);
@@ -27,10 +27,9 @@ bool Chunk::Initialize()
 			int height = Terrain::GetHeight(nx, nz);
 			for (int y = 0; y < CHUNK_SIZE_P; ++y) {
 				int ny = m_position.y + y;
-				m_blocks[x][y][z].m_type = Terrain::SetType(nx, ny, nz, height);
-				//float thick = Terrain::Get3DPerlinNoise(nx, ny, nz);
-				m_blocks[x][y][z].SetActive(1 <= ny && m_blocks[x][y][z].m_type);
-				if (m_blocks[x][y][z].IsActive()) {
+				m_blocks[x][y][z].SetType(Terrain::SetType(nx, ny, nz, height));
+				
+				if (-63 <= ny && m_blocks[x][y][z].GetType()) {
 					// x dir column
 					axisColBit[Utils::GetIndexFrom3D(0, y, z, CHUNK_SIZE_P)] |= (1ULL << x);
 					// y dir column
@@ -166,12 +165,12 @@ bool Chunk::Initialize()
 
 	m_isLoaded = true;
 
-	//auto end_time = std::chrono::steady_clock::now();
-	//auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
-	//sum += duration.count();
-	//count++;
-	//std::cout << "Function Average duration: " << (double)sum / (double)count << " microseconds"
-	//		  << std::endl;
+	auto end_time = std::chrono::steady_clock::now();
+	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
+	sum += duration.count();
+	count++;
+	std::cout << "Function Average duration: " << (double)sum / (double)count << " microseconds"
+			  << std::endl;
 
 	return true;
 }

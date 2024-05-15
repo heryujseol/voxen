@@ -5,7 +5,7 @@ using namespace DirectX::SimpleMath;
 
 namespace Terrain {
 
-	static int p[512] = {
+	static int32_t p[512] = {
         151, 160, 137, 91, 90, 15, 131, 13, 201, 95, 96, 53, 194, 233, 7, 225, 140, 36, 103, 30, 69, 142,
         8, 99, 37, 240, 21, 10, 23, 190, 6, 148, 247, 120, 234, 75, 0, 26, 197, 62, 94, 252, 219, 203,
         117, 35, 11, 32, 57, 177, 33, 88, 237, 149, 56, 87, 174, 20, 125, 136, 171, 168, 68, 175, 74,
@@ -65,7 +65,6 @@ namespace Terrain {
 		return v;
 	}
 
-
 	static float GetPerlinNoise(float x, float y)
 	{
 		Vector2 p = Vector2(x, y);
@@ -74,19 +73,18 @@ namespace Terrain {
 		int y0 = (int)floor(y);
 		int y1 = y0 + 1;
 
-
 		float n0 = RandomGradient(x0, y0).Dot(p - Vector2((float)x0, (float)y0));
 		if ((p - Vector2((float)x0, (float)y0)).Length() == 0)
 			n0 = 0;
 		float n1 = RandomGradient(x1, y0).Dot(p - Vector2((float)x1, (float)y0));
 		if ((p - Vector2((float)x1, (float)y0)).Length() == 0)
-			n0 = 0;
+			n1 = 0;
 		float n2 = RandomGradient(x0, y1).Dot(p - Vector2((float)x0, (float)y1));
 		if ((p - Vector2((float)x0, (float)y1)).Length() == 0)
-			n0 = 0;
+			n2 = 0;
 		float n3 = RandomGradient(x1, y1).Dot(p - Vector2((float)x1, (float)y1));
 		if ((p - Vector2((float)x1, (float)y1)).Length() == 0)
-			n0 = 0;
+			n3 = 0;
 
 		float inter_x0 = CubicLerp(n0, n1, p.x - (float)x0);
 		float inter_x1 = CubicLerp(n2, n3, p.x - (float)x0);
@@ -99,9 +97,9 @@ namespace Terrain {
 
 	static float lerp(float t, float a, float b) { return a + t * (b - a); }
 
-	static float grad(int hash, float x, float y, float z)
+	static float grad(int32_t hash, float x, float y, float z)
 	{
-		int h = hash & 15;
+		int32_t h = hash & 15;
 		float u = h < 8 ? x : y, v = h < 4 ? y : h == 12 || h == 14 ? x : z;
 		return ((h & 1) == 0 ? u : -u) + ((h & 2) == 0 ? v : -v);
 	}
@@ -131,9 +129,9 @@ namespace Terrain {
 		float result = 0.0f;
 		float amp = 0.8f;
 		float freq = 1.0f;
-		int octave = 5;
+		//int octave = 5;
 
-		for (int i = 0; i < octave; ++i) {
+		for (int i = 0; i < 5; ++i) {
 			result += amp * GetPerlinNoise(nx * freq, ny * freq);
 
 			amp *= 0.5f;
@@ -145,12 +143,11 @@ namespace Terrain {
 
 		return (int)(result * 100.0f) + 32;
 	}
-
 	
-	static int SetType(int x, int y, int z, int h)
+	static unsigned char SetType(int x, int y, int z, int h)
 	{
-		float thick = Get3DPerlinNoise((float)x / 32.0f, (float)y / 32.0f, (float)z / 32.0f);
-		int type = 0;	// air
+		float thick = Get3DPerlinNoise((float)x / 64.0f, (float)y / 64.0f, (float)z / 64.0f);
+		unsigned char type = 0; // air
 		
 		if (y == h) { // Áö¸é
 			if (y > 180)
@@ -160,7 +157,7 @@ namespace Terrain {
 			else
 				type = 2; // grass
 
-			if (thick > 0.45f)
+			if (thick > 0.5f)
 				type = 0;
 		}
 		else if (y < h) {
@@ -169,13 +166,12 @@ namespace Terrain {
 			else
 				type = 6;
 
-			if (thick > 0.45f)
+			if (thick > 0.5f)
 				type = 0;
 		}
 
 		if (y > h && y < 62)
 			type = 1; // water
-
 
 		return type;
 	}
