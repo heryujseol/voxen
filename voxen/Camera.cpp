@@ -3,7 +3,7 @@
 
 Camera::Camera()
 	: m_projFovAngleY(80.0f), m_nearZ(0.01f), m_farZ(1000.0f), m_aspectRatio(16.0f / 9.0f),
-	  m_eyePos(0.0f, 0.0f, 0.0f), m_chunkPos(0.0f, 0.0f, 0.0f), m_to(0.0f, 0.0f, 1.0f),
+	  m_eyePos(0.0f, 0.0f, 0.0f), m_chunkPos(0.0f, 0.0f, 0.0f), m_forward(0.0f, 0.0f, 1.0f),
 	  m_up(0.0f, 1.0f, 0.0f), m_right(1.0f, 0.0f, 0.0f), m_viewNdcX(0.0f), m_viewNdcY(0.0f),
 	  m_speed(20.0f), m_isOnConstantDirtyFlag(false), m_isOnChunkDirtyFlag(false)
 {
@@ -21,11 +21,11 @@ bool Camera::Initialize(Vector3 pos)
 	m_constantData.view = GetViewMatrix();
 	m_constantData.proj = GetProjectionMatrix();
 	m_constantData.eyePos = m_eyePos;
+	m_constantData.eyeDir = m_forward;
 
-	CameraConstantData tempConstantData;
-	tempConstantData.view = m_constantData.view.Transpose();
-	tempConstantData.proj = m_constantData.proj.Transpose();
-	tempConstantData.eyePos = m_constantData.eyePos;
+	CameraConstantData tempConstantData = m_constantData;
+	tempConstantData.view = tempConstantData.view.Transpose();
+	tempConstantData.proj = tempConstantData.proj.Transpose();
 	if (!DXUtils::CreateConstantBuffer(m_constantBuffer, tempConstantData)) {
 		std::cout << "failed create constant buffer" << std::endl;
 		return false;
@@ -40,9 +40,14 @@ void Camera::Update(float dt, bool keyPressed[256], float mouseX, float mouseY)
 	UpdateViewDirection(mouseX, mouseY);
 
 	if (m_isOnConstantDirtyFlag) {
-		CameraConstantData tempConstantData;
-		tempConstantData.view = GetViewMatrix().Transpose();
-		tempConstantData.proj = GetProjectionMatrix().Transpose();
+		m_constantData.view = GetViewMatrix();
+		m_constantData.proj = GetProjectionMatrix();
+		m_constantData.eyePos = m_eyePos;
+		m_constantData.eyeDir = m_forward;
+
+		CameraConstantData tempConstantData = m_constantData;
+		tempConstantData.view = tempConstantData.view.Transpose();
+		tempConstantData.proj = tempConstantData.proj.Transpose();
 		DXUtils::UpdateConstantBuffer(m_constantBuffer, tempConstantData);
 
 		m_isOnConstantDirtyFlag = false;
@@ -96,11 +101,11 @@ void Camera::UpdateViewDirection(float ndcX, float ndcY)
 	Vector3 basisZ = Vector3(0.0f, 0.0f, 1.0f);
 
 	Quaternion q = Quaternion(basisY * sinf(thetaHorizontal * 0.5f), cosf(thetaHorizontal * 0.5f));
-	m_to = Vector3::Transform(basisZ, Matrix::CreateFromQuaternion(q));
+	m_forward = Vector3::Transform(basisZ, Matrix::CreateFromQuaternion(q));
 	m_right = Vector3::Transform(basisX, Matrix::CreateFromQuaternion(q));
 
 	q = Quaternion(m_right * sinf(thetaVertical * 0.5f), cosf(thetaVertical * 0.5f));
-	m_to = Vector3::Transform(m_to, Matrix::CreateFromQuaternion(q));
+	m_forward = Vector3::Transform(m_forward, Matrix::CreateFromQuaternion(q));
 	m_up = Vector3::Transform(basisY, Matrix::CreateFromQuaternion(q));
 }
 
@@ -110,7 +115,7 @@ Vector3 Camera::GetChunkPosition() { return m_chunkPos; }
 
 float Camera::GetDistance() { return m_farZ; }
 
-Matrix Camera::GetViewMatrix() { return XMMatrixLookToLH(m_eyePos, m_to, m_up); }
+Matrix Camera::GetViewMatrix() { return XMMatrixLookToLH(m_eyePos, m_forward, m_up); }
 
 Matrix Camera::GetProjectionMatrix()
 {
@@ -120,6 +125,6 @@ Matrix Camera::GetProjectionMatrix()
 
 ComPtr<ID3D11Buffer> Camera::GetConstantBuffer() { return m_constantBuffer; }
 
-void Camera::MoveForward(float dt) { m_eyePos += m_to * m_speed * dt; }
+void Camera::MoveForward(float dt) { m_eyePos += m_forward * m_speed * dt; }
 
 void Camera::MoveRight(float dt) { m_eyePos += m_right * m_speed * dt; }

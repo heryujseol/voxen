@@ -2,8 +2,6 @@ cbuffer CameraConstantBuffer : register(b0)
 {
     matrix view;
     matrix proj;
-    float3 eyePos;
-    float dummy;
 }
 
 cbuffer ChunkConstantBuffer : register(b1)
