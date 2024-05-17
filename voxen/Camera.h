@@ -42,7 +42,7 @@ private:
 
 	Vector3 m_eyePos;
 	Vector3 m_chunkPos;
-	Vector3 m_to;
+	Vector3 m_forward;
 	Vector3 m_up;
 	Vector3 m_right;
 
@@ -51,7 +51,6 @@ private:
 
 	float m_speed;
 
-	
 
 	CameraConstantData m_constantData;
 	ComPtr<ID3D11Buffer> m_constantBuffer;

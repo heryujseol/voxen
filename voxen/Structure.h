@@ -16,6 +16,8 @@ struct CameraConstantData {
 	Matrix proj;
 	Vector3 eyePos;
 	float dummy;
+	Vector3 eyeDir;
+	float dummy2;
 };
 
 struct ChunkConstantData {
@@ -24,5 +26,5 @@ struct ChunkConstantData {
 
 struct SkyboxConstantData {
 	Vector3 sunDir;
-	float dummy;
+	float skyScale;
 };
