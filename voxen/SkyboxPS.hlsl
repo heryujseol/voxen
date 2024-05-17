@@ -28,6 +28,7 @@ struct vsOutput
 static const float PI = 3.14159265;
 static const float invPI = 1.0 / 3.14159265;
 static const float showAltitudeBoundary = -0.3;
+static const float sectionAltitudeBounary = 0.05;
 
 static float3 horizonDay = float3(0.6, 0.8, 1.0);
 static float3 horizonNight = float3(0.05, 0.05, 0.2);
@@ -71,22 +72,31 @@ bool getPlanetTexcoord(float3 posDir, float3 planetDir, float size, out float2 t
 
 float3 getSkyColor(float posAltitude, float sunAltitude)
 {
+    // 태양 위치에 따른 빠른 색 변환 (고도가 0에서 증가할 때 빠르게 밤낮이 바뀌기 위함)
     float exp = ((sunAltitude >= 0 ? 1.0 : -1.0) * pow(abs(sunAltitude), 0.6) + 1.0) * 0.5;
+    float3 zenithColor = lerp(zenithNight, zenithDay, exp);
     float3 normalHorizonColor = lerp(horizonNight, horizonDay, exp);
-    float3 normalZenithColor = lerp(zenithNight, zenithDay, exp);
     
     // 태양의 고도가 낮을 때만 sun컬러를 결정하도록 선택
+    // zenith와 horizon 구별 고도 고려
     float3 sunHorizonX = lerp(horizonSunset, horizonSunrise, (sunDir.x + 1.0) * 0.5);
-    float3 sunHorizon = lerp(sunHorizonX, normalHorizonColor, pow(abs(sunAltitude), 0.3));
+    float3 sunHorizon = lerp(sunHorizonX, normalHorizonColor, pow(abs(sunAltitude - sectionAltitudeBounary), 0.3));
     
-    // 바라보는 방향 
+    // 바라보는 방향에 대한 비등방성
     float sunDirWeight = pow(max(dot(sunDir, eyeDir), 0.0), 3.0);
     float3 horizonColor = lerp(normalHorizonColor, sunHorizon, sunDirWeight);
-    float3 zenithColor = normalZenithColor;
     
-    float3 retMixColor = (horizonColor + zenithColor) * 0.5;
-    float posAltitudeWeight = smoothstep(0.0, 1.0, abs(posAltitude));
-    return lerp(retMixColor, (posAltitude > 0.0 ? zenithColor : horizonColor), pow(posAltitudeWeight, 0.3));
+    // zenith와 horizon 구별 고도 고려
+    // 최대한 구별된 색 선택하도록 결정
+    float3 mixColor = (horizonColor + zenithColor) * 0.5;
+    if (posAltitude <= sectionAltitudeBounary)
+    {   
+        return lerp(horizonColor, mixColor, pow((posAltitude + 1.0) / (1.0 + sectionAltitudeBounary), 10.0));
+    }
+    else
+    {
+        return lerp(mixColor, zenithColor, pow((posAltitude - sectionAltitudeBounary) / (1.0 - sectionAltitudeBounary), 0.5));
+    }
 }
 
 float4 main(vsOutput input) : SV_TARGET
