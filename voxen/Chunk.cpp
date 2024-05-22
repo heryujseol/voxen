@@ -2,11 +2,12 @@
 #include "DXUtils.h"
 
 #include <future>
+#include <algorithm>
+#include <unordered_map>
 
 Chunk::Chunk()
 	: m_position(0.0, 0.0, 0.0), m_stride(sizeof(VoxelVertex)), m_offset(0),
-	  m_vertexBuffer(nullptr),
-	  m_indexBuffer(nullptr), m_constantBuffer(nullptr), m_isLoaded(false)
+	  m_vertexBuffer(nullptr), m_indexBuffer(nullptr), m_constantBuffer(nullptr), m_isLoaded(false)
 {
 }
 
@@ -19,23 +20,31 @@ bool Chunk::Initialize()
 	auto start_time = std::chrono::steady_clock::now();
 
 	// 1. make axis column bit data
-	std::vector<uint64_t> axisColBit(CHUNK_SIZE_P2 * 3, 0);
+	static uint64_t axisColBit[CHUNK_SIZE_P2 * 3];
+	std::fill(axisColBit, axisColBit + CHUNK_SIZE_P2 * 3, 0);
+	std::unordered_map<uint8_t, bool> typeMap;
+
 	for (int x = 0; x < CHUNK_SIZE_P; ++x) {
 		for (int z = 0; z < CHUNK_SIZE_P; ++z) {
 			int nx = (int)m_position.x + x - 1;
 			int nz = (int)m_position.z + z - 1;
 			int height = Terrain::GetHeight(nx, nz);
+
 			for (int y = 0; y < CHUNK_SIZE_P; ++y) {
 				int ny = m_position.y + y;
-				m_blocks[x][y][z].SetType(Terrain::SetType(nx, ny, nz, height));
-				
-				if (-63 <= ny && m_blocks[x][y][z].GetType()) {
-					// x dir column
-					axisColBit[Utils::GetIndexFrom3D(0, y, z, CHUNK_SIZE_P)] |= (1ULL << x);
-					// y dir column
-					axisColBit[Utils::GetIndexFrom3D(1, z, x, CHUNK_SIZE_P)] |= (1ULL << y);
-					// z dir column
-					axisColBit[Utils::GetIndexFrom3D(2, y, x, CHUNK_SIZE_P)] |= (1ULL << z);
+				if (-64 <= ny && (ny <= height || height <= 62)) {
+					uint8_t type = Terrain::SetType(nx, ny, nz, height);
+					m_blocks[x][y][z].SetType(type);
+					typeMap[type] = true;
+
+					if (type) {
+						// x dir column
+						axisColBit[Utils::GetIndexFrom3D(0, y, z, CHUNK_SIZE_P)] |= (1ULL << x);
+						// y dir column
+						axisColBit[Utils::GetIndexFrom3D(1, z, x, CHUNK_SIZE_P)] |= (1ULL << y);
+						// z dir column
+						axisColBit[Utils::GetIndexFrom3D(2, y, x, CHUNK_SIZE_P)] |= (1ULL << z);
+					}
 				}
 			}
 		}
@@ -48,7 +57,9 @@ bool Chunk::Initialize()
 	// 3: y axis & top->bottom side (+ => - : dir -)
 	// 4: z axis & front->back side (- => + : dir +)
 	// 5: z axis & back->front side (+ => - : dir -)
-	std::vector<uint64_t> cullColBit(CHUNK_SIZE_P2 * 6, 0);
+	static uint64_t cullColBit[CHUNK_SIZE_P2 * 6];
+	std::fill(cullColBit, cullColBit + CHUNK_SIZE_P2 * 6, 0);
+
 	for (int axis = 0; axis < 3; ++axis) {
 		for (int h = 1; h < CHUNK_SIZE_P - 1; ++h) {
 			for (int w = 1; w < CHUNK_SIZE_P - 1; ++w) {
@@ -75,7 +86,10 @@ bool Chunk::Initialize()
 	 *  | 1    2    3 |/
 	 *  ---------------
 	 */
-	std::vector<uint64_t> faceColbit(CHUNK_SIZE2 * 6, 0);
+	static uint64_t faceColBit[Block::BLOCK_TYPE_COUNT][CHUNK_SIZE2 * 6];
+	for (const auto& p : typeMap)
+		std::fill(faceColBit[p.first], faceColBit[p.first] + CHUNK_SIZE2 * 6, 0);
+
 	for (int face = 0; face < 6; ++face) {
 		for (int h = 0; h < CHUNK_SIZE; ++h) {
 			for (int w = 0; w < CHUNK_SIZE; ++w) {
@@ -83,12 +97,22 @@ bool Chunk::Initialize()
 					cullColBit[Utils::GetIndexFrom3D(face, h + 1, w + 1, CHUNK_SIZE_P)];
 				culledBit = culledBit >> 1;					   // 33bit: P,CHUNK_SIZE
 				culledBit = culledBit & ~(1ULL << CHUNK_SIZE); // 32bit: CHUNK_SIZE
-
 				while (culledBit) {
 					int bitPos = Utils::TrailingZeros(culledBit); // 1110001000 -> trailing zero : 3
 					culledBit = culledBit & (culledBit - 1ULL);	  // 1110000000
 
-					faceColbit[Utils::GetIndexFrom3D(face, bitPos, w, CHUNK_SIZE)] |= (1ULL << h);
+					uint8_t type = 0; 
+					if (face < 2) {
+						type = m_blocks[bitPos+1][h+1][w+1].GetType();
+					}
+					else if (face < 4) {
+						type = m_blocks[w+1][bitPos+1][h+1].GetType();
+					}
+					else { // face < 6
+						type = m_blocks[w+1][h+1][bitPos+1].GetType();
+					}
+
+					faceColBit[type][Utils::GetIndexFrom3D(face, bitPos, w, CHUNK_SIZE)] |= (1ULL << h);
 				}
 			}
 		}
@@ -99,44 +123,50 @@ bool Chunk::Initialize()
 	// face 0, 1 : left-right
 	// face 2, 3 : top-bottom
 	// face 4, 5 : front-back
-	for (int face = 0; face < 6; ++face) {
-		for (int s = 0; s < CHUNK_SIZE; ++s) {
-			for (int i = 0; i < CHUNK_SIZE; ++i) {
-				uint64_t faceBit = faceColbit[Utils::GetIndexFrom3D(face, s, i, CHUNK_SIZE)];
-				int step = 0;
-				while (step < CHUNK_SIZE) {						   // 111100011100
-					step += Utils::TrailingZeros(faceBit >> step); // 1111000111|00| -> 2
-					if (step >= CHUNK_SIZE)
-						break;
-
-					int ones = Utils::TrailingOnes((faceBit >> step));	// 1111000|111|00 -> 3
-					uint64_t submask = ((1ULL << ones) - 1ULL) << step; // 111 << 2 -> 11100
-
-					int w = 1;
-					while (i + w < CHUNK_SIZE) {
-						uint64_t cb =
-							faceColbit[Utils::GetIndexFrom3D(face, s, i + w, CHUNK_SIZE)] & submask;
-						if (cb != submask)
+	for (const auto& p : typeMap) {
+		uint8_t type = p.first;
+		for (int face = 0; face < 6; ++face) {
+			for (int s = 0; s < CHUNK_SIZE; ++s) {
+				for (int i = 0; i < CHUNK_SIZE; ++i) {
+					uint64_t faceBit =
+						faceColBit[type][Utils::GetIndexFrom3D(face, s, i, CHUNK_SIZE)];
+					int step = 0;
+					while (step < CHUNK_SIZE) {						   // 111100011100
+						step += Utils::TrailingZeros(faceBit >> step); // 1111000111|00| -> 2
+						if (step >= CHUNK_SIZE)
 							break;
 
-						faceColbit[Utils::GetIndexFrom3D(face, s, i + w, CHUNK_SIZE)] &= (~submask);
-						w++;
+						int ones = Utils::TrailingOnes((faceBit >> step));	// 1111000|111|00 -> 3
+						uint64_t submask = ((1ULL << ones) - 1ULL) << step; // 111 << 2 -> 11100
+
+						int w = 1;
+						while (i + w < CHUNK_SIZE) {
+							uint64_t cb = faceColBit[type][Utils::GetIndexFrom3D(
+											  face, s, i + w, CHUNK_SIZE)] &
+										  submask;
+							if (cb != submask)
+								break;
+
+							faceColBit[type][Utils::GetIndexFrom3D(face, s, i + w, CHUNK_SIZE)] &=
+								(~submask);
+							w++;
+						}
+
+						if (face == 0)
+							CreateQuad(s, step, i, w, ones, face, type);
+						else if (face == 1)
+							CreateQuad(s + 1, step, i, w, ones, face, type);
+						else if (face == 2)
+							CreateQuad(i, s, step, w, ones, face, type);
+						else if (face == 3)
+							CreateQuad(i, s + 1, step, w, ones, face, type);
+						else if (face == 4)
+							CreateQuad(i, step, s, w, ones, face, type);
+						else // face == 5
+							CreateQuad(i, step, s + 1, w, ones, face, type);
+
+						step += ones;
 					}
-
-					if (face == 0)
-						CreateQuad(s, step, i, w, ones, face, 0);
-					else if (face == 1)
-						CreateQuad(s + 1, step, i, w, ones, face, 0);
-					else if (face == 2)
-						CreateQuad(i, s, step, w, ones, face, 0);
-					else if (face == 3)
-						CreateQuad(i, s + 1, step, w, ones, face, 0);
-					else if (face == 4)
-						CreateQuad(i, step, s, w, ones, face, 0);
-					else // face == 5
-						CreateQuad(i, step, s + 1, w, ones, face, 0);
-
-					step += ones;
 				}
 			}
 		}
@@ -214,7 +244,6 @@ void Chunk::Clear()
 		m_constantBuffer = nullptr;
 	}
 }
-
 
 VoxelVertex Chunk::MakeVertex(int x, int y, int z, int face, int type)
 {

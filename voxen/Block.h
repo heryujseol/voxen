@@ -1,15 +1,19 @@
 #pragma once
 #include "Terrain.h"
 
+#include <stdint.h>
+
 class Block 
 {
 public:
 	Block() : m_type(0) {}
 	~Block() {}
-	
-	inline void SetType(unsigned char type) { m_type = type; }
-	inline unsigned char GetType() { return m_type; }
+
+	inline uint8_t GetType() { return m_type; }
+	inline void SetType(uint8_t type) { m_type = type; }
+
+	static const int BLOCK_TYPE_COUNT = 10;
 
 private:
-	unsigned char m_type;
+	uint8_t m_type;
 };

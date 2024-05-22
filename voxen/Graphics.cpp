@@ -57,6 +57,11 @@ namespace Graphics {
 	ComPtr<ID3D11Texture2D> grassColorMapBuffer;
 	ComPtr<ID3D11ShaderResourceView> grassColorMapSRV;
 
+	ComPtr<ID3D11Texture2D> sunBuffer;
+	ComPtr<ID3D11ShaderResourceView> sunSRV;
+	ComPtr<ID3D11Texture2D> moonBuffer;
+	ComPtr<ID3D11ShaderResourceView> moonSRV;
+
 
 	// Viewport
 	D3D11_VIEWPORT basicViewport;
@@ -187,14 +192,24 @@ bool Graphics::InitDepthStencilBuffers(UINT width, UINT height)
 bool Graphics::InitShaderResourceBuffers()
 {
 	if (!DXUtils::CreateTextureFromFile(
-			atlasMapBuffer, atlasMapSRV, "../assets/blender_uv_grid_2k.png")) {
-		std::cout << "failed create texture from file" << std::endl;
+			atlasMapBuffer, atlasMapSRV, "../assets/blockatlas1.png")) {
+		std::cout << "failed create texture from a file" << std::endl;
 		return false;
 	}
 
-	if (!DXUtils::CreateTextureFromFile(
+	/*if (!DXUtils::CreateTextureFromFile(
 			grassColorMapBuffer, grassColorMapSRV, "../assets/grass_color_map.png")) {
-		std::cout << "failed create texture from file" << std::endl;
+		std::cout << "failed create texture from grass color map file" << std::endl;
+		return false;
+	}*/
+
+	if (!DXUtils::CreateTextureFromFile(sunBuffer, sunSRV, "../assets/sun.png")) {
+		std::cout << "failed create texture from sun file" << std::endl;
+		return false;
+	}
+
+	if (!DXUtils::CreateTextureFromFile(moonBuffer, moonSRV, "../assets/moon.png")) {
+		std::cout << "failed create texture from moon file" << std::endl;
 		return false;
 	}
 
@@ -237,7 +252,7 @@ bool Graphics::InitVertexShaderAndInputLayouts()
 	// SkyBox
 	std::vector<D3D11_INPUT_ELEMENT_DESC> elementDesc2 = {
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "FACE", 0, DXGI_FORMAT_R32_UINT, 0, 4*3, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "FACE", 0, DXGI_FORMAT_R32_UINT, 0, 4 * 3, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	};
 	if (!DXUtils::CreateVertexShaderAndInputLayout(
 			L"SkyboxVS.hlsl", skyboxVS, skyboxIL, elementDesc2)) {
@@ -364,7 +379,6 @@ void Graphics::InitGraphicsPSO()
 	skyboxPSO.inputLayout = skyboxIL;
 	skyboxPSO.vertexShader = skyboxVS;
 	skyboxPSO.pixelShader = skyboxPS;
-	skyboxPSO.samplerStates.clear();
 }
 
 void Graphics::SetPipelineStates(GraphicsPSO& pso)

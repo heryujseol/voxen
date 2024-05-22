@@ -35,16 +35,32 @@ namespace Terrain {
         78, 66, 215, 61, 156, 180,
     };
 	
-	static float Lerp(float a, float b, float w) { return (1 - w) * a + w * b; }
+	static float Smootherstep(float a, float b, float w)
+	{
+		return (b - a) * ((w * (w * 6.0 - 15.0) + 10.0) * w * w * w) + a;
+	}
 
 	static float CubicLerp(float a, float b, float w)
 	{
 		return (b - a) * (float)((3.0f - w * 2.0f) * w * w) + a;
 	}
 
-	static float Smootherstep(float a, float b, float w)
+	static Vector2 RandomGradient2(int ix, int iy)
 	{
-		return (b - a) * (float)((w * (w * 6.0f - 15.0f) + 10.0f) * w * w * w) + a;
+		const unsigned w = 8 * sizeof(unsigned);
+		const unsigned s = w / 2;
+		unsigned a = ix, b = iy;
+
+		a *= 1789256896;
+		b ^= a << s | a >> (w - s);
+		b *= 3588430632;
+		a ^= b << s | b >> (w - s);
+		a *= 1568468904;
+
+		float random = a * ((float)3.14159265 / ~(~0u >> 1)); // in [0, 2*Pi]
+
+		Vector2 v(cos(random), sin(random));
+		return v;
 	}
 
 	static Vector2 RandomGradient(int ix, int iy)
@@ -63,6 +79,34 @@ namespace Terrain {
 
 		Vector2 v(cos(random), sin(random));
 		return v;
+	}
+
+	static float GetPerlinNoise2(float x, float y)
+	{
+		Vector2 p = Vector2(x, y);
+		int x0 = (int)floor(x);
+		int x1 = x0 + 1;
+		int y0 = (int)floor(y);
+		int y1 = y0 + 1;
+
+		float n0 = RandomGradient2(x0, y0).Dot(p - Vector2((float)x0, (float)y0));
+		if ((p - Vector2((float)x0, (float)y0)).Length() == 0)
+			n0 = 0;
+		float n1 = RandomGradient2(x1, y0).Dot(p - Vector2((float)x1, (float)y0));
+		if ((p - Vector2((float)x1, (float)y0)).Length() == 0)
+			n1 = 0;
+		float n2 = RandomGradient2(x0, y1).Dot(p - Vector2((float)x0, (float)y1));
+		if ((p - Vector2((float)x0, (float)y1)).Length() == 0)
+			n2 = 0;
+		float n3 = RandomGradient2(x1, y1).Dot(p - Vector2((float)x1, (float)y1));
+		if ((p - Vector2((float)x1, (float)y1)).Length() == 0)
+			n3 = 0;
+
+		float inter_x0 = Smootherstep(n0, n1, p.x - (float)x0);
+		float inter_x1 = Smootherstep(n2, n3, p.x - (float)x0);
+		float inter_y = Smootherstep(inter_x0, inter_x1, p.y - (float)y0);
+
+		return inter_y * 0.5f + 0.5f;
 	}
 
 	static float GetPerlinNoise(float x, float y)
@@ -127,7 +171,7 @@ namespace Terrain {
 		float ny = (float)z / 256.0f;
 
 		float result = 0.0f;
-		float amp = 0.8f;
+		float amp = 0.9f;
 		float freq = 1.0f;
 		//int octave = 5;
 
@@ -141,37 +185,90 @@ namespace Terrain {
 		result = pow(result, 2.8f);
 		result = round(result * 80) / 80;
 
-		return (int)(result * 100.0f) + 32;
+		return (int)(result * 100.0f) + 16;
 	}
 	
-	static unsigned char SetType(int x, int y, int z, int h)
-	{
-		float thick = Get3DPerlinNoise((float)x / 64.0f, (float)y / 64.0f, (float)z / 64.0f);
-		unsigned char type = 0; // air
-		
-		if (y == h) { // 지면
-			if (y > 180)
-				type = 5; // snow
-			else if (y < 62)
-				type = 3; // sand
-			else
-				type = 2; // grass
 
-			if (thick > 0.5f)
+	/*	type
+	0 = air
+	1 = water
+	2 = grass
+	3 = sand
+	4 = stone
+	5 = snow grass
+	6 = snow
+	7 = dirt
+	8 = swamp grass
+	9 = swamp grass2
+	*/
+	static uint8_t SetType(int x, int y, int z, int h)
+	{
+		float thick = Get3DPerlinNoise((float)x / 96.0f, (float)y / 96.0f, (float)z / 96.0f);
+		float t = GetPerlinNoise2((float)x / 256.0f, (float)z / 256.0f);
+		uint8_t type = 0;
+
+		if (y == h) { // 지면
+			if (y > 160)
+				type = 6;
+			else if (y > 148) {
+				if (t > 0.60f)
+					type = 4;
+				else if (t > 0.35f)
+					type = 8;
+				else
+					type = 5;
+			}
+			else if (y > 105) {
+				if (t > 0.4f)
+					type = 8;
+				else type = 5;
+			}
+			else if (y > 62) {
+				
+				if (t > 0.6f)
+					type = 9;
+				else if (t > 0.35f)
+					type = 8;
+				else
+					type = 3;
+			}
+			else
+				type = 3;
+
+			if (thick > 0.6f)
 				type = 0;
 		}
 		else if (y < h) {
-			if (h - 10 < y)
+			if (h - 10 >= y)
 				type = 4;
-			else
-				type = 6;
+			else {
+				if (y > 160)
+					type = 6;
+				else if (y > 148) {
+					if (t > 0.60f)
+						type = 4;
+					else
+						type = 7;
+				}
+				else if (y > 105) {
+					type = 7;
+				}
+				else if (y > 62) {
+					if (t > 0.35f)
+						type = 7;
+					else
+						type = 3;
+				}
+				else
+					type = 3;
+			}
 
-			if (thick > 0.5f)
+			if (thick > 0.6f)
 				type = 0;
 		}
 
 		if (y > h && y < 62)
-			type = 1; // water
+			type = 1;
 
 		return type;
 	}
