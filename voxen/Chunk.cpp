@@ -24,16 +24,17 @@ bool Chunk::Initialize()
 	std::fill(axisColBit, axisColBit + CHUNK_SIZE_P2 * 3, 0);
 	std::unordered_map<uint8_t, bool> typeMap;
 
+
 	for (int x = 0; x < CHUNK_SIZE_P; ++x) {
 		for (int z = 0; z < CHUNK_SIZE_P; ++z) {
 			int nx = (int)m_position.x + x - 1;
 			int nz = (int)m_position.z + z - 1;
 			int height = Terrain::GetHeight(nx, nz);
-
+			
 			for (int y = 0; y < CHUNK_SIZE_P; ++y) {
 				int ny = m_position.y + y;
 				if (-64 <= ny && (ny <= height || height <= 62)) {
-					uint8_t type = Terrain::SetType(nx, ny, nz, height);
+					uint8_t type = Terrain::GetType(nx, ny, nz, height);
 					m_blocks[x][y][z].SetType(type);
 					typeMap[type] = true;
 

@@ -45,6 +45,8 @@ namespace Terrain {
 		return (b - a) * (float)((3.0f - w * 2.0f) * w * w) + a;
 	}
 
+	static float Lerp(float a, float b, float w) { return a + w * (b - a); }
+
 	static Vector2 RandomGradient2(int ix, int iy)
 	{
 		const unsigned w = 8 * sizeof(unsigned);
@@ -201,36 +203,41 @@ namespace Terrain {
 	8 = swamp grass
 	9 = swamp grass2
 	*/
-	static uint8_t SetType(int x, int y, int z, int h)
+	static uint8_t GetType(int x, int y, int z, int h)
 	{
 		float thick = Get3DPerlinNoise((float)x / 96.0f, (float)y / 96.0f, (float)z / 96.0f);
-		float t = GetPerlinNoise2((float)x / 256.0f, (float)z / 256.0f);
+		float t = GetPerlinNoise2((float)x / 182.0f, (float)z / 182.0f);
+
 		uint8_t type = 0;
 
 		if (y == h) { // Áö¸é
-			if (y > 160)
-				type = 6;
-			else if (y > 148) {
-				if (t > 0.60f)
-					type = 4;
-				else if (t > 0.35f)
-					type = 8;
+			if (y > 140) {
+				if (t > 0.6f)
+					type = 6;
 				else
 					type = 5;
 			}
-			else if (y > 105) {
-				if (t > 0.4f)
-					type = 8;
-				else type = 5;
+			else if (y > 108) {
+				if (t > 0.48f)
+					type = 2;
+				else if (t > 0.42f)
+					type = 4;
+				else
+					type = 5;
 			}
-			else if (y > 62) {
-				
+			else if (y > 96) {
 				if (t > 0.6f)
 					type = 9;
-				else if (t > 0.35f)
+				else
+					type = 8;
+			}
+			else if (y > 62) {
+				if (t > 0.6f)
+					type = 3;
+				else if (t > 0.4f)
 					type = 8;
 				else
-					type = 3;
+					type = 9;
 			}
 			else
 				type = 3;
@@ -242,22 +249,32 @@ namespace Terrain {
 			if (h - 10 >= y)
 				type = 4;
 			else {
-				if (y > 160)
-					type = 6;
-				else if (y > 148) {
-					if (t > 0.60f)
+				if (y > 140) {
+					if (t > 0.6f) {
+						if (y == h - 1)
+							type = 5;
+						else
+							type = 7;
+					}
+					else
+						type = 5;
+				}
+				else if (y > 108) {
+					if (t > 0.55f)
+						type = 7;
+					else if (t > 0.4f)
 						type = 4;
 					else
 						type = 7;
 				}
-				else if (y > 105) {
+				else if (y > 96) {
 					type = 7;
 				}
 				else if (y > 62) {
-					if (t > 0.35f)
-						type = 7;
-					else
+					if (t > 0.6f)
 						type = 3;
+					else
+						type = 7;
 				}
 				else
 					type = 3;
