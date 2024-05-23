@@ -16,16 +16,19 @@ namespace Graphics {
 	// Input Layout
 	extern ComPtr<ID3D11InputLayout> basicIL;
 	extern ComPtr<ID3D11InputLayout> skyboxIL;
+	extern ComPtr<ID3D11InputLayout> cloudIL;
 
 
 	// Vertex Shader
 	extern ComPtr<ID3D11VertexShader> basicVS;
 	extern ComPtr<ID3D11VertexShader> skyboxVS;
+	extern ComPtr<ID3D11VertexShader> cloudVS;
 
 
 	// Pixel Shader
 	extern ComPtr<ID3D11PixelShader> basicPS;
 	extern ComPtr<ID3D11PixelShader> skyboxPS;
+	extern ComPtr<ID3D11PixelShader> cloudPS;
 
 
 	// Rasterizer State
@@ -40,6 +43,11 @@ namespace Graphics {
 
 	// Depth Stencil State
 	extern ComPtr<ID3D11DepthStencilState> basicDSS;
+
+	
+	// Blend State
+	extern ComPtr<ID3D11BlendState> alphaBS;
+	extern ComPtr<ID3D11BlendState> msaaAlphaBS;
 
 
 	// RTV & Buffer
@@ -90,6 +98,7 @@ namespace Graphics {
 	extern bool InitRasterizerStates();
 	extern bool InitSamplerStates();
 	extern bool InitDepthStencilStates();
+	extern bool InitBlendStates();
 
 
 	// PSO
@@ -98,4 +107,5 @@ namespace Graphics {
 	extern GraphicsPSO basicPSO;
 	extern GraphicsPSO basicWirePSO;
 	extern GraphicsPSO skyboxPSO;
+	extern GraphicsPSO cloudPSO;
 }

@@ -15,12 +15,14 @@ public:
 	Skybox();
 	~Skybox();
 
-	bool Initialize(float scale);
+	bool Initialize(float scale, float speed);
 	void Update(float dt);
 	void Render();
 
 private:
 	void CreateBox(float scale);
+
+	float m_speed;
 
 	std::vector<SkyboxVertex> m_vertices;
 	std::vector<uint32_t> m_indices;

@@ -16,7 +16,7 @@ Camera::~Camera() {}
 bool Camera::Initialize(Vector3 pos)
 {
 	m_eyePos = pos;
-	m_chunkPos = Utils::CalcChunkPos(m_eyePos);
+	m_chunkPos = Utils::CalcOffsetPos(m_eyePos, Chunk::CHUNK_SIZE);
 
 	m_constantData.view = GetViewMatrix();
 	m_constantData.proj = GetProjectionMatrix();
@@ -74,7 +74,7 @@ void Camera::UpdatePosition(bool keyPressed[256], float dt)
 	}
 
 	if (m_isOnConstantDirtyFlag) {
-		Vector3 newChunkPos = Utils::CalcChunkPos(m_eyePos);
+		Vector3 newChunkPos = Utils::CalcOffsetPos(m_eyePos, Chunk::CHUNK_SIZE);
 		if (newChunkPos != m_chunkPos) {
 			m_isOnChunkDirtyFlag = true;
 			m_chunkPos = newChunkPos;

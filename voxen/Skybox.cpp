@@ -3,15 +3,17 @@
 #include "DXUtils.h"
 
 Skybox::Skybox()
-	: m_stride(sizeof(SkyboxVertex)), m_offset(0), m_vertexBuffer(nullptr), m_indexBuffer(nullptr)
+	: m_speed(0.0f), m_stride(sizeof(SkyboxVertex)), m_offset(0), m_vertexBuffer(nullptr), m_indexBuffer(nullptr)
 {
 }
 
 Skybox::~Skybox() {}
 
-bool Skybox::Initialize(float scale)
+bool Skybox::Initialize(float scale, float speed)
 {
 	// make block
+	m_speed = speed;
+
 	CreateBox(scale);
 
 	if (!DXUtils::CreateVertexBuffer(m_vertexBuffer, m_vertices)) {
@@ -37,9 +39,7 @@ bool Skybox::Initialize(float scale)
 
 void Skybox::Update(float dt) 
 {
-	// move sunDir
-	float speed = 0.2f;
-	m_constantData.sunDir = Vector3::Transform(m_constantData.sunDir, Matrix::CreateRotationZ(dt * speed));
+	m_constantData.sunDir = Vector3::Transform(m_constantData.sunDir, Matrix::CreateRotationZ(dt * m_speed));
 	m_constantData.sunDir.Normalize();
 	DXUtils::UpdateConstantBuffer(m_constantBuffer, m_constantData);
 }
@@ -63,7 +63,6 @@ void Skybox::CreateBox(float scale)
 {
 	SkyboxVertex v;
 	// ¿ÞÂÊ
-	v.face = 0;
 	v.position = Vector3(-1.0f, 1.0f, 1.0f) * scale;
 	m_vertices.push_back(v);
 	v.position = Vector3(-1.0f, 1.0f, -1.0f) * scale;
@@ -75,7 +74,6 @@ void Skybox::CreateBox(float scale)
 
 
 	// ¿À¸¥ÂÊ
-	v.face = 1;
 	v.position = Vector3(1.0f, 1.0f, -1.0f) * scale;
 	m_vertices.push_back(v);
 	v.position = Vector3(1.0f, 1.0f, 1.0f) * scale;
@@ -87,7 +85,6 @@ void Skybox::CreateBox(float scale)
 
 
 	// ¾Æ·§¸é
-	v.face = 2;
 	v.position = Vector3(-1.0f, -1.0f, -1.0f) * scale;
 	m_vertices.push_back(v);
 	v.position = Vector3(1.0f, -1.0f, -1.0f) * scale;
@@ -98,7 +95,6 @@ void Skybox::CreateBox(float scale)
 	m_vertices.push_back(v);
 
 	// À­¸é
-	v.face = 3;
 	v.position = Vector3(-1.0f, 1.0f, 1.0f) * scale;
 	m_vertices.push_back(v);
 	v.position = Vector3(1.0f, 1.0f, 1.0f) * scale;
@@ -109,7 +105,6 @@ void Skybox::CreateBox(float scale)
 	m_vertices.push_back(v);
 
 	// ¾Õ¸é
-	v.face = 4;
 	v.position = Vector3(-1.0f, 1.0f, -1.0f) * scale;
 	m_vertices.push_back(v);
 	v.position = Vector3(1.0f, 1.0f, -1.0f) * scale;
@@ -120,7 +115,6 @@ void Skybox::CreateBox(float scale)
 	m_vertices.push_back(v);
 
 	// µÞ¸é
-	v.face = 5;
 	v.position = Vector3(1.0f, 1.0f, 1.0f) * scale;
 	m_vertices.push_back(v);
 	v.position = Vector3(-1.0f, 1.0f, 1.0f) * scale;

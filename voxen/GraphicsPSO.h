@@ -26,14 +26,14 @@ public:
 	std::vector<ID3D11SamplerState *> samplerStates;
 
 	ComPtr<ID3D11DepthStencilState> depthStencilState;
-	
 
+	ComPtr<ID3D11BlendState> blendState;
+	float blendFactor[4];
+	
 	/*
 	ComPtr<ID3D11HullShader> m_hullShader;
     ComPtr<ID3D11DomainShader> m_domainShader;
     ComPtr<ID3D11GeometryShader> m_geometryShader;
-	ComPtr<ID3D11BlendState> m_blendState;
-	float m_blendFactor[4] = {1.0f, 1.0f, 1.0f, 1.0f};
 	UINT m_stencilRef = 0;
 	*/
 };

@@ -70,7 +70,18 @@ bool getPlanetTexcoord(float3 posDir, float3 planetDir, float size, out float2 t
     return false;
 }
 
-float3 getSkyColor(float posAltitude, float sunAltitude)
+float HenyeyGreensteinPhase(in float3 L, in float3 V, in float aniso)
+{
+    // L: toLight
+    // V: eyeDir 
+    // https://www.shadertoy.com/view/7s3SRH
+    
+    float cosT = dot(L, V);
+    float g = aniso;
+    return (1.0 - g * g) / (4.0 * PI * pow(abs(1.0 + g * g - 2.0 * g * cosT), 3.0 / 2.0));
+}
+
+float3 getSkyColor(float posAltitude, float sunAltitude, float3 eyeToPos)
 {
     // 태양 위치에 따른 빠른 색 변환 (고도가 0에서 증가할 때 빠르게 밤낮이 바뀌기 위함)
     float exp = ((sunAltitude >= 0 ? 1.0 : -1.0) * pow(abs(sunAltitude), 0.6) + 1.0) * 0.5;
@@ -83,7 +94,7 @@ float3 getSkyColor(float posAltitude, float sunAltitude)
     float3 sunHorizon = lerp(sunHorizonX, normalHorizonColor, pow(abs(sunAltitude - sectionAltitudeBounary), 0.3));
     
     // 바라보는 방향에 대한 비등방성
-    float sunDirWeight = pow(max(dot(sunDir, eyeDir), 0.0), 3.0);
+    float sunDirWeight = sunAltitude > showAltitudeBoundary ? HenyeyGreensteinPhase(sunDir, eyeDir, 0.6) : 0.0;
     float3 horizonColor = lerp(normalHorizonColor, sunHorizon, sunDirWeight);
     
     // zenith와 horizon 구별 고도 고려
@@ -103,6 +114,7 @@ float4 main(vsOutput input) : SV_TARGET
 {
     float3 color = float3(0.0, 0.0, 0.0);
     float3 posDir = normalize(input.posWorld);
+    float3 eyeToPos = normalize(input.posWorld - eyePos);
     
     // ([0, pi] - pi/2) * -2/pi -> [1, -1]
     float posAltitude = clamp((acos(posDir.y) - (PI * 0.5)) * (-2.0 * invPI), -1.0, 1.0);
@@ -139,7 +151,7 @@ float4 main(vsOutput input) : SV_TARGET
         color += moonTexture.SampleLevel(pointSampler, moonTexcoord, 0.0).rgb * moonStrength;
     }
    
-    color += getSkyColor(posAltitude, sunAltitude);
+    color += getSkyColor(posAltitude, sunAltitude, eyeToPos);
     
     return float4(color, 1.0);
 }

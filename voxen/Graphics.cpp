@@ -11,16 +11,19 @@ namespace Graphics {
 	// Input Layout
 	ComPtr<ID3D11InputLayout> basicIL;
 	ComPtr<ID3D11InputLayout> skyboxIL;
+	ComPtr<ID3D11InputLayout> cloudIL;
 
 
 	// Vertex Shader
 	ComPtr<ID3D11VertexShader> basicVS;
 	ComPtr<ID3D11VertexShader> skyboxVS;
+	ComPtr<ID3D11VertexShader> cloudVS;
 
 
 	// Pixel Shader
 	ComPtr<ID3D11PixelShader> basicPS;
 	ComPtr<ID3D11PixelShader> skyboxPS;
+	ComPtr<ID3D11PixelShader> cloudPS;
 
 
 	// Rasterizer State
@@ -35,6 +38,11 @@ namespace Graphics {
 
 	// Depth Stencil State
 	ComPtr<ID3D11DepthStencilState> basicDSS;
+
+
+	// Blend State
+	ComPtr<ID3D11BlendState> alphaBS;
+	ComPtr<ID3D11BlendState> msaaAlphaBS;
 
 
 	// RTV & Buffer
@@ -70,10 +78,10 @@ namespace Graphics {
 	// PSO
 	void InitGraphicsPSO();
 	void SetPipelineStates(GraphicsPSO& pso);
-
 	GraphicsPSO basicPSO;
 	GraphicsPSO basicWirePSO;
 	GraphicsPSO skyboxPSO;
+	GraphicsPSO cloudPSO;
 }
 
 
@@ -233,6 +241,9 @@ bool Graphics::InitGraphicsState()
 	if (!InitDepthStencilStates())
 		return false;
 
+	if (!InitBlendStates())
+		return false;
+
 	return true;
 }
 
@@ -251,12 +262,22 @@ bool Graphics::InitVertexShaderAndInputLayouts()
 
 	// SkyBox
 	std::vector<D3D11_INPUT_ELEMENT_DESC> elementDesc2 = {
-		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "FACE", 0, DXGI_FORMAT_R32_UINT, 0, 4 * 3, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 }
 	};
 	if (!DXUtils::CreateVertexShaderAndInputLayout(
 			L"SkyboxVS.hlsl", skyboxVS, skyboxIL, elementDesc2)) {
 		std::cout << "failed create skybox vs" << std::endl;
+		return false;
+	}
+
+	// Cloud
+	std::vector<D3D11_INPUT_ELEMENT_DESC> elementDesc3 = { 
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 }, 
+		{ "FACE", 0, DXGI_FORMAT_R8_UINT, 0, 4 * 3, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+	};
+	if (!DXUtils::CreateVertexShaderAndInputLayout(
+			L"CloudVS.hlsl", cloudVS, cloudIL, elementDesc3)) {
+		std::cout << "failed create cloud vs" << std::endl;
 		return false;
 	}
 
@@ -267,13 +288,19 @@ bool Graphics::InitPixelShaders()
 {
 	// BasicPS
 	if (!DXUtils::CreatePixelShader(L"BasicPS.hlsl", basicPS)) {
-		std::cout << "failed create ps" << std::endl;
+		std::cout << "failed create basic ps" << std::endl;
 		return false;
 	}
 
 	// SkyboxPS
 	if (!DXUtils::CreatePixelShader(L"SkyboxPS.hlsl", skyboxPS)) {
-		std::cout << "failed create ps" << std::endl;
+		std::cout << "failed create skybox ps" << std::endl;
+		return false;
+	}
+
+	// CloudPS
+	if (!DXUtils::CreatePixelShader(L"CloudPS.hlsl", cloudPS)) {
+		std::cout << "failed create cloud ps" << std::endl;
 		return false;
 	}
 
@@ -352,10 +379,46 @@ bool Graphics::InitDepthStencilStates()
 	// basic DSS
 	HRESULT ret = Graphics::device->CreateDepthStencilState(&desc, basicDSS.GetAddressOf());
 	if (FAILED(ret)) {
-		std::cout << "failed create basic DSS";
+		std::cout << "failed create basic DSS" << std::endl;
 		return false;
 	}
 
+	return true;
+}
+
+bool Graphics::InitBlendStates() 
+{
+	D3D11_BLEND_DESC desc;
+	ZeroMemory(&desc, sizeof(desc));
+	desc.AlphaToCoverageEnable = true;
+	desc.IndependentBlendEnable = false;
+	desc.RenderTarget[0].BlendEnable = false;
+	desc.RenderTarget[0].SrcBlend = D3D11_BLEND_ONE;
+	desc.RenderTarget[0].DestBlend = D3D11_BLEND_ZERO;
+	desc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+	desc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+	desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
+	desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+	desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+	HRESULT ret = Graphics::device->CreateBlendState(&desc, msaaAlphaBS.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create msaa alpha BS" << std::endl;
+		return false;
+	}
+
+	desc.RenderTarget[0].BlendEnable = true;
+	desc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+	desc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA; 
+	desc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+	desc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+	desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ONE;
+	desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+	desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+	ret = Graphics::device->CreateBlendState(&desc, alphaBS.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create alpha BS" << std::endl;
+		return false;
+	}
 	return true;
 }
 
@@ -379,6 +442,13 @@ void Graphics::InitGraphicsPSO()
 	skyboxPSO.inputLayout = skyboxIL;
 	skyboxPSO.vertexShader = skyboxVS;
 	skyboxPSO.pixelShader = skyboxPS;
+
+	// cloudPSO
+	cloudPSO = basicPSO;
+	cloudPSO.inputLayout = cloudIL;
+	cloudPSO.vertexShader = cloudVS;
+	cloudPSO.pixelShader = cloudPS;
+	cloudPSO.blendState = msaaAlphaBS;
 }
 
 void Graphics::SetPipelineStates(GraphicsPSO& pso)
@@ -396,6 +466,8 @@ void Graphics::SetPipelineStates(GraphicsPSO& pso)
 		context->PSSetSamplers(0, 0, nullptr);
 	else
 		context->PSSetSamplers(0, (UINT)pso.samplerStates.size(), pso.samplerStates.data());
-
+	
 	context->OMSetDepthStencilState(pso.depthStencilState.Get(), 0);
+
+	context->OMSetBlendState(pso.blendState.Get(), pso.blendFactor , 0xffffffff);
 }

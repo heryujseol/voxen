@@ -13,15 +13,15 @@ using namespace DirectX::SimpleMath;
 
 class Utils {
 public:
-	static Vector3 CalcChunkPos(Vector3 pos)
+	static Vector3 CalcOffsetPos(Vector3 pos, int baseSize)
 	{
 		int floorX = (int)floor(pos.x);
 		int floorY = (int)floor(pos.y);
 		int floorZ = (int)floor(pos.z);
 
-		int modX = ((floorX % Chunk::CHUNK_SIZE) + Chunk::CHUNK_SIZE) % Chunk::CHUNK_SIZE;
-		int modY = ((floorY % Chunk::CHUNK_SIZE) + Chunk::CHUNK_SIZE) % Chunk::CHUNK_SIZE;
-		int modZ = ((floorZ % Chunk::CHUNK_SIZE) + Chunk::CHUNK_SIZE) % Chunk::CHUNK_SIZE;
+		int modX = ((floorX % baseSize) + baseSize) % baseSize;
+		int modY = ((floorY % baseSize) + baseSize) % baseSize;
+		int modZ = ((floorZ % baseSize) + baseSize) % baseSize;
 
 		return Vector3((float)(floorX - modX), (float)(floorY - modY), (float)(floorZ - modZ));
 	}

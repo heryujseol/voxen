@@ -122,7 +122,8 @@ void App::Run()
 void App::Update(float dt)
 {
 	m_camera.Update(dt, m_keyPressed, m_mouseNdcX, m_mouseNdcY);
-	m_chunkManager.Update(m_camera);
+	//m_chunkManager.Update(m_camera);
+	m_cloud.Update(dt, m_camera.GetPosition());
 	if (!m_keyToggle['F'])
 		m_skybox.Update(dt);
 }
@@ -154,6 +155,10 @@ void App::Render()
 	Graphics::SetPipelineStates(Graphics::skyboxPSO);
 	m_skybox.Render();
 
+
+	// cloud
+	Graphics::SetPipelineStates(Graphics::cloudPSO);
+	m_cloud.Render();
 
 	// RTV -> backBuffer
 	Graphics::context->ResolveSubresource(Graphics::backBuffer.Get(), 0,
@@ -240,8 +245,11 @@ bool App::InitScene()
 	if (!m_chunkManager.Initialize(m_camera.GetChunkPosition()))
 		return false;
 
-	if (!m_skybox.Initialize(400.0f))
+	if (!m_skybox.Initialize(400.0f, 0.2f))
 		return false;
-
+	
+	if (!m_cloud.Initialize(m_camera.GetPosition()))
+		return false;
+	
 	return true;
 }

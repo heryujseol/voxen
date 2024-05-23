@@ -7,7 +7,6 @@ cbuffer CameraConstantBuffer : register(b0)
 struct vsInput
 {
     float3 position : POSITION;
-    uint face : FACE;
 };
 
 struct vsOutput
