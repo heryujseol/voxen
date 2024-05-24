@@ -182,7 +182,7 @@ public:
 	}
 
 	static bool CreateTextureBuffer(
-		ComPtr<ID3D11Texture2D>& buffer, UINT width, UINT height, bool isMSAA, DXGI_FORMAT format, D3D11_BIND_FLAG bindFlags)
+		ComPtr<ID3D11Texture2D>& buffer, UINT width, UINT height, bool isMSAA, DXGI_FORMAT format, UINT bindFlags)
 	{
 		D3D11_TEXTURE2D_DESC desc;
 		ZeroMemory(&desc, sizeof(desc));
@@ -285,7 +285,6 @@ public:
 		
 		return true;
 	}
-
 
 	static bool CreateDDSTextureFromFile(
 		ComPtr<ID3D11ShaderResourceView>& srv, const std::wstring& filename, bool isCubemap)

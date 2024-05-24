@@ -122,10 +122,12 @@ void App::Run()
 void App::Update(float dt)
 {
 	m_camera.Update(dt, m_keyPressed, m_mouseNdcX, m_mouseNdcY);
-	//m_chunkManager.Update(m_camera);
+	// m_chunkManager.Update(m_camera);
 	m_cloud.Update(dt, m_camera.GetPosition());
 	if (!m_keyToggle['F'])
-		m_skybox.Update(dt);
+		m_skybox.Update(dt * 0.0f, m_camera.GetForward());
+	else
+		m_skybox.Update(dt, m_camera.GetForward());
 }
 
 void App::Render()
@@ -142,9 +144,10 @@ void App::Render()
 	Graphics::context->OMSetRenderTargets(
 		1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
 
-	Graphics::context->VSSetConstantBuffers(0, 1, m_camera.GetConstantBuffer().GetAddressOf());
-	Graphics::context->PSSetConstantBuffers(0, 1, m_camera.GetConstantBuffer().GetAddressOf());
-
+	Graphics::context->VSSetConstantBuffers(0, 1, m_camera.m_constantBuffer.GetAddressOf());
+	std::vector<ID3D11Buffer*> pptr = { m_camera.m_constantBuffer.Get(),
+		m_skybox.m_constantBuffer.Get() };
+	Graphics::context->PSSetConstantBuffers(0, 2, pptr.data());
 
 	// basic
 	Graphics::SetPipelineStates(m_keyToggle[9] ? Graphics::basicWirePSO : Graphics::basicPSO);
@@ -159,6 +162,7 @@ void App::Render()
 	// cloud
 	Graphics::SetPipelineStates(Graphics::cloudPSO);
 	m_cloud.Render();
+
 
 	// RTV -> backBuffer
 	Graphics::context->ResolveSubresource(Graphics::backBuffer.Get(), 0,
@@ -247,9 +251,9 @@ bool App::InitScene()
 
 	if (!m_skybox.Initialize(400.0f, 0.2f))
 		return false;
-	
+
 	if (!m_cloud.Initialize(m_camera.GetPosition()))
 		return false;
-	
+
 	return true;
 }

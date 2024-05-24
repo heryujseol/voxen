@@ -12,18 +12,21 @@ namespace Graphics {
 	ComPtr<ID3D11InputLayout> basicIL;
 	ComPtr<ID3D11InputLayout> skyboxIL;
 	ComPtr<ID3D11InputLayout> cloudIL;
+	ComPtr<ID3D11InputLayout> samplingIL;
 
 
 	// Vertex Shader
 	ComPtr<ID3D11VertexShader> basicVS;
 	ComPtr<ID3D11VertexShader> skyboxVS;
 	ComPtr<ID3D11VertexShader> cloudVS;
+	ComPtr<ID3D11VertexShader> samplingVS;
 
 
 	// Pixel Shader
 	ComPtr<ID3D11PixelShader> basicPS;
 	ComPtr<ID3D11PixelShader> skyboxPS;
 	ComPtr<ID3D11PixelShader> cloudPS;
+	ComPtr<ID3D11PixelShader> samplingPS;
 
 
 	// Rasterizer State
@@ -42,7 +45,6 @@ namespace Graphics {
 
 	// Blend State
 	ComPtr<ID3D11BlendState> alphaBS;
-	ComPtr<ID3D11BlendState> msaaAlphaBS;
 
 
 	// RTV & Buffer
@@ -51,6 +53,9 @@ namespace Graphics {
 
 	ComPtr<ID3D11Texture2D> basicRenderBuffer;
 	ComPtr<ID3D11RenderTargetView> basicRTV;
+
+	ComPtr<ID3D11Texture2D> cloudRenderBuffer;
+	ComPtr<ID3D11RenderTargetView> cloudRTV;
 
 
 	// DSV & Buffer
@@ -70,6 +75,9 @@ namespace Graphics {
 	ComPtr<ID3D11Texture2D> moonBuffer;
 	ComPtr<ID3D11ShaderResourceView> moonSRV;
 
+	ComPtr<ID3D11Texture2D> cloudResolvedBuffer;
+	ComPtr<ID3D11ShaderResourceView> cloudSRV;
+
 
 	// Viewport
 	D3D11_VIEWPORT basicViewport;
@@ -82,6 +90,7 @@ namespace Graphics {
 	GraphicsPSO basicWirePSO;
 	GraphicsPSO skyboxPSO;
 	GraphicsPSO cloudPSO;
+	GraphicsPSO cloudBlendPSO;
 }
 
 
@@ -144,7 +153,7 @@ bool Graphics::InitGraphicsBuffer(UINT width, UINT height)
 	if (!InitDepthStencilBuffers(width, height))
 		return false;
 
-	if (!InitShaderResourceBuffers())
+	if (!InitShaderResourceBuffers(width, height))
 		return false;
 
 	return true;
@@ -161,15 +170,30 @@ bool Graphics::InitRenderTargetBuffers(UINT width, UINT height)
 		return false;
 	}
 
+
 	// Basic RTV
 	DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	D3D11_BIND_FLAG bindFlag = D3D11_BIND_RENDER_TARGET;
+	UINT bindFlag = D3D11_BIND_RENDER_TARGET;
 	if (!DXUtils::CreateTextureBuffer(basicRenderBuffer, width, height, true, format, bindFlag)) {
 		std::cout << "failed create render target buffer" << std::endl;
 		return false;
 	}
 	ret = Graphics::device->CreateRenderTargetView(
 		basicRenderBuffer.Get(), nullptr, basicRTV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create render target view" << std::endl;
+		return false;
+	}
+
+
+	// Cloud RTV
+	if (!DXUtils::CreateTextureBuffer(cloudRenderBuffer, width, height, true, format, bindFlag))
+	{
+		std::cout << "failed create render target buffer" << std::endl;
+		return false;
+	}
+	ret = Graphics::device->CreateRenderTargetView(
+		cloudRenderBuffer.Get(), nullptr, cloudRTV.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create render target view" << std::endl;
 		return false;
@@ -197,8 +221,9 @@ bool Graphics::InitDepthStencilBuffers(UINT width, UINT height)
 	return true;
 }
 
-bool Graphics::InitShaderResourceBuffers()
+bool Graphics::InitShaderResourceBuffers(UINT width, UINT height)
 {
+	// Asset Files
 	if (!DXUtils::CreateTextureFromFile(
 			atlasMapBuffer, atlasMapSRV, "../assets/blender_uv_grid_2k.png")) {
 		std::cout << "failed create texture from a file" << std::endl;
@@ -218,6 +243,21 @@ bool Graphics::InitShaderResourceBuffers()
 
 	if (!DXUtils::CreateTextureFromFile(moonBuffer, moonSRV, "../assets/moon.png")) {
 		std::cout << "failed create texture from moon file" << std::endl;
+		return false;
+	}
+
+
+	// cloudSRV
+	DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	UINT bindFlag = D3D11_BIND_SHADER_RESOURCE;
+	if (!DXUtils::CreateTextureBuffer(cloudResolvedBuffer, width, height, false, format, bindFlag)) {
+		std::cout << "failed create shader resource buffer" << std::endl;
+		return false;
+	}
+	HRESULT ret = Graphics::device->CreateShaderResourceView(
+		cloudResolvedBuffer.Get(), 0, cloudSRV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create shader resource view from cloud srv" << std::endl;
 		return false;
 	}
 
@@ -281,6 +321,17 @@ bool Graphics::InitVertexShaderAndInputLayouts()
 		return false;
 	}
 
+	// Sampling
+	std::vector<D3D11_INPUT_ELEMENT_DESC> elementDesc4 = {
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 4 * 3, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+	};
+	if (!DXUtils::CreateVertexShaderAndInputLayout(
+			L"SamplingVS.hlsl", samplingVS, samplingIL, elementDesc4)) {
+		std::cout << "failed create sampling vs" << std::endl;
+		return false;
+	}
+
 	return true;
 }
 
@@ -301,6 +352,12 @@ bool Graphics::InitPixelShaders()
 	// CloudPS
 	if (!DXUtils::CreatePixelShader(L"CloudPS.hlsl", cloudPS)) {
 		std::cout << "failed create cloud ps" << std::endl;
+		return false;
+	}
+
+	// SamplingPS
+	if (!DXUtils::CreatePixelShader(L"SamplingPS.hlsl", samplingPS)) {
+		std::cout << "failed create sampling ps" << std::endl;
 		return false;
 	}
 
@@ -392,20 +449,6 @@ bool Graphics::InitBlendStates()
 	ZeroMemory(&desc, sizeof(desc));
 	desc.AlphaToCoverageEnable = true;
 	desc.IndependentBlendEnable = false;
-	desc.RenderTarget[0].BlendEnable = false;
-	desc.RenderTarget[0].SrcBlend = D3D11_BLEND_ONE;
-	desc.RenderTarget[0].DestBlend = D3D11_BLEND_ZERO;
-	desc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
-	desc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
-	desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
-	desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
-	desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
-	HRESULT ret = Graphics::device->CreateBlendState(&desc, msaaAlphaBS.GetAddressOf());
-	if (FAILED(ret)) {
-		std::cout << "failed create msaa alpha BS" << std::endl;
-		return false;
-	}
-
 	desc.RenderTarget[0].BlendEnable = true;
 	desc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
 	desc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA; 
@@ -414,7 +457,8 @@ bool Graphics::InitBlendStates()
 	desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ONE;
 	desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
 	desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
-	ret = Graphics::device->CreateBlendState(&desc, alphaBS.GetAddressOf());
+
+	HRESULT ret = Graphics::device->CreateBlendState(&desc, alphaBS.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create alpha BS" << std::endl;
 		return false;
@@ -431,6 +475,7 @@ void Graphics::InitGraphicsPSO()
 	basicPSO.rasterizerState = solidRS;
 	basicPSO.pixelShader = basicPS;
 	basicPSO.samplerStates.push_back(pointClampSS.Get());
+	basicPSO.samplerStates.push_back(linearWrapSS.Get());
 	basicPSO.depthStencilState = basicDSS;
 
 	// basic wire PSO
@@ -448,7 +493,13 @@ void Graphics::InitGraphicsPSO()
 	cloudPSO.inputLayout = cloudIL;
 	cloudPSO.vertexShader = cloudVS;
 	cloudPSO.pixelShader = cloudPS;
-	cloudPSO.blendState = msaaAlphaBS;
+
+	// cloudBlendPSO
+	cloudBlendPSO = basicPSO;
+	cloudBlendPSO.inputLayout = samplingIL;
+	cloudBlendPSO.vertexShader = samplingVS;
+	cloudBlendPSO.pixelShader = samplingPS;
+	cloudBlendPSO.blendState = alphaBS;
 }
 
 void Graphics::SetPipelineStates(GraphicsPSO& pso)

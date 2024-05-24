@@ -4,8 +4,9 @@
 
 #include <algorithm>
 Cloud::Cloud()
-	: m_speed(10.0f), m_mapCenterPosition(0.0f, 0.0f, 0.0f), m_mapDataOffset(0.0f, 0.0f, 0.0f),
-	  m_stride(sizeof(CloudVertex)), m_offset(0)
+	: m_mapCenterPosition(0.0f, 0.0f, 0.0f), m_mapDataOffset(0.0f, 0.0f, 0.0f), m_speed(10.0f),
+	  m_height(192.0f), m_stride(sizeof(CloudVertex)), m_offset(0),
+	  m_samplingStride(sizeof(SamplingVertex)), m_samplingOffset(0)
 {
 	for (int i = 0; i < CLOUD_MAP_SIZE; ++i) {
 		std::fill(m_map[i], m_map[i] + CLOUD_MAP_SIZE, false);
@@ -30,7 +31,10 @@ bool Cloud::Initialize(Vector3 cameraPosition)
 	m_mapCenterPosition.y = 0.0f;
 	m_mapDataOffset = m_mapCenterPosition;
 
-	if (!BuildMap())
+	if (!BuildCloud())
+		return false;
+
+	if (!BuildSquare())
 		return false;
 
 	return true;
@@ -61,10 +65,10 @@ void Cloud::Update(float dt, Vector3 cameraPosition)
 
 	if (newMapCenterPosition != m_mapCenterPosition) {
 		m_mapCenterPosition = newMapCenterPosition;
-		BuildMap();
+		BuildCloud();
 	}
 
-	Vector3 worldPosition = m_mapCenterPosition + Vector3(0.0f, 192.0f, 0.0f);
+	Vector3 worldPosition = m_mapCenterPosition + Vector3(0.0f, m_height, 0.0f);
 	m_constantData.world = Matrix::CreateScale(CLOUD_SCALE_SIZE, 4.0f, CLOUD_SCALE_SIZE) *
 						   Matrix::CreateTranslation(worldPosition);
 	m_constantData.world = m_constantData.world.Transpose();
@@ -73,15 +77,40 @@ void Cloud::Update(float dt, Vector3 cameraPosition)
 
 void Cloud::Render()
 {
+	const FLOAT clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+	Graphics::context->ClearRenderTargetView(Graphics::cloudRTV.Get(), clearColor);
+	Graphics::context->OMSetRenderTargets(
+		1, Graphics::cloudRTV.GetAddressOf(), Graphics::basicDSV.Get());
+
 	Graphics::context->IASetIndexBuffer(m_indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
 	Graphics::context->IASetVertexBuffers(
 		0, 1, m_vertexBuffer.GetAddressOf(), &m_stride, &m_offset);
+
 	Graphics::context->VSSetConstantBuffers(1, 1, m_constantBuffer.GetAddressOf());
+	Graphics::context->PSSetConstantBuffers(2, 1, m_constantBuffer.GetAddressOf());
 
 	Graphics::context->DrawIndexed((UINT)m_indices.size(), 0, 0);
+
+	Blend();
 }
 
-bool Cloud::BuildMap()
+void Cloud::Blend()
+{
+	Graphics::context->OMSetRenderTargets(1, Graphics::basicRTV.GetAddressOf(), nullptr);
+	Graphics::SetPipelineStates(Graphics::cloudBlendPSO);
+
+	Graphics::context->IASetIndexBuffer(m_samplingIndexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
+	Graphics::context->IASetVertexBuffers(
+		0, 1, m_samplingVertexBuffer.GetAddressOf(), &m_samplingStride, &m_samplingOffset);
+
+	Graphics::context->ResolveSubresource(Graphics::cloudResolvedBuffer.Get(), 0,
+		Graphics::cloudRenderBuffer.Get(), 0, DXGI_FORMAT_R8G8B8A8_UNORM);
+	Graphics::context->PSSetShaderResources(0, 1, Graphics::cloudSRV.GetAddressOf());
+
+	Graphics::context->DrawIndexed((UINT)m_samplingIndices.size(), 0, 0);
+}
+
+bool Cloud::BuildCloud()
 {
 	for (int i = 0; i < CLOUD_MAP_SIZE; ++i) {
 		for (int j = 0; j < CLOUD_MAP_SIZE; ++j) {
@@ -119,7 +148,7 @@ bool Cloud::BuildMap()
 
 			int x = i - (int)(CLOUD_MAP_SIZE * 0.5f);
 			int z = j - (int)(CLOUD_MAP_SIZE * 0.5f);
-			CreateVertex(x, z, x_n, x_p, z_n, z_p);
+			CreateCloudMesh(x, z, x_n, x_p, z_n, z_p);
 		}
 	}
 
@@ -137,8 +166,8 @@ bool Cloud::BuildMap()
 			return false;
 		}
 
-		m_constantData.density = 0.8f;
-		m_constantData.color = Vector3(1.0f, 1.0f, 1.0f);
+		m_constantData.density = 0.9f;
+		m_constantData.volumeColor = Vector3(1.0f, 1.0f, 1.0f);
 		m_constantData.world = Matrix();
 		if (!DXUtils::CreateConstantBuffer(m_constantBuffer, m_constantData)) {
 			std::cout << "failed create constant buffer in cloud" << std::endl;
@@ -149,7 +178,7 @@ bool Cloud::BuildMap()
 	return true;
 }
 
-void Cloud::CreateVertex(int x, int z, bool x_n, bool x_p, bool z_n, bool z_p)
+void Cloud::CreateCloudMesh(int x, int z, bool x_n, bool x_p, bool z_n, bool z_p)
 {
 	uint32_t originVertexSize = (uint32_t)m_vertices.size();
 	uint32_t faceCount = 0;
@@ -244,4 +273,51 @@ void Cloud::CreateVertex(int x, int z, bool x_n, bool x_p, bool z_n, bool z_p)
 		m_indices.push_back(originVertexSize + 2 + i * 4);
 		m_indices.push_back(originVertexSize + 3 + i * 4);
 	}
+}
+
+bool Cloud::BuildSquare()
+{
+	CreateSquareMesh();
+
+	if (!DXUtils::CreateVertexBuffer(m_samplingVertexBuffer, m_samplingVertices)) {
+		std::cout << "failed create sampling vertex buffer in cloud" << std::endl;
+		return false;
+	}
+
+	if (!DXUtils::CreateIndexBuffer(m_samplingIndexBuffer, m_samplingIndices)) {
+		std::cout << "failed create sampling index buffer in cloud" << std::endl;
+		return false;
+	}
+
+	return true;
+}
+
+void Cloud::CreateSquareMesh()
+{
+	SamplingVertex vertex;
+
+	vertex.position = Vector3(-1.0f, 1.0f, 0.0f);
+	vertex.texcoord = Vector2(0.0f, 0.0f);
+	m_samplingVertices.push_back(vertex);
+
+	vertex.position = Vector3(1.0f, 1.0f, 0.0f);
+	vertex.texcoord = Vector2(1.0f, 0.0f);
+	m_samplingVertices.push_back(vertex);
+
+	vertex.position = Vector3(1.0f, -1.0f, 0.0f);
+	vertex.texcoord = Vector2(1.0f, 1.0f);
+	m_samplingVertices.push_back(vertex);
+
+	vertex.position = Vector3(-1.0f, -1.0f, 0.0f);
+	vertex.texcoord = Vector2(0.0f, 1.0f);
+	m_samplingVertices.push_back(vertex);
+
+
+	m_samplingIndices.push_back(0);
+	m_samplingIndices.push_back(1);
+	m_samplingIndices.push_back(2);
+
+	m_samplingIndices.push_back(0);
+	m_samplingIndices.push_back(2);
+	m_samplingIndices.push_back(3);
 }

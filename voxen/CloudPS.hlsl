@@ -5,30 +5,108 @@ struct vsOutput
     uint face : FACE;
 };
 
+cbuffer CameraConstantBuffer : register(b0)
+{
+    matrix view;
+    matrix proj;
+    float3 eyePos;
+    float dummy1;
+    float3 eyeDir;
+    float dummy2;
+}
+
+cbuffer SkyboxConstantBuffer : register(b1)
+{
+    float3 sunDir;
+    float skyScale;
+    float3 sunStrength;
+    float sunAltitude;
+    float3 moonStrength;
+    float sectionAltitudeBounary;
+    float3 horizonColor;
+    float showAltitudeBoundary;
+    float3 zenithColor;
+    float dummy3;
+};
+
+cbuffer CloudConstantBuffer : register(b2)
+{
+    matrix world;
+    float3 volumeColor;
+    float density;
+}
+
+static const float PI = 3.14159265;
+static const float invPI = 1.0 / 3.14159265;
+
 float3 getFaceColor(uint face)
 {
     if (face == 0 || face == 1)
     {
-        return float3(0.86, 0.86, 0.86);
+        return float3(0.9, 0.9, 0.9);
     }
     else if (face == 4 || face == 5)
     {
-        return float3(0.93, 0.93, 0.93);
+        return float3(0.85, 0.85, 0.85);
     }
     else if (face == 3)
     {
         return float3(1.0, 1.0, 1.0);
     }
-    else // 2
+    else
     {
-        return float3(0.7, 0.7, 0.7);
+        return float3(0.8, 0.8, 0.8);
     }
+}
+
+float HenyeyGreensteinPhase(float3 L, float3 V, float aniso)
+{
+    // L: toLight
+    // V: eyeDir
+    float cosT = dot(L, V);
+    float g = aniso;
+    return (1.0f - g * g) / (4.0f * PI * pow(abs(1.0f + g * g - 2.0f * g * cosT), 3.0f / 2.0f));
+}
+
+float BeerLambert(float absorptionCoefficient, float distanceTraveled)
+{
+    return exp(-absorptionCoefficient * distanceTraveled);
 }
 
 float4 main(vsOutput input) : SV_TARGET
 {
-    float3 color = float3(0.0, 0.0, 0.0);
+    float3 color = volumeColor;
+   /*
+    // lightColor
+    float cloudAltitude = clamp((saturate(192.0 / skyScale) - (PI * 0.5)) * (-2.0 * invPI), -1.0, 1.0);
+    float3 mixColor = (horizonColor + zenithColor) * 0.5;
+    float3 lightColor = float3(0.0, 0.0, 0.0);
+    if (cloudAltitude <= sectionAltitudeBounary)
+    {
+        lightColor = lerp(horizonColor, mixColor, pow((cloudAltitude + 1.0) / (1.0 + sectionAltitudeBounary), 10.0));
+    }
+    else
+    {
+        lightColor = lerp(mixColor, zenithColor, pow((cloudAltitude - sectionAltitudeBounary) / (1.0 - sectionAltitudeBounary), 0.5));
+    }
+    lightColor = horizonColor;
+    */
+    // lighting
+    //float3 lighting = sunStrength * 15.0 * getFaceColor(input.face);
     
+    //color = volumeColor * density * lightColor;
+    //float3 eyeToPos = 
+    //color = lightColor * lighting * density * HenyeyGreensteinPhase(sunDir, eyeToPos, 0.1);
     
-    return float4(getFaceColor(input.face), 0.8);
+    //float distance = length(input.posWorld.xz - eyePos.xz);
+    //float alpha = lerp(0.0, 1.0, (320.0 - distance) / 320.0);
+    
+    //color += volumeColor * 4.0 * lerp(horizonColor, zenithColor, 0.5) * density * getFaceColor(input.face) * BeerLambert(density, 1.0);
+    float3 mixColor = (horizonColor + zenithColor) * 0.5;
+    color *= mixColor * sunStrength * getFaceColor(input.face);
+    
+    float distance = clamp(length(input.posWorld - eyePos), 320.0, 480.0);
+    
+    float a = smoothstep(320.0, 480.0, distance);
+    return float4(color, 0.8 - a);
 }

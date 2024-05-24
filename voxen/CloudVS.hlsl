@@ -7,7 +7,7 @@ cbuffer CameraConstantBuffer : register(b0)
 cbuffer CloudConstantBuffer : register(b1)
 {
     matrix world;
-    float3 color;
+    float3 volumeColor;
     float density;
 }
 
@@ -19,7 +19,7 @@ struct vsInput
 
 struct vsOutput
 {
-    float4 posProj : SV_Position;
+    float4 posProj : SV_POSITION;
     float3 posWorld : POSITION;
     uint face : FACE;
 };

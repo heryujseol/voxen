@@ -13,22 +13,26 @@ namespace Graphics {
 	extern ComPtr<ID3D11DeviceContext> context;
 	extern ComPtr<IDXGISwapChain> swapChain;
 
+
 	// Input Layout
 	extern ComPtr<ID3D11InputLayout> basicIL;
 	extern ComPtr<ID3D11InputLayout> skyboxIL;
 	extern ComPtr<ID3D11InputLayout> cloudIL;
+	extern ComPtr<ID3D11InputLayout> samplingIL;
 
 
 	// Vertex Shader
 	extern ComPtr<ID3D11VertexShader> basicVS;
 	extern ComPtr<ID3D11VertexShader> skyboxVS;
 	extern ComPtr<ID3D11VertexShader> cloudVS;
+	extern ComPtr<ID3D11VertexShader> samplingVS;
 
 
 	// Pixel Shader
 	extern ComPtr<ID3D11PixelShader> basicPS;
 	extern ComPtr<ID3D11PixelShader> skyboxPS;
 	extern ComPtr<ID3D11PixelShader> cloudPS;
+	extern ComPtr<ID3D11PixelShader> samplingPS;
 
 
 	// Rasterizer State
@@ -47,7 +51,6 @@ namespace Graphics {
 	
 	// Blend State
 	extern ComPtr<ID3D11BlendState> alphaBS;
-	extern ComPtr<ID3D11BlendState> msaaAlphaBS;
 
 
 	// RTV & Buffer
@@ -57,7 +60,10 @@ namespace Graphics {
 	extern ComPtr<ID3D11Texture2D> basicRenderBuffer;
 	extern ComPtr<ID3D11RenderTargetView> basicRTV;
 
+	extern ComPtr<ID3D11Texture2D> cloudRenderBuffer;
+	extern ComPtr<ID3D11RenderTargetView> cloudRTV;
 	
+
 	// DSV & Buffer
 	extern ComPtr<ID3D11Texture2D> basicDepthBuffer;
 	extern ComPtr<ID3D11DepthStencilView> basicDSV;
@@ -75,6 +81,9 @@ namespace Graphics {
 	extern ComPtr<ID3D11Texture2D> moonBuffer;
 	extern ComPtr<ID3D11ShaderResourceView> moonSRV;
 
+	extern ComPtr<ID3D11Texture2D> cloudResolvedBuffer;
+	extern ComPtr<ID3D11ShaderResourceView> cloudSRV;
+
 
 	// Viewport
 	extern D3D11_VIEWPORT basicViewport;
@@ -88,7 +97,7 @@ namespace Graphics {
 	extern bool InitGraphicsBuffer(UINT width, UINT height);
 	extern bool InitRenderTargetBuffers(UINT width, UINT height);
 	extern bool InitDepthStencilBuffers(UINT width, UINT height);
-	extern bool InitShaderResourceBuffers();
+	extern bool InitShaderResourceBuffers(UINT width, UINT height);
 	
 
 	// VS, IL, PS, RS, SS, DSS (+ HS, DS, GS, BS ...)
@@ -108,4 +117,5 @@ namespace Graphics {
 	extern GraphicsPSO basicWirePSO;
 	extern GraphicsPSO skyboxPSO;
 	extern GraphicsPSO cloudPSO;
+	extern GraphicsPSO cloudBlendPSO;
 }

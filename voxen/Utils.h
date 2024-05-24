@@ -9,10 +9,14 @@
 #include "Utils.h"
 #include "Chunk.h"
 
+#include <algorithm>
+
 using namespace DirectX::SimpleMath;
 
-class Utils {
-public:
+namespace Utils {
+	static const float PI = 3.14159265f;
+	static const float invPI = 1.0f / PI;
+
 	static Vector3 CalcOffsetPos(Vector3 pos, int baseSize)
 	{
 		int floorX = (int)floor(pos.x);
@@ -26,7 +30,12 @@ public:
 		return Vector3((float)(floorX - modX), (float)(floorY - modY), (float)(floorZ - modZ));
 	}
 
-	static float Lerp(float a, float b, float w) { return (1 - w) * a + w * b; }
+	template <typename T>
+	static T Lerp(T a, T b, float w) 
+	{ 
+		w = std::clamp(w, 0.0f, 1.0f);
+		return (1 - w) * a + w * b; 
+	}
 
 	static float CubicLerp(float a, float b, float w)
 	{
@@ -147,5 +156,15 @@ public:
 	static inline int TrailingOnes(uint64_t num)
 	{
 		return (int)log2((num & ~(num + 1)) + 1); // __builtin_ctzll or _BitScanForward64}
+	}
+
+	static float HenyeyGreensteinPhase(Vector3 L, Vector3 V, float aniso)
+	{
+		// L: toLight
+		// V: eyeDir
+		// https://www.shadertoy.com/view/7s3SRH
+		float cosT = L.Dot(V);
+		float g = aniso;
+		return (1.0f - g * g) / (4.0f * PI * pow(abs(1.0f + g * g - 2.0f * g * cosT), 3.0f / 2.0f));
 	}
 };
