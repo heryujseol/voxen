@@ -28,7 +28,7 @@ private:
 	
 	static const int CLOUD_DATA_MAP_SIZE = 512;
 	static const int CLOUD_SCALE_SIZE = 16;
-	static const int CLOUD_MAP_SIZE = 50;
+	static const int CLOUD_MAP_SIZE = 64;
 
 	bool m_map[CLOUD_MAP_SIZE][CLOUD_MAP_SIZE];
 	bool m_dataMap[CLOUD_DATA_MAP_SIZE][CLOUD_DATA_MAP_SIZE];

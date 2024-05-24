@@ -122,12 +122,15 @@ void App::Run()
 void App::Update(float dt)
 {
 	m_camera.Update(dt, m_keyPressed, m_mouseNdcX, m_mouseNdcY);
-	// m_chunkManager.Update(m_camera);
-	m_cloud.Update(dt, m_camera.GetPosition());
-	if (!m_keyToggle['F'])
-		m_skybox.Update(dt * 0.0f, m_camera.GetForward());
-	else
+	//m_chunkManager.Update(m_camera);
+	if (m_keyToggle['F']) {
 		m_skybox.Update(dt, m_camera.GetForward());
+		m_cloud.Update(dt, m_camera.GetPosition());
+	}
+	else {
+		m_skybox.Update(0.0f, m_camera.GetForward());
+		m_cloud.Update(0.0f, m_camera.GetPosition());
+	}
 }
 
 void App::Render()
@@ -243,13 +246,13 @@ bool App::InitGUI()
 
 bool App::InitScene()
 {
-	if (!m_camera.Initialize(Vector3(16.0f, 50.0f, 16.0f)))
+	if (!m_camera.Initialize(Vector3(16.0f, 80.0f, 16.0f)))
 		return false;
 
 	if (!m_chunkManager.Initialize(m_camera.GetChunkPosition()))
 		return false;
 
-	if (!m_skybox.Initialize(400.0f, 0.2f))
+	if (!m_skybox.Initialize(550.0f, 0.2f))
 		return false;
 
 	if (!m_cloud.Initialize(m_camera.GetPosition()))

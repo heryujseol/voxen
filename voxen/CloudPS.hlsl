@@ -33,7 +33,7 @@ cbuffer CloudConstantBuffer : register(b2)
 {
     matrix world;
     float3 volumeColor;
-    float density;
+    float cloudScale;
 }
 
 static const float PI = 3.14159265;
@@ -43,11 +43,11 @@ float3 getFaceColor(uint face)
 {
     if (face == 0 || face == 1)
     {
-        return float3(0.9, 0.9, 0.9);
+        return float3(0.95, 0.95, 0.95);
     }
     else if (face == 4 || face == 5)
     {
-        return float3(0.85, 0.85, 0.85);
+        return float3(0.9, 0.9, 0.9);
     }
     else if (face == 3)
     {
@@ -55,7 +55,7 @@ float3 getFaceColor(uint face)
     }
     else
     {
-        return float3(0.8, 0.8, 0.8);
+        return float3(0.75, 0.75, 0.75);
     }
 }
 
@@ -75,7 +75,7 @@ float BeerLambert(float absorptionCoefficient, float distanceTraveled)
 
 float4 main(vsOutput input) : SV_TARGET
 {
-    float3 color = volumeColor;
+    
    /*
     // lightColor
     float cloudAltitude = clamp((saturate(192.0 / skyScale) - (PI * 0.5)) * (-2.0 * invPI), -1.0, 1.0);
@@ -102,11 +102,30 @@ float4 main(vsOutput input) : SV_TARGET
     //float alpha = lerp(0.0, 1.0, (320.0 - distance) / 320.0);
     
     //color += volumeColor * 4.0 * lerp(horizonColor, zenithColor, 0.5) * density * getFaceColor(input.face) * BeerLambert(density, 1.0);
-    float3 mixColor = (horizonColor + zenithColor) * 0.5;
-    color *= mixColor * sunStrength * getFaceColor(input.face);
+    float3 color = volumeColor * getFaceColor(input.face);
     
-    float distance = clamp(length(input.posWorld - eyePos), 320.0, 480.0);
+    float distance = length(input.posWorld.xz - eyePos.xz);
     
-    float a = smoothstep(320.0, 480.0, distance);
-    return float4(color, 0.8 - a);
+    float horizonWeight = smoothstep(260.0, cloudScale, clamp(distance, 260.0, cloudScale));
+    color = lerp(color, horizonColor, horizonWeight);
+    
+    if (sunAltitude >= sectionAltitudeBounary) // day
+    {
+
+    }
+    else if (sunAltitude <= showAltitudeBoundary) // night
+    {
+      
+    }
+    else // sunset or sunrise
+    {
+       
+    }
+    
+    //float alphaWeight = smoothstep(0.0, 1.0, saturate((cloudScale - distance) / cloudScale));
+    //float alpha = alphaWeight * 0.85;
+    float alphaWeight = smoothstep(260.0, cloudScale, clamp(distance, 260.0, cloudScale));
+    float alpha = (1.0 - alphaWeight) * 0.8; // [0, 0.85]
+    
+    return float4(color, alpha);
 }

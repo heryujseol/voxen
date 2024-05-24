@@ -67,7 +67,8 @@ float4 main(vsOutput input) : SV_TARGET
     texcoord += indexUV; // x.u  y.v 
     texcoord /= texCount;
     
-    float4 color = atlasTexture.Sample(pointClampSS, texcoord);
+    float3 color = atlasTexture.Sample(pointClampSS, texcoord).rgb;
     
-    return color;
+    return float4(color, 0.0);
+
 }

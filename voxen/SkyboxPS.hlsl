@@ -92,8 +92,8 @@ float4 main(vsOutput input) : SV_TARGET
     float3 posDir = normalize(input.posWorld);
     
     // sun
-    float maxSunSize = 200.0f;
-    float minSunSize = 75.0f;
+    float maxSunSize = 220.0f;
+    float minSunSize = 50.0f;
     float sunSize = lerp(minSunSize, maxSunSize, pow(max(dot(sunDir, eyeDir), 0.0), 3.0));
     float2 sunTexcoord;
     if (sunAltitude > showAltitudeBoundary && getPlanetTexcoord(posDir, sunDir, sunSize, sunTexcoord))
@@ -122,7 +122,7 @@ float4 main(vsOutput input) : SV_TARGET
    
     color += getSkyColor(posDir);
     
-    return float4(color, 1.0);
+    return float4(color, 0.0);
 }
 
 

@@ -49,5 +49,5 @@ struct SkyboxConstantData {
 struct CloudConstantData {
 	Matrix world;
 	Vector3 volumeColor;
-	float density;
+	float cloudScale;
 };

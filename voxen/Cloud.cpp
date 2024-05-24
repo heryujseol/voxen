@@ -23,7 +23,7 @@ bool Cloud::Initialize(Vector3 cameraPosition)
 	srand((unsigned int)time(NULL));
 	for (int i = 0; i < CLOUD_DATA_MAP_SIZE; ++i) {
 		for (int j = 0; j < CLOUD_DATA_MAP_SIZE; ++j) {
-			m_dataMap[i][j] = rand() % 2 == 0;
+			m_dataMap[i][j] = rand() % 5 == 0;
 		}
 	}
 
@@ -77,8 +77,8 @@ void Cloud::Update(float dt, Vector3 cameraPosition)
 
 void Cloud::Render()
 {
-	const FLOAT clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-	Graphics::context->ClearRenderTargetView(Graphics::cloudRTV.Get(), clearColor);
+	Graphics::context->CopyResource(
+		Graphics::cloudRenderBuffer.Get(), Graphics::basicRenderBuffer.Get());
 	Graphics::context->OMSetRenderTargets(
 		1, Graphics::cloudRTV.GetAddressOf(), Graphics::basicDSV.Get());
 
@@ -166,7 +166,7 @@ bool Cloud::BuildCloud()
 			return false;
 		}
 
-		m_constantData.density = 0.9f;
+		m_constantData.cloudScale = CLOUD_SCALE_SIZE * CLOUD_MAP_SIZE * 0.5;
 		m_constantData.volumeColor = Vector3(1.0f, 1.0f, 1.0f);
 		m_constantData.world = Matrix();
 		if (!DXUtils::CreateConstantBuffer(m_constantBuffer, m_constantData)) {
