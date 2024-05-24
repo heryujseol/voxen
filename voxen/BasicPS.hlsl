@@ -11,6 +11,12 @@ cbuffer CameraConstantBuffer : register(b0)
     float dummy;
 }
 
+cbuffer SkyboxConstantBuffer : register(b1)
+{
+    float3 sunDir;
+    float skyScale;
+};
+
 struct vsOutput
 {
     float4 posProj : SV_POSITION;
@@ -47,6 +53,35 @@ float2 getVoxelTexcoord(float3 pos, uint face)
     }   
 }
 
+float3 getNormal(uint face)
+{
+    if (face == 0)
+    {
+        return float3(-1.0, 0.0, 0.0);
+    }
+    else if (face == 1)
+    {
+        return float3(1.0, 0.0, 0.0);
+    }
+    else if (face == 2)
+    {
+        return float3(0.0, -1.0, 0.0);
+    }
+    else if (face == 3)
+    {
+        return float3(0.0, 1.0, 0.0);
+    }
+    else if (face == 4)
+    {
+        return float3(0.0, 0.0, -1.0);
+    }
+    else
+    {
+        return float3(0.0, 0.0, 1.0);
+
+    }
+}
+
 float4 main(vsOutput input) : SV_TARGET
 {
     /*
@@ -57,6 +92,11 @@ float4 main(vsOutput input) : SV_TARGET
     
     // atlas test
     // 2048 2048 -> 텍스쳐당 128x128, 그게 16x16
+    float3 dir = sunDir;
+    float3 normal = getNormal(input.face);
+    
+    float ndotl = max(dot(dir, normal), 0.0);
+    
     float2 texcoord = getVoxelTexcoord(input.posWorld, input.face);
     uint texCount = 16;  // 한 줄의 텍스쳐 개수
     
@@ -68,6 +108,16 @@ float4 main(vsOutput input) : SV_TARGET
     texcoord /= texCount;
     
     float4 color = atlasTexture.Sample(pointClampSS, texcoord);
+    color *= 0.8;
+    
+    if (ndotl == 0)
+    {
+        color = color;
+    }
+    else
+    {
+        color *= ndotl + 1.0f;
+    }
     
     return color;
 }

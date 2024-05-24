@@ -143,6 +143,7 @@ void App::Render()
 
 	Graphics::context->VSSetConstantBuffers(0, 1, m_camera.GetConstantBuffer().GetAddressOf());
 	Graphics::context->PSSetConstantBuffers(0, 1, m_camera.GetConstantBuffer().GetAddressOf());
+	Graphics::context->PSSetConstantBuffers(1, 1, m_skybox.GetConstantBuffer().GetAddressOf());
 
 
 	// basic

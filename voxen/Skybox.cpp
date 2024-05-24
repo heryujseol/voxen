@@ -35,7 +35,7 @@ bool Skybox::Initialize(float scale)
 	return true;
 }
 
-void Skybox::Update(float dt) 
+void Skybox::Update(float dt)
 {
 	// move sunDir
 	float speed = 0.2f;
@@ -142,3 +142,5 @@ void Skybox::CreateBox(float scale)
 
 	std::reverse(m_indices.begin(), m_indices.end()); // for front CW at inner
 }
+
+ComPtr<ID3D11Buffer> Skybox::GetConstantBuffer() { return m_constantBuffer; }

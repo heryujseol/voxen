@@ -19,6 +19,8 @@ public:
 	void Update(float dt);
 	void Render();
 
+	ComPtr<ID3D11Buffer> GetConstantBuffer();
+
 private:
 	void CreateBox(float scale);
 
