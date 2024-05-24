@@ -9,12 +9,14 @@ cbuffer CameraConstantBuffer : register(b0)
     matrix proj;
     float3 eyePos;
     float dummy;
+    float3 eyeDir;
+    float dummy2;
 }
 
 cbuffer SkyboxConstantBuffer : register(b1)
 {
     float3 sunDir;
-    float dummy2;
+    float skyScale;
 };
 
 struct vsOutput
@@ -23,7 +25,20 @@ struct vsOutput
     float3 posWorld : POSITION;
 };
 
-bool getPlanetTexcoord(float3 posDir, float3 planetDir, out float2 texcoord)
+static const float PI = 3.14159265;
+static const float invPI = 1.0 / 3.14159265;
+static const float showAltitudeBoundary = -0.3;
+static const float sectionAltitudeBounary = 0.05;
+
+static float3 horizonDay = float3(0.6, 0.8, 1.0);
+static float3 horizonNight = float3(0.05, 0.05, 0.2);
+static float3 horizonSunrise = float3(0.8, 0.4, 0.2);
+static float3 horizonSunset = float3(0.9, 0.6, 0.2);
+
+static float3 zenithDay = float3(0.3, 0.6, 1.0);
+static float3 zenithNight = float3(0.0, 0.0, 0.1);
+
+bool getPlanetTexcoord(float3 posDir, float3 planetDir, float size, out float2 texcoord)
 {
     if (length(posDir.xy) == 0.0)
         return false;
@@ -31,17 +46,22 @@ bool getPlanetTexcoord(float3 posDir, float3 planetDir, out float2 texcoord)
     float3 posDirHorizontal = normalize(float3(planetDir.xy, posDir.z));
     float3 posDirVertical = normalize(float3(posDir.xy, 0.0));
     
-    float dotSH = dot(posDirHorizontal, planetDir);
-    float dotSV = dot(posDirVertical, planetDir);
+    float dotSH = max(dot(posDirHorizontal, planetDir), 0.0);
+    float dotSV = max(dot(posDirVertical, planetDir), 0.0);
     
-    if (dotSH >= 0.98 && dotSV >= 0.98)
+    float width = max(tan(acos(dotSH)), 0.0) * skyScale;
+    float height = max(tan(acos(dotSV)), 0.0) * skyScale;
+    
+    if (width <= size && height <= size) // 0 ~ size
     {
         // horizontal tex_x 
-        float tex_x = 25.0 * (0.02 + (posDirHorizontal.z < 0 ? 1.0 - dotSH : dotSH - 1.0)); // 25.0 * (0.02 + [-0.02, 0.02])
+        float sign = posDirHorizontal.z > 0 ? -1 : 1;
+        float tex_x = (sign * width + size) * 0.5 / size;
         
         // vertical tex_y
         float3 crossSV = cross(planetDir, posDirVertical);
-        float tex_y = 25.0 * (0.02 + (crossSV.z < 0 ? 1.0 - dotSV : dotSV - 1.0)); // 25.0 * (0.02 + [-0.02, 0.02])
+        sign = crossSV.z > 0 ? -1 : 1;
+        float tex_y = (sign * height + size) * 0.5 / size;
         
         texcoord = float2(tex_x, tex_y);
         return true;
@@ -50,73 +70,59 @@ bool getPlanetTexcoord(float3 posDir, float3 planetDir, out float2 texcoord)
     return false;
 }
 
-float3 getSkyColor(float3 posDir)
+float3 getSkyColor(float posAltitude, float sunAltitude)
 {
-    float PI = 3.14159265;
-    float invPI = 1.0 / 3.14159265;
-    // ([0, pi] - pi/2) * -2/pi -> [-1, 1]
-    float sunAltitude = clamp((acos(sunDir.y) - (PI * 0.5)) * (-2.0 * invPI), -1.0, 1.0);
-    float posAltitude = clamp((acos(posDir.y) - (PI * 0.5)) * (-2.0 * invPI), -1.0, 1.0);
+    // 태양 위치에 따른 빠른 색 변환 (고도가 0에서 증가할 때 빠르게 밤낮이 바뀌기 위함)
+    float exp = ((sunAltitude >= 0 ? 1.0 : -1.0) * pow(abs(sunAltitude), 0.6) + 1.0) * 0.5;
+    float3 zenithColor = lerp(zenithNight, zenithDay, exp);
+    float3 normalHorizonColor = lerp(horizonNight, horizonDay, exp);
     
-    float3 horizonDay = float3(0.5, 0.7, 1.0);
-    float3 zenithDay = float3(0.2, 0.5, 1.0);
+    // 태양의 고도가 낮을 때만 sun컬러를 결정하도록 선택
+    // zenith와 horizon 구별 고도 고려
+    float3 sunHorizonX = lerp(horizonSunset, horizonSunrise, (sunDir.x + 1.0) * 0.5);
+    float3 sunHorizon = lerp(sunHorizonX, normalHorizonColor, pow(abs(sunAltitude - sectionAltitudeBounary), 0.3));
     
-    float3 horizonNight = float3(0.05, 0.05, 0.2);
-    float3 zenithNight = float3(0.0, 0.0, 0.2);
+    // 바라보는 방향에 대한 비등방성
+    float sunDirWeight = pow(max(dot(sunDir, eyeDir), 0.0), 3.0);
+    float3 horizonColor = lerp(normalHorizonColor, sunHorizon, sunDirWeight);
     
-    float3 horizonSunrise = float3(0.8, 0.4, 0.2);
-    float3 zenithSunrise = float3(0.5, 0.3, 0.5);
-    
-    float3 horizonSunset = float3(0.9, 0.5, 0.2);
-    float3 zenithSunset = float3(0.4, 0.4, 0.6);
-    
-    float3 retHorizonColor = float3(0.0, 0.0, 0.0);
-    float3 retZenithColor = float3(0.0, 0.0, 0.0);
-    if (sunAltitude >= 0) // Day
-    {
-        if (sunDir.x > 0) // Sunrise
-        {
-            retHorizonColor = lerp(horizonSunrise, horizonDay, sunAltitude);
-            retZenithColor = lerp(zenithSunrise, zenithDay, sunAltitude);
-        }
-        else // Sunset
-        {
-            retHorizonColor = lerp(horizonSunset, horizonDay, sunAltitude);
-            retZenithColor = lerp(zenithSunset, zenithDay, sunAltitude);
-        }
-    }   
-    else // Night
-    {
-        if (sunDir.x < 0) // Sunset
-        {
-            retHorizonColor = lerp(horizonSunset, horizonNight, -sunAltitude);
-            retZenithColor = lerp(zenithSunset, zenithNight, -sunAltitude);
-        }
-        else // Sunrise
-        {
-            retHorizonColor = lerp(horizonSunrise, horizonNight, -sunAltitude);
-            retZenithColor = lerp(zenithSunrise, zenithNight, -sunAltitude);
-        }
+    // zenith와 horizon 구별 고도 고려
+    // 최대한 구별된 색 선택하도록 결정
+    float3 mixColor = (horizonColor + zenithColor) * 0.5;
+    if (posAltitude <= sectionAltitudeBounary)
+    {   
+        return lerp(horizonColor, mixColor, pow((posAltitude + 1.0) / (1.0 + sectionAltitudeBounary), 10.0));
     }
-    
-    return lerp(retHorizonColor, retZenithColor, posAltitude);
+    else
+    {
+        return lerp(mixColor, zenithColor, pow((posAltitude - sectionAltitudeBounary) / (1.0 - sectionAltitudeBounary), 0.5));
+    }
 }
 
 float4 main(vsOutput input) : SV_TARGET
 {
-    float3 posDir = normalize(input.posWorld);
     float3 color = float3(0.0, 0.0, 0.0);
+    float3 posDir = normalize(input.posWorld);
+    
+    // ([0, pi] - pi/2) * -2/pi -> [1, -1]
+    float posAltitude = clamp((acos(posDir.y) - (PI * 0.5)) * (-2.0 * invPI), -1.0, 1.0);
+    float sunAltitude = clamp((acos(sunDir.y) - (PI * 0.5)) * (-2.0 * invPI), -1.0, 1.0);
     
     // sun
+    float maxSunSize = 200.0f;
+    float minSunSize = 75.0f;
+    float sunSize = lerp(minSunSize, maxSunSize, pow(max(dot(sunDir, eyeDir), 0.0), 3.0));
     float2 sunTexcoord;
-    if (getPlanetTexcoord(posDir, sunDir, sunTexcoord))
+    if (sunAltitude > showAltitudeBoundary && getPlanetTexcoord(posDir, sunDir, sunSize, sunTexcoord))
     {
-        color += sunTexture.SampleLevel(pointSampler, sunTexcoord, 0.0).rgb;
+        float sunStrength = max(sunAltitude, 0.6);
+        color += sunTexture.SampleLevel(pointSampler, sunTexcoord, 0.0).rgb * sunStrength;
     }
-    
+ 
     // moon
+    float moonSize = minSunSize;
     float2 moonTexcoord;
-    if (getPlanetTexcoord(posDir, -sunDir, moonTexcoord))
+    if (-sunAltitude > showAltitudeBoundary && getPlanetTexcoord(posDir, -sunDir, moonSize, moonTexcoord))
     {
         uint col = 4;
         uint row = 2;
@@ -128,10 +134,12 @@ float4 main(vsOutput input) : SV_TARGET
         
         moonTexcoord += indexUV; // moonTexcoord : [0,0]~[4,2] 
         moonTexcoord = float2(moonTexcoord.x / col, moonTexcoord.y / row); // [4,2]->[1,1]
-        color += moonTexture.SampleLevel(pointSampler, moonTexcoord, 0.0).rgb;
+        
+        float moonStrength = max(-sunAltitude, 0.1);
+        color += moonTexture.SampleLevel(pointSampler, moonTexcoord, 0.0).rgb * moonStrength;
     }
-    
-    color += getSkyColor(posDir);
+   
+    color += getSkyColor(posAltitude, sunAltitude);
     
     return float4(color, 1.0);
 }

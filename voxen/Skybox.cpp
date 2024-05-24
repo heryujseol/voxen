@@ -24,6 +24,7 @@ bool Skybox::Initialize(float scale)
 		return false;
 	}
 
+	m_constantData.skyScale = scale;
 	m_constantData.sunDir = Vector3(1.0f, 0.0f, 0.0f);
 	//m_constantData.sunDir = Vector3::Transform(m_constantData.sunDir, Matrix::CreateRotationZ(0.3f * 3.141592f));
 	if (!DXUtils::CreateConstantBuffer(m_constantBuffer, m_constantData)) {
