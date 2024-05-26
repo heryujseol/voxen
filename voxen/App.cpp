@@ -246,7 +246,7 @@ bool App::InitGUI()
 
 bool App::InitScene()
 {
-	if (!m_camera.Initialize(Vector3(16.0f, 80.0f, 16.0f)))
+	if (!m_camera.Initialize(Vector3(0.0f, 108.0f, 0.0f)))
 		return false;
 
 	if (!m_chunkManager.Initialize(m_camera.GetChunkPosition()))

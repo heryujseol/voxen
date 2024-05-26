@@ -20,10 +20,13 @@ Cloud::~Cloud(){};
 
 bool Cloud::Initialize(Vector3 cameraPosition)
 {
-	srand((unsigned int)time(NULL));
 	for (int i = 0; i < CLOUD_DATA_MAP_SIZE; ++i) {
 		for (int j = 0; j < CLOUD_DATA_MAP_SIZE; ++j) {
-			m_dataMap[i][j] = rand() % 5 == 0;
+			float noise1 = Utils::PerlinFbm((float)i / CLOUD_DATA_MAP_SIZE,
+				(float)j / CLOUD_DATA_MAP_SIZE, CLOUD_DATA_MAP_SIZE * 0.125f, 3);
+			float noise2 = Utils::PerlinFbm((float)i / CLOUD_DATA_MAP_SIZE,
+				(float)j / CLOUD_DATA_MAP_SIZE, CLOUD_DATA_MAP_SIZE * 0.5f, 1);
+			m_dataMap[i][j] = noise1 > 0.2f || noise2 > 0.5f;
 		}
 	}
 
@@ -67,6 +70,9 @@ void Cloud::Update(float dt, Vector3 cameraPosition)
 		m_mapCenterPosition = newMapCenterPosition;
 		BuildCloud();
 	}
+
+	if (m_vertices.empty())
+		return;
 
 	Vector3 worldPosition = m_mapCenterPosition + Vector3(0.0f, m_height, 0.0f);
 	m_constantData.world = Matrix::CreateScale(CLOUD_SCALE_SIZE, 4.0f, CLOUD_SCALE_SIZE) *
@@ -120,7 +126,7 @@ bool Cloud::BuildCloud()
 			int z =
 				((int)(m_mapDataOffset.z / CLOUD_SCALE_SIZE) + j - (int)(CLOUD_MAP_SIZE * 0.5f)) %
 				CLOUD_DATA_MAP_SIZE;
-
+		
 			if (x < 0)
 				x += CLOUD_DATA_MAP_SIZE;
 			if (z < 0)
