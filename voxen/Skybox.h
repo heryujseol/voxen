@@ -16,7 +16,7 @@ public:
 	~Skybox();
 
 	bool Initialize(float scale, float speed);
-	void Update(float dt, Vector3 eyeDir);
+	void Update(float dt);
 	void Render();
 
 	ComPtr<ID3D11Buffer> m_constantBuffer;
@@ -24,16 +24,29 @@ public:
 private:
 	void CreateMesh(float scale);
 
+	uint32_t m_dateTime;
 	float m_speed;
 
-	const float SHOW_BOUNDARY = -0.2f;
-	const float SECTION_BOUNDARY = 0.1f;
-	const Vector3 HORIZON_DAY = Vector3(0.68f, 0.83f, 1.0f);
-	const Vector3 HORIZON_NIGHT = Vector3(0.05f, 0.05f, 0.2f);
-	const Vector3 HORIZON_SUNRISE = Vector3(0.8f, 0.4f, 0.2f);
-	const Vector3 HORIZON_SUNSET = Vector3(0.9f, 0.6f, 0.2f);
-	const Vector3 ZENITH_DAY = Vector3(0.51f, 0.69f, 1.0f);
-	const Vector3 ZENITH_NIGHT = Vector3(0.0f, 0.0f, 0.1f);
+	const uint32_t DATE_CYCLE_AMOUNT = 24000;
+	const uint32_t DATE_REAL_TIME = 0.5f * 60;
+	const float DATE_TIME_SPEED = (float)DATE_CYCLE_AMOUNT / DATE_REAL_TIME;
+	
+	// normal color
+	const Vector3 NORMAL_DAY_HORIZON = Vector3(0.67f, 0.82f, 1.0f);
+	const Vector3 NORMAL_DAY_ZENITH = Vector3(0.52f, 0.67f, 1.0f);
+
+	const Vector3 NORMAL_NIGHT_HORIZON = Vector3(0.04f, 0.05f, 0.09f);
+	const Vector3 NORMAL_NIGHT_ZENITH = Vector3(0.0f, 0.0f, 0.01f);
+	
+	// sun color
+	const Vector3 SUN_DAY_HORIZON = Vector3(0.47f, 0.62f, 1.0f);
+	const Vector3 SUN_DAY_ZENITH = Vector3(0.32f, 0.45f, 1.0f);
+
+	const Vector3 SUN_SUNRISE_HORIZON = Vector3(0.72f, 0.60f, 0.34f);
+	const Vector3 SUN_SUNRISE_ZENITH = Utils::Lerp(SUN_DAY_ZENITH, NORMAL_NIGHT_ZENITH, 15.0f / 27.0f);
+
+	const Vector3 SUN_SUNSET_HORIZON = Vector3(0.64f, 0.26f, 0.04f);
+	const Vector3 SUN_SUNSET_ZENITH = Utils::Lerp(SUN_DAY_ZENITH, NORMAL_NIGHT_ZENITH, 15.0f / 27.0f);
 
 	std::vector<SkyboxVertex> m_vertices;
 	std::vector<uint32_t> m_indices;

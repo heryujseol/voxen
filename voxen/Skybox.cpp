@@ -5,8 +5,8 @@
 #include <algorithm>
 
 Skybox::Skybox()
-	: m_speed(0.0f), m_stride(sizeof(SkyboxVertex)), m_offset(0), m_vertexBuffer(nullptr),
-	  m_indexBuffer(nullptr)
+	: m_dateTime(0), m_speed(0.0f), m_stride(sizeof(SkyboxVertex)), m_offset(0),
+	  m_vertexBuffer(nullptr), m_indexBuffer(nullptr)
 {
 }
 
@@ -29,8 +29,6 @@ bool Skybox::Initialize(float scale, float speed)
 	}
 
 	m_constantData.skyScale = scale;
-	m_constantData.showAltitudeBoundary = SHOW_BOUNDARY;
-	m_constantData.sectionAltitudeBounary = SECTION_BOUNDARY;
 	m_constantData.sunDir = Vector3(1.0f, 0.0f, 0.0f);
 	if (!DXUtils::CreateConstantBuffer(m_constantBuffer, m_constantData)) {
 		std::cout << "failed create constant buffer in skybox" << std::endl;
@@ -40,45 +38,95 @@ bool Skybox::Initialize(float scale, float speed)
 	return true;
 }
 
-void Skybox::Update(float dt, Vector3 eyeDir)
+void Skybox::Update(float dt)
 {
+	static float acc = 0.0f;
+
+	// dateTime
+	acc += DATE_TIME_SPEED * dt;
+	m_dateTime = (uint32_t)acc;
+	m_dateTime %= DATE_CYCLE_AMOUNT;
+
 	// sunDir
-	Vector3 sunDir =
-		Vector3::Transform(m_constantData.sunDir, Matrix::CreateRotationZ(dt * m_speed));
+	float angle = (float)m_dateTime / DATE_CYCLE_AMOUNT * 2.0f * Utils::PI;
+	Vector3 sunDir = Vector3::Transform(Vector3(1.0f, 0.0f, 0.0f), Matrix::CreateRotationZ(angle));
 	sunDir.Normalize();
 
-	float sunAltitude = std::clamp(
-		(std::acos(sunDir.y) - (Utils::PI * 0.5f)) * (-2.0f * Utils::invPI), -1.0f, 1.0f);
+	// set color & strength
+	Vector3 normalHorizonColor = Vector3(0.0f);
+	Vector3 normalZenithColor = Vector3(0.0f);
+	Vector3 sunHorizonColor = Vector3(0.0f);
+	Vector3 sunZenithColor = Vector3(0.0f);
+	float sunStrength = 0.0f;
 
-	// 태양 위치에 따른 빠른 색 변환 (고도가 0에서 증가할 때 빠르게 밤낮이 바뀌기 위함)
-	float exp = ((sunAltitude >= 0 ? 1.0f : -1.0f) * powf(abs(sunAltitude), 0.6f) + 1.0f) * 0.5f;
-	Vector3 zenithColor = Utils::Lerp(ZENITH_NIGHT, ZENITH_DAY, exp);
-	Vector3 normalHorizonColor = Utils::Lerp(HORIZON_NIGHT, HORIZON_DAY, exp);
+	if (1000 <= m_dateTime && m_dateTime < 11000) { // day
+		normalHorizonColor = NORMAL_DAY_HORIZON;
+		normalZenithColor = NORMAL_DAY_ZENITH;
+		sunHorizonColor = SUN_DAY_HORIZON;
+		sunZenithColor = SUN_DAY_ZENITH;
 
-	// 태양의 고도가 낮을 때만 sun컬러를 결정하도록 선택
-	// zenith와 horizon 구별 고도 고려
-	Vector3 sunHorizonX = Utils::Lerp(HORIZON_SUNSET, HORIZON_SUNRISE, (sunDir.x + 1.0f) * 0.5f);
-	Vector3 sunHorizon = Utils::Lerp(
-		sunHorizonX, normalHorizonColor, powf(abs(sunAltitude - SECTION_BOUNDARY), 0.3f));
+		sunStrength = 1.0f;
+	}
+	else if (13700 <= m_dateTime && m_dateTime < 22300) { // night
+		normalHorizonColor = NORMAL_NIGHT_HORIZON;
+		normalZenithColor = NORMAL_NIGHT_ZENITH;
+		sunHorizonColor = NORMAL_NIGHT_HORIZON;
+		sunZenithColor = NORMAL_NIGHT_ZENITH;
 
-	// 바라보는 방향에 대한 비등방성
-	float sunDirWeight =
-		sunAltitude > SHOW_BOUNDARY ? Utils::HenyeyGreensteinPhase(sunDir, eyeDir, 0.625f) : 0.0f;
-	Vector3 horizonColor = Utils::Lerp(normalHorizonColor, sunHorizon, sunDirWeight);
+		sunStrength = 0.0f;
+	}
+	else { // mix
+		if (m_dateTime < 1000)
+			m_dateTime += DATE_CYCLE_AMOUNT;
 
-	float sunClampedAlt = std::clamp(sunAltitude, SHOW_BOUNDARY, SECTION_BOUNDARY);
-	float sunStrengthWeight = (sunClampedAlt - SHOW_BOUNDARY) / (SECTION_BOUNDARY - SHOW_BOUNDARY);
+		// normal color
+		if (11000 <= m_dateTime && m_dateTime < 13700) {
+			float w = (float)(m_dateTime - 11000) / 2700.0f;
+			normalHorizonColor = Utils::Lerp(NORMAL_DAY_HORIZON, NORMAL_NIGHT_HORIZON, w);
+			normalZenithColor = Utils::Lerp(NORMAL_DAY_ZENITH, NORMAL_NIGHT_ZENITH, w);
 
-	float moonClampedAlt = std::clamp(-sunAltitude, SHOW_BOUNDARY, SECTION_BOUNDARY);
-	float moonStrengthWeight =
-		(moonClampedAlt - SHOW_BOUNDARY) / (SECTION_BOUNDARY - SHOW_BOUNDARY);
+			sunStrength = Utils::Smootherstep(0.0f, 1.0f, 1.0f - w);
+		} // 11000 ~ 13700 | 22300 ~ 25000
+		else if (22300 <= m_dateTime && m_dateTime <= 25000) {
+			float w = (float)(m_dateTime - 22300) / 2700.0f;
+			normalHorizonColor = Utils::Lerp(NORMAL_NIGHT_HORIZON, NORMAL_DAY_HORIZON, w);
+			normalZenithColor = Utils::Lerp(NORMAL_NIGHT_ZENITH, NORMAL_DAY_ZENITH, w);
 
+			sunStrength = Utils::Smootherstep(0.0f, 1.0f, w);
+		}
+
+		// sun color
+		if (11000 <= m_dateTime && m_dateTime < 12500) { // day ~ sunset
+			float w = (float)(m_dateTime - 11000) / 1500.0f;
+			sunHorizonColor = Utils::Lerp(SUN_DAY_HORIZON, SUN_SUNSET_HORIZON, w);
+			sunZenithColor = Utils::Lerp(SUN_DAY_ZENITH, SUN_SUNSET_ZENITH, w);
+		}
+		else if (12500 <= m_dateTime && m_dateTime < 13700) { // sunset ~ night
+			float w = (float)(m_dateTime - 12500) / 1200.0f;
+			sunHorizonColor = Utils::Lerp(SUN_SUNSET_HORIZON, NORMAL_NIGHT_HORIZON, w);
+			sunZenithColor = Utils::Lerp(SUN_SUNSET_ZENITH, NORMAL_NIGHT_ZENITH, w);
+		}
+		else if (22300 <= m_dateTime && m_dateTime < 23500) { // night ~ sunrise
+			float w = (float)(m_dateTime - 22300) / 1200.0f;
+			sunHorizonColor = Utils::Lerp(NORMAL_NIGHT_HORIZON, SUN_SUNRISE_HORIZON, w);
+			sunZenithColor = Utils::Lerp(NORMAL_NIGHT_ZENITH, SUN_SUNRISE_ZENITH, w);
+		}
+		else { // sunrise ~ day
+			float w = (float)(m_dateTime - 23500) / 1500.0f;
+			sunHorizonColor = Utils::Lerp(SUN_SUNRISE_HORIZON, SUN_DAY_HORIZON, w);
+			sunZenithColor = Utils::Lerp(SUN_SUNRISE_ZENITH, SUN_DAY_ZENITH, w);
+		}
+	}
+
+	m_constantData.dateTime = m_dateTime % DATE_CYCLE_AMOUNT;
 	m_constantData.sunDir = sunDir;
-	m_constantData.sunAltitude = sunAltitude;
-	m_constantData.sunStrength = Vector3(Utils::Smootherstep(0.0f, 1.0f, sunStrengthWeight));
-	m_constantData.moonStrength = Vector3(Utils::Smootherstep(0.0f, 1.0f, moonStrengthWeight));
-	m_constantData.horizonColor = horizonColor;
-	m_constantData.zenithColor = zenithColor;
+	m_constantData.normalHorizonColor = normalHorizonColor;
+	m_constantData.normalZenithColor = normalZenithColor;
+	m_constantData.sunHorizonColor = sunHorizonColor;
+	m_constantData.sunZenithColor = sunZenithColor;
+	m_constantData.sunStrength = sunStrength;
+	m_constantData.moonStrength = 1.0f - sunStrength;
+
 	DXUtils::UpdateConstantBuffer(m_constantBuffer, m_constantData);
 }
 

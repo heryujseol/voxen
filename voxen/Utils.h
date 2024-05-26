@@ -212,14 +212,4 @@ namespace Utils {
 	{
 		return (int)log2((num & ~(num + 1)) + 1); // __builtin_ctzll or _BitScanForward64}
 	}
-
-	static float HenyeyGreensteinPhase(Vector3 L, Vector3 V, float aniso)
-	{
-		// L: toLight
-		// V: eyeDir
-		// https://www.shadertoy.com/view/7s3SRH
-		float cosT = L.Dot(V);
-		float g = aniso;
-		return (1.0f - g * g) / (4.0f * PI * pow(abs(1.0f + g * g - 2.0f * g * cosT), 3.0f / 2.0f));
-	}
 };

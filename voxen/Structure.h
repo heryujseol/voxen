@@ -36,13 +36,13 @@ struct ChunkConstantData {
 struct SkyboxConstantData {
 	Vector3 sunDir;
 	float skyScale;
-	Vector3 sunStrength;
-	float sunAltitude;
-	Vector3 moonStrength;
-	float sectionAltitudeBounary;
-	Vector3 horizonColor;
-	float showAltitudeBoundary;
-	Vector3 zenithColor;
+	Vector3 normalHorizonColor;
+	uint32_t dateTime;
+	Vector3 normalZenithColor;
+	float sunStrength;
+	Vector3 sunHorizonColor;
+	float moonStrength;
+	Vector3 sunZenithColor;
 	float dummy3;
 };
 

@@ -19,13 +19,13 @@ cbuffer SkyboxConstantBuffer : register(b1)
 {
     float3 sunDir;
     float skyScale;
-    float3 sunStrength;
-    float sunAltitude;
-    float3 moonStrength;
-    float sectionAltitudeBounary;
-    float3 horizonColor;
-    float showAltitudeBoundary;
-    float3 zenithColor;
+    float3 normalHorizonColor;
+    uint dateTime;
+    float3 normalZenithColor;
+    float sunStrength;
+    float3 sunHorizonColor;
+    float moonStrength;
+    float3 sunZenithColor;
     float dummy3;
 };
 
@@ -75,57 +75,21 @@ float BeerLambert(float absorptionCoefficient, float distanceTraveled)
 
 float4 main(vsOutput input) : SV_TARGET
 {
-    
-   /*
-    // lightColor
-    float cloudAltitude = clamp((saturate(192.0 / skyScale) - (PI * 0.5)) * (-2.0 * invPI), -1.0, 1.0);
-    float3 mixColor = (horizonColor + zenithColor) * 0.5;
-    float3 lightColor = float3(0.0, 0.0, 0.0);
-    if (cloudAltitude <= sectionAltitudeBounary)
-    {
-        lightColor = lerp(horizonColor, mixColor, pow((cloudAltitude + 1.0) / (1.0 + sectionAltitudeBounary), 10.0));
-    }
-    else
-    {
-        lightColor = lerp(mixColor, zenithColor, pow((cloudAltitude - sectionAltitudeBounary) / (1.0 - sectionAltitudeBounary), 0.5));
-    }
-    lightColor = horizonColor;
-    */
-    // lighting
-    //float3 lighting = sunStrength * 15.0 * getFaceColor(input.face);
-    
-    //color = volumeColor * density * lightColor;
-    //float3 eyeToPos = 
-    //color = lightColor * lighting * density * HenyeyGreensteinPhase(sunDir, eyeToPos, 0.1);
-    
-    //float distance = length(input.posWorld.xz - eyePos.xz);
-    //float alpha = lerp(0.0, 1.0, (320.0 - distance) / 320.0);
-    
-    //color += volumeColor * 4.0 * lerp(horizonColor, zenithColor, 0.5) * density * getFaceColor(input.face) * BeerLambert(density, 1.0);
     float3 color = volumeColor * getFaceColor(input.face);
     
     float distance = length(input.posWorld.xz - eyePos.xz);
     
+    // 거리가 멀면 horizon color 선택 
     float horizonWeight = smoothstep(260.0, cloudScale, clamp(distance, 260.0, cloudScale));
-    color = lerp(color, horizonColor, horizonWeight);
+    color = lerp(color, sunHorizonColor, horizonWeight);
     
-    if (sunAltitude >= sectionAltitudeBounary) // day
-    {
-
-    }
-    else if (sunAltitude <= showAltitudeBoundary) // night
-    {
-      
-    }
-    else // sunset or sunrise
-    {
-       
-    }
     
-    //float alphaWeight = smoothstep(0.0, 1.0, saturate((cloudScale - distance) / cloudScale));
-    //float alpha = alphaWeight * 0.85;
+    color *= sunHorizonColor;
+    
+    
+    // distance alpha
     float alphaWeight = smoothstep(260.0, cloudScale, clamp(distance, 260.0, cloudScale));
-    float alpha = (1.0 - alphaWeight) * 0.8; // [0, 0.85]
+    float alpha = (1.0 - alphaWeight) * 0.8; // [0, 0.8]
     
     return float4(color, alpha);
 }

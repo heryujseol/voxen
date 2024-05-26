@@ -124,11 +124,11 @@ void App::Update(float dt)
 	m_camera.Update(dt, m_keyPressed, m_mouseNdcX, m_mouseNdcY);
 	//m_chunkManager.Update(m_camera);
 	if (m_keyToggle['F']) {
-		m_skybox.Update(dt, m_camera.GetForward());
+		m_skybox.Update(dt);
 		m_cloud.Update(dt, m_camera.GetPosition());
 	}
 	else {
-		m_skybox.Update(0.0f, m_camera.GetForward());
+		m_skybox.Update(0.0f);
 		m_cloud.Update(0.0f, m_camera.GetPosition());
 	}
 }
