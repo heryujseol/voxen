@@ -84,16 +84,16 @@ float4 main(vsOutput input) : SV_TARGET
     color = lerp(color, sunHorizonColor, horizonWeight);
     
     float sunAltitude = sin(sunDir.y);
-    float angle1 = PI / 12.0;
-    float angle2 = -PI / 6.0;
-    float angle3 = (angle1 + angle2) * 0.5;
-    if (angle1 <= sunAltitude)
+    float dayHorizonAltitude = PI / 12.0;
+    float nightHorizonAltitude = -PI * (1.7 / 6.0);
+    float maxHorizonAltitude = -PI / 24.0;
+    if (dayHorizonAltitude <= sunAltitude)
     {
         color *= float3(1.0, 1.0, 1.0);
     }
-    else if (angle3 <= sunAltitude && sunAltitude <= angle1)
+    else if (maxHorizonAltitude <= sunAltitude && sunAltitude <= dayHorizonAltitude)
     {
-        color *= lerp(sunHorizonColor, float3(1, 1, 1), smoothstep(angle3, angle1, sunAltitude));
+        color *= lerp(sunHorizonColor, float3(1, 1, 1), smoothstep(maxHorizonAltitude, dayHorizonAltitude, sunAltitude));
     }
     else
     {
