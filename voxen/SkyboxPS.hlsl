@@ -81,26 +81,25 @@ bool getPlanetTexcoord(float3 posDir, float3 planetDir, float size, out float2 t
     return ret;
 }
 
-float3 getSkyColor(float3 posDir, float sunAltitude)
+float3 getSkyColor(float3 posDir, float sunDirWeight)
 {
     // ([0, pi] - pi/2) * -2/pi -> [1, -1]
-    float posAltitude = clamp((acos(posDir.y) - (PI * 0.5)) * (-2.0 * invPI), -1.0, 1.0);
+    float posAltitude = sin(posDir.y);
    
-    // 비등방성
-    float sunDirWeight = sunAltitude > -0.2 ? HenyeyGreensteinPhase(sunDir, eyeDir, 0.625) : 0.0;
     float3 horizonColor = lerp(normalHorizonColor, sunHorizonColor, sunDirWeight);
     float3 zenithColor = lerp(normalZenithColor, sunZenithColor, sunDirWeight);
     
     // zenith와 horizon 구별 고도 고려
     // 최대한 구별된 색 선택하도록 결정
     float3 mixColor = (horizonColor + zenithColor) * 0.5;
-    if (posAltitude <= 0.1)
+    float horizonAltitude = PI / 24.0;
+    if (posAltitude <= horizonAltitude)
     {
-        return lerp(horizonColor, mixColor, pow((posAltitude + 1.0) / (1.0 + 0.1), 15.0));
+        return lerp(horizonColor, mixColor, pow((posAltitude + 1.0) / (1.0 + horizonAltitude), 15.0));
     }
     else
     {
-        return lerp(mixColor, zenithColor, pow((posAltitude - 0.1) / (1.0 - 0.1), 0.5));
+        return lerp(mixColor, zenithColor, pow((posAltitude - horizonAltitude) / (1.0 - horizonAltitude), 0.5));
     }
 }
 
@@ -108,14 +107,16 @@ float4 main(vsOutput input) : SV_TARGET
 {
     float3 color = float3(0.0, 0.0, 0.0);
     float3 posDir = normalize(input.posWorld);
-    float sunAltitude = clamp((acos(sunDir.y) - (PI * 0.5)) * (-2.0 * invPI), -1.0, 1.0);
+    
+    float sunAltitude = sin(sunDir.y);
+    float showSectionAltitude = -PI / 6.0;
     
     // sun
     float maxSunSize = 220.0f;
     float minSunSize = 50.0f;
     float sunSize = lerp(minSunSize, maxSunSize, pow(max(dot(sunDir, eyeDir), 0.0), 3.0));
     float2 sunTexcoord;
-    if (sunAltitude > -0.2 && getPlanetTexcoord(posDir, sunDir, sunSize, sunTexcoord))
+    if (sunAltitude > showSectionAltitude && getPlanetTexcoord(posDir, sunDir, sunSize, sunTexcoord))
     {
         color += sunTexture.SampleLevel(pointSampler, sunTexcoord, 0.0).rgb * sunStrength;
     }
@@ -123,7 +124,7 @@ float4 main(vsOutput input) : SV_TARGET
     // moon
     float moonSize = lerp(minSunSize, maxSunSize * 0.5f, pow(max(dot(-sunDir, eyeDir), 0.0), 3.0));
     float2 moonTexcoord;
-    if (-sunAltitude > -0.2 && getPlanetTexcoord(posDir, -sunDir, moonSize, moonTexcoord))
+    if (-sunAltitude > showSectionAltitude && getPlanetTexcoord(posDir, -sunDir, moonSize, moonTexcoord))
     {
         uint col = 4;
         uint row = 2;
@@ -140,7 +141,8 @@ float4 main(vsOutput input) : SV_TARGET
     }
    
     // background sky
-    color += getSkyColor(posDir, sunAltitude);
+    float sunDirWeight = sunAltitude > showSectionAltitude ? HenyeyGreensteinPhase(sunDir, eyeDir, 0.625) : 0.0;
+    color += getSkyColor(posDir, sunDirWeight);
     
     return float4(color, 0.0);
 }

@@ -21,7 +21,10 @@ vsOutput main(vsInput input)
     
     output.posWorld = input.position;
     
-    output.posProj = mul(float4(output.posWorld, 0.0), view);
+    output.posProj.xyz = output.posWorld;
+    //output.posProj.y += 550.0 * sin(3.14159265 / 24.0);
+    
+    output.posProj = mul(float4(output.posProj.xyz, 0.0), view);
     output.posProj = mul(float4(output.posProj.xyz, 1.0), proj);
     
     return output;
