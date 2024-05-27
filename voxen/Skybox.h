@@ -39,7 +39,7 @@ private:
 	const Vector3 NORMAL_NIGHT_ZENITH = Vector3(0.0f, 0.0f, 0.01f);
 	
 	// sun color
-	const Vector3 SUN_DAY_HORIZON = Vector3(0.47f, 0.62f, 1.0f);
+	const Vector3 SUN_DAY_HORIZON = Vector3(0.60f, 0.74f, 1.0f);
 	const Vector3 SUN_DAY_ZENITH = Vector3(0.32f, 0.45f, 1.0f);
 
 	const Vector3 SUN_SUNRISE_HORIZON = Vector3(0.72f, 0.60f, 0.34f);
