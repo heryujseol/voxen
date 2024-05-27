@@ -83,12 +83,26 @@ float4 main(vsOutput input) : SV_TARGET
     float horizonWeight = smoothstep(260.0, cloudScale, clamp(distance, 260.0, cloudScale));
     color = lerp(color, sunHorizonColor, horizonWeight);
     
-    color *= sunHorizonColor;
-    
+    float sunAltitude = sin(sunDir.y);
+    float angle1 = PI / 12.0;
+    float angle2 = -PI / 6.0;
+    float angle3 = (angle1 + angle2) * 0.5;
+    if (angle1 <= sunAltitude)
+    {
+        color *= float3(1.0, 1.0, 1.0);
+    }
+    else if (angle3 <= sunAltitude && sunAltitude <= angle1)
+    {
+        color *= lerp(sunHorizonColor, float3(1, 1, 1), smoothstep(angle3, angle1, sunAltitude));
+    }
+    else
+    {
+        color *= sunHorizonColor;
+    }
     
     // distance alpha
     float alphaWeight = smoothstep(260.0, cloudScale, clamp(distance, 260.0, cloudScale));
     float alpha = (1.0 - alphaWeight) * 0.8; // [0, 0.8]
     
-    return float4(volumeColor * getFaceColor(input.face), alpha);
+    return float4(color, alpha);
 }
