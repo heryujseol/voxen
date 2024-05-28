@@ -192,16 +192,16 @@ bool Graphics::InitDepthStencilBuffers(UINT width, UINT height)
 bool Graphics::InitShaderResourceBuffers()
 {
 	if (!DXUtils::CreateTextureFromFile(
-			atlasMapBuffer, atlasMapSRV, "../assets/blender_uv_grid_2k.png")) {
+			atlasMapBuffer, atlasMapSRV, "../assets/blockatlas1.png")) {
 		std::cout << "failed create texture from a file" << std::endl;
 		return false;
 	}
 
-	if (!DXUtils::CreateTextureFromFile(
+	/*if (!DXUtils::CreateTextureFromFile(
 			grassColorMapBuffer, grassColorMapSRV, "../assets/grass_color_map.png")) {
 		std::cout << "failed create texture from grass color map file" << std::endl;
 		return false;
-	}
+	}*/
 
 	if (!DXUtils::CreateTextureFromFile(sunBuffer, sunSRV, "../assets/sun.png")) {
 		std::cout << "failed create texture from sun file" << std::endl;

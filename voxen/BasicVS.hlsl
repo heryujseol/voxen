@@ -31,7 +31,7 @@ vsOutput main(uint data : DATA)
     output.posWorld = mul(float4(position, 1.0), world).xyz;
   
     output.posProj = float4(output.posWorld, 1.0);
-    output.posProj = mul(output.posProj, view);
+    output.posProj = mul(output.posProj, view); 
     output.posProj = mul(output.posProj, proj);
     
     output.face = face;

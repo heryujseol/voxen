@@ -84,11 +84,11 @@ float3 getNormal(uint face)
 
 float4 main(vsOutput input) : SV_TARGET
 {
-    /*
-    float temperature = 0.5;
-    float downfall = 1.0;
-    float4 biome = biomeColorMap.SampleLevel(pointClampSS, float2(1 - temperature, 1 - temperature / downfall), 0.0);
-    */
+    
+    //float temperature = 0.5;
+    //float downfall = 1.0;
+    //float4 biome = grassColorMap.SampleLevel(pointClampSS, float2(1 - temperature, 1 - temperature / downfall), 0.0);
+    
     
     // atlas test
     // 2048 2048 -> 텍스쳐당 128x128, 그게 16x16
@@ -101,7 +101,7 @@ float4 main(vsOutput input) : SV_TARGET
     uint texCount = 16;  // 한 줄의 텍스쳐 개수
     
     // [type * 6 + side] => 1차원 인덱스를 2차원 인덱스 좌표로 변경
-    uint index = input.type * 6 + input.face;
+    uint index = (input.type - 1) * 6 + input.face;
 
     uint2 indexUV = uint2(index % texCount, index / texCount);
     texcoord += indexUV; // x.u  y.v 
@@ -118,6 +118,17 @@ float4 main(vsOutput input) : SV_TARGET
     {
         color *= ndotl + 1.0f;
     }
+    float2 ddX = ddx(texcoord);
+    float2 ddY = ddy(texcoord);
+    
+    //float4 color = atlasTexture.SampleGrad(pointClampSS, texcoord, ddX, ddY);
+    float4 color = atlasTexture.SampleLevel(pointClampSS, texcoord, 5.0);
+    //float4 color = atlasTexture.Sample(pointClampSS, texcoord);
+    
+    //if (input.type == 2 && input.face == 3)
+    //    color = biome * color;
+    
+    //float4 color = tex2Dgrad(atlasTexture, texcoord, ddX, ddY);
     
     return color;
 }

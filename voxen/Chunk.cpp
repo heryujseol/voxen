@@ -24,32 +24,32 @@ bool Chunk::Initialize()
 	std::fill(axisColBit, axisColBit + CHUNK_SIZE_P2 * 3, 0);
 	std::unordered_map<uint8_t, bool> typeMap;
 
+
 	for (int x = 0; x < CHUNK_SIZE_P; ++x) {
 		for (int z = 0; z < CHUNK_SIZE_P; ++z) {
-			int height = Utils::GetHeight((int)m_position.x + x - 1, (int)m_position.z + z - 1);
-
+			int nx = (int)m_position.x + x - 1;
+			int nz = (int)m_position.z + z - 1;
+			int height = Terrain::GetHeight(nx, nz);
+			
 			for (int y = 0; y < CHUNK_SIZE_P; ++y) {
-				if (1 <= m_position.y + y && m_position.y + y <= height) {
-					uint8_t type = 2; // get type from TerrainGenerator
+				int ny = m_position.y + y;
+				if (-64 <= ny && (ny <= height || height <= 62)) {
+					uint8_t type = Terrain::GetType(nx, ny, nz, height);
 					m_blocks[x][y][z].SetType(type);
 					typeMap[type] = true;
 
-					if (type) { // type == 0 is Air
+					if (type) {
 						// x dir column
-						axisColBit[Utils::Utils::GetIndexFrom3D(0, y, z, CHUNK_SIZE_P)] |=
-							(1ULL << x);
+						axisColBit[Utils::GetIndexFrom3D(0, y, z, CHUNK_SIZE_P)] |= (1ULL << x);
 						// y dir column
-						axisColBit[Utils::Utils::GetIndexFrom3D(1, z, x, CHUNK_SIZE_P)] |=
-							(1ULL << y);
+						axisColBit[Utils::GetIndexFrom3D(1, z, x, CHUNK_SIZE_P)] |= (1ULL << y);
 						// z dir column
-						axisColBit[Utils::Utils::GetIndexFrom3D(2, y, x, CHUNK_SIZE_P)] |=
-							(1ULL << z);
+						axisColBit[Utils::GetIndexFrom3D(2, y, x, CHUNK_SIZE_P)] |= (1ULL << z);
 					}
 				}
 			}
 		}
 	}
-
 
 	// 2. cull face column bit
 	// 0: x axis & left->right side (- => + : dir +)
@@ -174,7 +174,6 @@ bool Chunk::Initialize()
 	}
 
 
-
 	// 5. make GPU buffer from CPU buffer
 	if (!IsEmpty()) {
 		if (!DXUtils::CreateVertexBuffer(m_vertexBuffer, m_vertices)) {
@@ -246,7 +245,6 @@ void Chunk::Clear()
 		m_constantBuffer = nullptr;
 	}
 }
-
 
 VoxelVertex Chunk::MakeVertex(int x, int y, int z, int face, int type)
 {

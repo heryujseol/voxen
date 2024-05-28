@@ -1,4 +1,5 @@
 #pragma once
+#include "Terrain.h"
 
 #include <stdint.h>
 
@@ -11,7 +12,7 @@ public:
 	inline uint8_t GetType() { return m_type; }
 	inline void SetType(uint8_t type) { m_type = type; }
 
-	static const int BLOCK_TYPE_COUNT = 256;
+	static const int BLOCK_TYPE_COUNT = 10;
 
 private:
 	uint8_t m_type;
