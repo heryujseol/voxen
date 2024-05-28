@@ -108,7 +108,7 @@ float4 main(vsOutput input) : SV_TARGET
     texcoord /= texCount;
     
     float4 color = atlasTexture.Sample(pointClampSS, texcoord);
-    color *= 0.8;
+    color *= 0.7;
     
     if (ndotl == 0)
     {
@@ -118,17 +118,6 @@ float4 main(vsOutput input) : SV_TARGET
     {
         color *= ndotl + 1.0f;
     }
-    float2 ddX = ddx(texcoord);
-    float2 ddY = ddy(texcoord);
-    
-    //float4 color = atlasTexture.SampleGrad(pointClampSS, texcoord, ddX, ddY);
-    float4 color = atlasTexture.SampleLevel(pointClampSS, texcoord, 5.0);
-    //float4 color = atlasTexture.Sample(pointClampSS, texcoord);
-    
-    //if (input.type == 2 && input.face == 3)
-    //    color = biome * color;
-    
-    //float4 color = tex2Dgrad(atlasTexture, texcoord, ddX, ddY);
     
     return color;
 }
