@@ -9,24 +9,33 @@
 #include "Utils.h"
 #include "Chunk.h"
 
+#include <algorithm>
+
 using namespace DirectX::SimpleMath;
 
-class Utils {
-public:
-	static Vector3 CalcChunkPos(Vector3 pos)
+namespace Utils {
+	static const float PI = 3.14159265f;
+	static const float invPI = 1.0f / PI;
+
+	static Vector3 CalcOffsetPos(Vector3 pos, int baseSize)
 	{
 		int floorX = (int)floor(pos.x);
 		int floorY = (int)floor(pos.y);
 		int floorZ = (int)floor(pos.z);
 
-		int modX = ((floorX % Chunk::CHUNK_SIZE) + Chunk::CHUNK_SIZE) % Chunk::CHUNK_SIZE;
-		int modY = ((floorY % Chunk::CHUNK_SIZE) + Chunk::CHUNK_SIZE) % Chunk::CHUNK_SIZE;
-		int modZ = ((floorZ % Chunk::CHUNK_SIZE) + Chunk::CHUNK_SIZE) % Chunk::CHUNK_SIZE;
+		int modX = ((floorX % baseSize) + baseSize) % baseSize;
+		int modY = ((floorY % baseSize) + baseSize) % baseSize;
+		int modZ = ((floorZ % baseSize) + baseSize) % baseSize;
 
 		return Vector3((float)(floorX - modX), (float)(floorY - modY), (float)(floorZ - modZ));
 	}
 
-	static float Lerp(float a, float b, float w) { return (1 - w) * a + w * b; }
+	template <typename T>
+	static T Lerp(T a, T b, float w) 
+	{ 
+		w = std::clamp(w, 0.0f, 1.0f);
+		return (1 - w) * a + w * b; 
+	}
 
 	static float CubicLerp(float a, float b, float w)
 	{
@@ -50,10 +59,65 @@ public:
 		a ^= b << s | b >> (w - s);
 		a *= 2048419325;
 
-		float random = a * ((float)3.14159265 / ~(~0u >> 1)); // in [0, 2*Pi]
+		float random = a * ((float)3.14159265f / ~(~0u >> 1)); // in [0, 2*Pi]
 
 		Vector2 v(cos(random), sin(random));
 		return v;
+	}
+
+	static Vector2 Hash(uint32_t x, uint32_t y) 
+	{ 
+		// https://www.shadertoy.com/view/3dVXDc
+		uint32_t u0 = 1597334673U;
+		uint32_t u1 = 3812015801U;
+		float uf = (1.0f / float(0xffffffffU));
+
+		uint32_t qi = x * u0;
+		uint32_t qj = y * u1;
+
+		uint32_t qx = (qi ^ qj) * u0;
+		uint32_t qy = (qi ^ qj) * u1;
+
+		float rx = -1.0f + 2.0f * qx * uf;
+		float ry = -1.0f + 2.0f * qy * uf;
+
+		return Vector2(rx, ry);
+	}
+
+	static float GetPerlinNoiseFbm(float x, float y) 
+	{
+		Vector2 p = Vector2(x, y);
+		int x0 = (int)floor(x);
+		int x1 = x0 + 1;
+		int y0 = (int)floor(y);
+		int y1 = y0 + 1;
+
+		float n0 = Hash(x0, y0).Dot(p - Vector2((float)x0, (float)y0));
+		float n1 = Hash(x1, y0).Dot(p - Vector2((float)x1, (float)y0));
+		float n2 = Hash(x0, y1).Dot(p - Vector2((float)x0, (float)y1));
+		float n3 = Hash(x1, y1).Dot(p - Vector2((float)x1, (float)y1));
+
+		float inter_x0 = CubicLerp(n0, n1, p.x - (float)x0);
+		float inter_x1 = CubicLerp(n2, n3, p.x - (float)x0);
+		float inter_y = CubicLerp(inter_x0, inter_x1, p.y - (float)y0);
+
+		return inter_y;
+	}
+
+	static float PerlinFbm(float x, float y, float freq, int octave)
+	{
+		float amp = 1.0f;
+		float noise = 0.0f;
+
+		for (int i = 0; i < octave; ++i) {
+			noise += amp * GetPerlinNoiseFbm(x * freq, y * freq);
+
+			freq *= 2.0f;
+			amp *= exp2(-0.85f);
+			 //exp2(-0.85f);
+		}
+
+		return noise;
 	}
 
 	static float GetPerlinNoise(float x, float y)

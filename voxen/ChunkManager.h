@@ -20,10 +20,11 @@ public:
 	void Update(Camera& camera);
 	void Render(Camera& camera);
 
-	// Chunk Manager
 	static const int CHUNK_COUNT = 21;
 	static const int MAX_HEIGHT = 256;
 	static const int MAX_HEIGHT_CHUNK_COUNT = MAX_HEIGHT / Chunk::CHUNK_SIZE;
+	static const int CHUNK_COUNT_P = CHUNK_COUNT + 2;
+	static const int MAX_HEIGHT_CHUNK_COUNT_P = MAX_HEIGHT_CHUNK_COUNT + 2;
 	static const int MAX_ASYNC_LOAD_COUNT = 4;
 
 private:
