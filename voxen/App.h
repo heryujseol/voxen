@@ -5,6 +5,7 @@
 #include "ChunkManager.h"
 #include "Camera.h"
 #include "Skybox.h"
+#include "Cloud.h"
 
 using namespace Microsoft::WRL;
 using namespace DirectX;
@@ -36,6 +37,7 @@ private:
 	ChunkManager m_chunkManager;
 	Camera m_camera;
 	Skybox m_skybox;
+	Cloud m_cloud;
 
 	bool m_keyPressed[256];
 	bool m_keyToggle[256];

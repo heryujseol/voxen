@@ -18,12 +18,13 @@ public:
 
 	void Update(float dt, bool keyPressed[256], float mouseX, float mouseY);
 
+	ComPtr<ID3D11Buffer> m_constantBuffer;
+
 	Vector3 GetPosition();
 	Vector3 GetChunkPosition();
-	float GetDistance();
+	Vector3 GetForward();
 	Matrix GetViewMatrix();
 	Matrix GetProjectionMatrix();
-	ComPtr<ID3D11Buffer> GetConstantBuffer();
 
 	bool m_isOnConstantDirtyFlag;
 	bool m_isOnChunkDirtyFlag;
@@ -53,5 +54,4 @@ private:
 
 
 	CameraConstantData m_constantData;
-	ComPtr<ID3D11Buffer> m_constantBuffer;
 };

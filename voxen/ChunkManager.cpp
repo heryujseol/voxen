@@ -10,7 +10,7 @@ ChunkManager::~ChunkManager() {}
 
 bool ChunkManager::Initialize(Vector3 cameraChunkPos)
 {
-	for (int i = 0; i < (CHUNK_COUNT + 1) * (CHUNK_COUNT + 1) * (MAX_HEIGHT_CHUNK_COUNT + 1); ++i) {
+	for (int i = 0; i < CHUNK_COUNT_P * CHUNK_COUNT_P * MAX_HEIGHT_CHUNK_COUNT_P; ++i) {
 		m_chunkPool.push_back(new Chunk());
 	}
 

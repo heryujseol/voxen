@@ -56,28 +56,18 @@ float4 main(vsOutput input) : SV_TARGET
     
     
     // atlas test
-    // 2048 2048 -> ÅØ½ºÃÄ´ç 128x128, ±×°Ô 16x16
+    // 2048 2048 -> í…ìŠ¤ì³ë‹¹ 128x128, ê·¸ê²Œ 16x16
     float2 texcoord = getVoxelTexcoord(input.posWorld, input.face);
-    uint texCount = 16;  // ÇÑ ÁÙÀÇ ÅØ½ºÃÄ °³¼ö
+    uint texCount = 16;  // í•œ ì¤„ì˜ í…ìŠ¤ì³ ê°œìˆ˜
     
-    // [type * 6 + side] => 1Â÷¿ø ÀÎµ¦½º¸¦ 2Â÷¿ø ÀÎµ¦½º ÁÂÇ¥·Î º¯°æ
+    // [type * 6 + side] => 1ì°¨ì› ì¸ë±ìŠ¤ë¥¼ 2ì°¨ì› ì¸ë±ìŠ¤ ì¢Œí‘œë¡œ ë³€ê²½
     uint index = (input.type - 1) * 6 + input.face;
 
     uint2 indexUV = uint2(index % texCount, index / texCount);
     texcoord += indexUV; // x.u  y.v 
     texcoord /= texCount;
     
-    float2 ddX = ddx(texcoord);
-    float2 ddY = ddy(texcoord);
+    float3 color = atlasTexture.Sample(pointClampSS, texcoord);
     
-    //float4 color = atlasTexture.SampleGrad(pointClampSS, texcoord, ddX, ddY);
-    float4 color = atlasTexture.SampleLevel(pointClampSS, texcoord, 5.0);
-    //float4 color = atlasTexture.Sample(pointClampSS, texcoord);
-    
-    //if (input.type == 2 && input.face == 3)
-    //    color = biome * color;
-    
-    //float4 color = tex2Dgrad(atlasTexture, texcoord, ddX, ddY);
-    
-    return color;
+    return float4(color, 0.0);
 }
