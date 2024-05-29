@@ -1,7 +1,7 @@
-SamplerState pointClampSS : register(s0);
-
 Texture2D atlasTexture : register(t0);
 Texture2D grassColorMap : register(t1);
+
+SamplerState pointClampSS : register(s0);
 
 cbuffer CameraConstantBuffer : register(b0)
 {
@@ -15,6 +15,14 @@ cbuffer SkyboxConstantBuffer : register(b1)
 {
     float3 sunDir;
     float skyScale;
+    float3 normalHorizonColor;
+    uint dateTime;
+    float3 normalZenithColor;
+    float sunStrength;
+    float3 sunHorizonColor;
+    float moonStrength;
+    float3 sunZenithColor;
+    float dummy3;
 };
 
 struct vsOutput
@@ -108,7 +116,15 @@ float4 main(vsOutput input) : SV_TARGET
     texcoord /= texCount;
     
     float4 color = atlasTexture.Sample(pointClampSS, texcoord);
-    color *= 0.7;
+    
+    float strength = 0.0;
+    if (sunDir.y > 0.0)
+        strength = sunStrength;
+    else
+        strength = moonStrength;
+    
+    //color *= strength;
+    color *= 0.6;
     
     if (ndotl == 0)
     {
@@ -116,7 +132,7 @@ float4 main(vsOutput input) : SV_TARGET
     }
     else
     {
-        color *= ndotl + 1.0f;
+        color *= ndotl + 1.0;
     }
     
     return color;

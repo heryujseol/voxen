@@ -24,7 +24,6 @@ bool Chunk::Initialize()
 	std::fill(axisColBit, axisColBit + CHUNK_SIZE_P2 * 3, 0);
 	std::unordered_map<uint8_t, bool> typeMap;
 
-
 	for (int x = 0; x < CHUNK_SIZE_P; ++x) {
 		for (int z = 0; z < CHUNK_SIZE_P; ++z) {
 			int nx = (int)m_position.x + x - 1;
@@ -40,16 +39,20 @@ bool Chunk::Initialize()
 
 					if (type) {
 						// x dir column
-						axisColBit[Utils::GetIndexFrom3D(0, y, z, CHUNK_SIZE_P)] |= (1ULL << x);
+						axisColBit[Utils::GetIndexFrom3D(0, y, z, CHUNK_SIZE_P)] |=
+							(1ULL << x);
 						// y dir column
-						axisColBit[Utils::GetIndexFrom3D(1, z, x, CHUNK_SIZE_P)] |= (1ULL << y);
+						axisColBit[Utils::GetIndexFrom3D(1, z, x, CHUNK_SIZE_P)] |=
+							(1ULL << y);
 						// z dir column
-						axisColBit[Utils::GetIndexFrom3D(2, y, x, CHUNK_SIZE_P)] |= (1ULL << z);
+						axisColBit[Utils::GetIndexFrom3D(2, y, x, CHUNK_SIZE_P)] |=
+							(1ULL << z);
 					}
 				}
 			}
 		}
 	}
+
 
 	// 2. cull face column bit
 	// 0: x axis & left->right side (- => + : dir +)

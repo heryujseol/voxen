@@ -42,6 +42,9 @@
     <ClCompile Include="GraphicsPSO.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="Cloud.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App.h">
@@ -77,6 +80,9 @@
     <ClInclude Include="GraphicsPSO.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+    <ClInclude Include="Cloud.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
     <ClInclude Include="Terrain.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
@@ -96,6 +102,18 @@
       <Filter>쉐이더 파일</Filter>
     </FxCompile>
     <FxCompile Include="SkyboxVS.hlsl">
+      <Filter>쉐이더 파일</Filter>
+    </FxCompile>
+    <FxCompile Include="CloudVS.hlsl">
+      <Filter>쉐이더 파일</Filter>
+    </FxCompile>
+    <FxCompile Include="CloudPS.hlsl">
+      <Filter>쉐이더 파일</Filter>
+    </FxCompile>
+    <FxCompile Include="SamplingVS.hlsl">
+      <Filter>쉐이더 파일</Filter>
+    </FxCompile>
+    <FxCompile Include="SamplingPS.hlsl">
       <Filter>쉐이더 파일</Filter>
     </FxCompile>
   </ItemGroup>

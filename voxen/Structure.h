@@ -8,14 +8,23 @@ typedef uint32_t VoxelVertex;
 
 struct SkyboxVertex {
 	Vector3 position;
-	uint32_t face;
+};
+
+struct CloudVertex {
+	Vector3 position;
+	uint8_t face;
+};
+
+struct SamplingVertex {
+	Vector3 position;
+	Vector2 texcoord;
 };
 
 struct CameraConstantData {
 	Matrix view;
 	Matrix proj;
 	Vector3 eyePos;
-	float dummy;
+	float dummy1;
 	Vector3 eyeDir;
 	float dummy2;
 };
@@ -27,4 +36,18 @@ struct ChunkConstantData {
 struct SkyboxConstantData {
 	Vector3 sunDir;
 	float skyScale;
+	Vector3 normalHorizonColor;
+	uint32_t dateTime;
+	Vector3 normalZenithColor;
+	float sunStrength;
+	Vector3 sunHorizonColor;
+	float moonStrength;
+	Vector3 sunZenithColor;
+	float dummy3;
+};
+
+struct CloudConstantData {
+	Matrix world;
+	Vector3 volumeColor;
+	float cloudScale;
 };
