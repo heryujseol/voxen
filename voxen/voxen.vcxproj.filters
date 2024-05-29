@@ -80,6 +80,9 @@
     <ClInclude Include="GraphicsPSO.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+    <ClInclude Include="Terrain.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
     <ClInclude Include="Cloud.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
