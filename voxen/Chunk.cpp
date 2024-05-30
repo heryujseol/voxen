@@ -32,7 +32,7 @@ bool Chunk::Initialize()
 			int height = Terrain::GetHeight(nx, nz);
 			
 			for (int y = 0; y < CHUNK_SIZE_P; ++y) {
-				int ny = m_position.y + y;
+				int ny = (int)m_position.y + y;
 				if (-64 <= ny && (ny <= height || height <= 62)) {
 					uint8_t type = Terrain::GetType(nx, ny, nz, height);
 					m_blocks[x][y][z].SetType(type);

@@ -1,6 +1,6 @@
-SamplerState pointClampSS : register(s0);
+SamplerState pointClampSS : register(s1);
 
-Texture2D atlasTexture : register(t0);
+Texture2DArray atlasTextureArray : register(t0);
 Texture2D grassColorMap : register(t1);
 
 cbuffer CameraConstantBuffer : register(b0)
@@ -21,53 +21,45 @@ struct vsOutput
 
 float2 getVoxelTexcoord(float3 pos, uint face)
 {
+    float2 texcoord = float2(0.0, 0.0);
     if (face == 0) // left
     {
-        return float2(abs(pos.z - ceil(pos.z)), abs(pos.y - ceil(pos.y)));
+        texcoord = float2(abs(pos.z - ceil(pos.z)), abs(pos.y - ceil(pos.y)));
     }
     else if (face == 1) // right
     {
-        return float2(abs(pos.z - floor(pos.z)), abs(pos.y - ceil(pos.y)));
+        texcoord = float2(abs(pos.z - floor(pos.z)), abs(pos.y - ceil(pos.y)));
     }
     else if (face == 2) // bottom
     {
-        return float2(abs(pos.x - floor(pos.x)), abs(pos.z - floor(pos.z)));
+        texcoord = float2(abs(pos.x - floor(pos.x)), abs(pos.z - floor(pos.z)));
     }
     else if (face == 3) // top
     {
-        return float2(abs(pos.x - floor(pos.x)), abs(pos.z - ceil(pos.z)));
+        texcoord = float2(abs(pos.x - floor(pos.x)), abs(pos.z - ceil(pos.z)));
     }
     else if (face == 4) // front
     {
-        return float2(abs(pos.x - floor(pos.x)), abs(pos.y - ceil(pos.y)));
+        texcoord = float2(abs(pos.x - floor(pos.x)), abs(pos.y - ceil(pos.y)));
     }
     else // back
     {
-        return float2(abs(pos.x - ceil(pos.x)), abs(pos.y - ceil(pos.y)));
-    }   
+        texcoord = float2(abs(pos.x - ceil(pos.x)), abs(pos.y - ceil(pos.y)));
+    }
+    
+    return saturate(texcoord);
 }
 
 float4 main(vsOutput input) : SV_TARGET
 {
-    
     //float temperature = 0.5;
     //float downfall = 1.0;
     //float4 biome = grassColorMap.SampleLevel(pointClampSS, float2(1 - temperature, 1 - temperature / downfall), 0.0);
     
-    
-    // atlas test
-    // 2048 2048 -> 텍스쳐당 128x128, 그게 16x16
     float2 texcoord = getVoxelTexcoord(input.posWorld, input.face);
-    uint texCount = 16;  // 한 줄의 텍스쳐 개수
-    
-    // [type * 6 + side] => 1차원 인덱스를 2차원 인덱스 좌표로 변경
     uint index = (input.type - 1) * 6 + input.face;
-
-    uint2 indexUV = uint2(index % texCount, index / texCount);
-    texcoord += indexUV; // x.u  y.v 
-    texcoord /= texCount;
     
-    float3 color = atlasTexture.Sample(pointClampSS, texcoord);
+    float3 color = atlasTextureArray.Sample(pointClampSS, float3(texcoord, index)).xyz;
     
     return float4(color, 0.0);
 }

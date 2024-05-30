@@ -30,8 +30,8 @@ private:
 	static const int CLOUD_SCALE_SIZE = 16;
 	static const int CLOUD_MAP_SIZE = 64;
 
-	bool m_map[CLOUD_MAP_SIZE][CLOUD_MAP_SIZE];
-	bool m_dataMap[CLOUD_DATA_MAP_SIZE][CLOUD_DATA_MAP_SIZE];
+	std::vector<std::vector<bool>> m_map;
+	std::vector<std::vector<bool>> m_dataMap;
 	Vector3 m_mapCenterPosition;
 	Vector3 m_mapDataOffset;
 	float m_speed;

@@ -224,11 +224,21 @@ bool Graphics::InitDepthStencilBuffers(UINT width, UINT height)
 bool Graphics::InitShaderResourceBuffers(UINT width, UINT height)
 {
 	// Asset Files
-	if (!DXUtils::CreateTextureFromFile(
+	/*
+	if (!DXUtils::CreateTexture2DFromFile(
 			atlasMapBuffer, atlasMapSRV, "../assets/blockatlas1.png")) {
-		std::cout << "failed create texture from a file" << std::endl;
+		std::cout << "failed create texture from atlas file" << std::endl;
 		return false;
 	}
+	
+	*/
+	
+	if (!DXUtils::CreateTextureArrayFromAtlasFile(
+			atlasMapBuffer, atlasMapSRV, "../assets/blockatlas2.png")) {
+		std::cout << "failed create texture from atlas file" << std::endl;
+		return false;
+	}
+	
 
 	/*if (!DXUtils::CreateTextureFromFile(
 			grassColorMapBuffer, grassColorMapSRV, "../assets/grass_color_map.png")) {
@@ -236,12 +246,12 @@ bool Graphics::InitShaderResourceBuffers(UINT width, UINT height)
 		return false;
 	}*/
 
-	if (!DXUtils::CreateTextureFromFile(sunBuffer, sunSRV, "../assets/sun.png")) {
+	if (!DXUtils::CreateTexture2DFromFile(sunBuffer, sunSRV, "../assets/sun.png")) {
 		std::cout << "failed create texture from sun file" << std::endl;
 		return false;
 	}
 
-	if (!DXUtils::CreateTextureFromFile(moonBuffer, moonSRV, "../assets/moon.png")) {
+	if (!DXUtils::CreateTexture2DFromFile(moonBuffer, moonSRV, "../assets/moon.png")) {
 		std::cout << "failed create texture from moon file" << std::endl;
 		return false;
 	}
