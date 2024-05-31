@@ -1,7 +1,5 @@
-SamplerState pointClampSS : register(s1);
-
+SamplerState pointClampSS : register(s0);
 Texture2DArray atlasTextureArray : register(t0);
-Texture2D grassColorMap : register(t1);
 
 cbuffer CameraConstantBuffer : register(b0)
 {
@@ -14,7 +12,8 @@ cbuffer CameraConstantBuffer : register(b0)
 struct vsOutput
 {
     float4 posProj : SV_POSITION;
-    float3 posWorld : POSITION;
+    float3 posWorld : POSITION1;
+    float2 uv : TEXCOORD;
     uint face : FACE;
     uint type : TYPE;
 };
@@ -46,20 +45,20 @@ float2 getVoxelTexcoord(float3 pos, uint face)
     {
         texcoord = float2(abs(pos.x - ceil(pos.x)), abs(pos.y - ceil(pos.y)));
     }
-    
-    return saturate(texcoord);
+
+    return texcoord;
 }
 
 float4 main(vsOutput input) : SV_TARGET
 {
-    //float temperature = 0.5;
-    //float downfall = 1.0;
-    //float4 biome = grassColorMap.SampleLevel(pointClampSS, float2(1 - temperature, 1 - temperature / downfall), 0.0);
-    
-    float2 texcoord = getVoxelTexcoord(input.posWorld, input.face);
+    float2 texcoord = input.uv; //getVoxelTexcoord(input.posModel, input.face);
     uint index = (input.type - 1) * 6 + input.face;
+
+    //float2 dx = ddx(texcoord);
+    //float2 dy = ddy(texcoord);
+    //float3 color = atlasTextureArray.SampleGrad(pointClampSS, float3(texcoord, index), -0.0, -0.0).rgb;
     
     float3 color = atlasTextureArray.Sample(pointClampSS, float3(texcoord, index)).xyz;
-    
-    return float4(color, 0.0);
+
+    return float4(color, 1.0); // Set alpha to 1.0 to ensure full opacity
 }

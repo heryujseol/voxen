@@ -174,7 +174,7 @@ bool Graphics::InitRenderTargetBuffers(UINT width, UINT height)
 	// Basic RTV
 	DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	UINT bindFlag = D3D11_BIND_RENDER_TARGET;
-	if (!DXUtils::CreateTextureBuffer(basicRenderBuffer, width, height, true, format, bindFlag)) {
+	if (!DXUtils::CreateTextureBuffer(basicRenderBuffer, width, height, false, format, bindFlag)) {
 		std::cout << "failed create render target buffer" << std::endl;
 		return false;
 	}
@@ -187,7 +187,7 @@ bool Graphics::InitRenderTargetBuffers(UINT width, UINT height)
 
 
 	// Cloud RTV
-	if (!DXUtils::CreateTextureBuffer(cloudRenderBuffer, width, height, true, format, bindFlag))
+	if (!DXUtils::CreateTextureBuffer(cloudRenderBuffer, width, height, false, format, bindFlag))
 	{
 		std::cout << "failed create render target buffer" << std::endl;
 		return false;
@@ -207,7 +207,7 @@ bool Graphics::InitDepthStencilBuffers(UINT width, UINT height)
 	// basic DSV
 	DXGI_FORMAT format = DXGI_FORMAT_D24_UNORM_S8_UINT;
 	D3D11_BIND_FLAG bindFlag = D3D11_BIND_DEPTH_STENCIL;
-	if (!DXUtils::CreateTextureBuffer(basicDepthBuffer, width, height, true, format, bindFlag)) {
+	if (!DXUtils::CreateTextureBuffer(basicDepthBuffer, width, height, false, format, bindFlag)) {
 		std::cout << "failed create depth stencil buffer" << std::endl;
 		return false;
 	}
@@ -412,9 +412,9 @@ bool Graphics::InitSamplerStates()
 
 	// point clamp
 	desc.Filter = D3D11_FILTER_MIN_MAG_POINT_MIP_LINEAR;
-	desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-	desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-	desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	desc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+	desc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+	desc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
 	HRESULT ret = Graphics::device->CreateSamplerState(&desc, pointClampSS.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create point clamp SS" << std::endl;
