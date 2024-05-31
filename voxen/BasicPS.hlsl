@@ -12,7 +12,7 @@ cbuffer CameraConstantBuffer : register(b0)
 struct vsOutput
 {
     float4 posProj : SV_POSITION;
-    float3 posWorld : POSITION1;
+    float3 posWorld : POSITION;
     float2 uv : TEXCOORD;
     uint face : FACE;
     uint type : TYPE;
