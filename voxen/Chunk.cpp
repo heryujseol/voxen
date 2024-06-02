@@ -257,17 +257,18 @@ void Chunk::CreateQuad(int x, int y, int z, int merged, int length, int face, in
 {
 	uint32_t originVertexSize = (uint32_t)m_vertices.size();
 
+	// order by vertexID for texcoord
 	if (face == 0) { // left
-		m_vertices.push_back(MakeVertex(x, y, z, face, type));
-		m_vertices.push_back(MakeVertex(x, y, z + merged, face, type));
-		m_vertices.push_back(MakeVertex(x, y + length, z + merged, face, type));
-		m_vertices.push_back(MakeVertex(x, y + length, z, face, type));
+		m_vertices.push_back(MakeVertex(x, y + length, z + merged, face, type)); // 0, 0
+		m_vertices.push_back(MakeVertex(x, y + length, z, face, type)); // 1, 0
+		m_vertices.push_back(MakeVertex(x, y, z, face, type)); // 1, 1
+		m_vertices.push_back(MakeVertex(x, y, z + merged, face, type)); // 0, 1
 	}
 	else if (face == 1) { // right
-		m_vertices.push_back(MakeVertex(x, y, z, face, type));
 		m_vertices.push_back(MakeVertex(x, y + length, z, face, type));
 		m_vertices.push_back(MakeVertex(x, y + length, z + merged, face, type));
 		m_vertices.push_back(MakeVertex(x, y, z + merged, face, type));
+		m_vertices.push_back(MakeVertex(x, y, z, face, type));
 	}
 	else if (face == 2) { // bottom
 		m_vertices.push_back(MakeVertex(x, y, z, face, type));
@@ -276,22 +277,22 @@ void Chunk::CreateQuad(int x, int y, int z, int merged, int length, int face, in
 		m_vertices.push_back(MakeVertex(x, y, z + length, face, type));
 	}
 	else if (face == 3) { // top
-		m_vertices.push_back(MakeVertex(x, y, z, face, type));
 		m_vertices.push_back(MakeVertex(x, y, z + length, face, type));
 		m_vertices.push_back(MakeVertex(x + merged, y, z + length, face, type));
 		m_vertices.push_back(MakeVertex(x + merged, y, z, face, type));
+		m_vertices.push_back(MakeVertex(x, y, z, face, type));
 	}
 	else if (face == 4) { // front
-		m_vertices.push_back(MakeVertex(x, y, z, face, type));
 		m_vertices.push_back(MakeVertex(x, y + length, z, face, type));
 		m_vertices.push_back(MakeVertex(x + merged, y + length, z, face, type));
 		m_vertices.push_back(MakeVertex(x + merged, y, z, face, type));
+		m_vertices.push_back(MakeVertex(x, y, z, face, type));
 	}
 	else if (face == 5) { // back
-		m_vertices.push_back(MakeVertex(x, y, z, face, type));
-		m_vertices.push_back(MakeVertex(x + merged, y, z, face, type));
 		m_vertices.push_back(MakeVertex(x + merged, y + length, z, face, type));
 		m_vertices.push_back(MakeVertex(x, y + length, z, face, type));
+		m_vertices.push_back(MakeVertex(x, y, z, face, type));
+		m_vertices.push_back(MakeVertex(x + merged, y, z, face, type));
 	}
 
 	m_indices.push_back(originVertexSize);

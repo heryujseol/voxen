@@ -105,6 +105,7 @@ bool Graphics::InitGraphicsCore(DXGI_FORMAT pixelFormat, HWND& hwnd, UINT width,
 #endif
 
 	D3D_FEATURE_LEVEL levels[] = {
+		D3D_FEATURE_LEVEL_11_1,
 		D3D_FEATURE_LEVEL_11_0,
 		D3D_FEATURE_LEVEL_9_3,
 	};
@@ -174,7 +175,7 @@ bool Graphics::InitRenderTargetBuffers(UINT width, UINT height)
 	// Basic RTV
 	DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	UINT bindFlag = D3D11_BIND_RENDER_TARGET;
-	if (!DXUtils::CreateTextureBuffer(basicRenderBuffer, width, height, false, format, bindFlag)) {
+	if (!DXUtils::CreateTextureBuffer(basicRenderBuffer, width, height, true, format, bindFlag)) {
 		std::cout << "failed create render target buffer" << std::endl;
 		return false;
 	}
@@ -187,7 +188,7 @@ bool Graphics::InitRenderTargetBuffers(UINT width, UINT height)
 
 
 	// Cloud RTV
-	if (!DXUtils::CreateTextureBuffer(cloudRenderBuffer, width, height, false, format, bindFlag))
+	if (!DXUtils::CreateTextureBuffer(cloudRenderBuffer, width, height, true, format, bindFlag))
 	{
 		std::cout << "failed create render target buffer" << std::endl;
 		return false;
@@ -207,12 +208,17 @@ bool Graphics::InitDepthStencilBuffers(UINT width, UINT height)
 	// basic DSV
 	DXGI_FORMAT format = DXGI_FORMAT_D24_UNORM_S8_UINT;
 	D3D11_BIND_FLAG bindFlag = D3D11_BIND_DEPTH_STENCIL;
-	if (!DXUtils::CreateTextureBuffer(basicDepthBuffer, width, height, false, format, bindFlag)) {
+	if (!DXUtils::CreateTextureBuffer(basicDepthBuffer, width, height, true, format, bindFlag)) {
 		std::cout << "failed create depth stencil buffer" << std::endl;
 		return false;
 	}
+
+	D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc;
+	ZeroMemory(&dsvDesc, sizeof(dsvDesc));
+	dsvDesc.Format = format;
+	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DMS;
 	HRESULT ret = Graphics::device->CreateDepthStencilView(
-		basicDepthBuffer.Get(), nullptr, basicDSV.GetAddressOf());
+		basicDepthBuffer.Get(), &dsvDesc, basicDSV.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create depth stencil view" << std::endl;
 		return false;
@@ -225,19 +231,21 @@ bool Graphics::InitShaderResourceBuffers(UINT width, UINT height)
 {
 	// Asset Files
 	/*
-	if (!DXUtils::CreateTexture2DFromFile(
+	* if (!DXUtils::CreateTexture2DFromFile(
 			atlasMapBuffer, atlasMapSRV, "../assets/blockatlas1.png")) {
 		std::cout << "failed create texture from atlas file" << std::endl;
 		return false;
 	}
 	
-	*/
 	
+	*/
 	if (!DXUtils::CreateTextureArrayFromAtlasFile(
-			atlasMapBuffer, atlasMapSRV, "../assets/blockatlas2.png")) {
+			atlasMapBuffer, atlasMapSRV, "../assets/blockatlas1.png")) {
 		std::cout << "failed create texture from atlas file" << std::endl;
 		return false;
 	}
+	
+	
 	
 
 	/*if (!DXUtils::CreateTextureFromFile(
@@ -378,10 +386,13 @@ bool Graphics::InitRasterizerStates()
 {
 	D3D11_RASTERIZER_DESC rastDesc;
 	ZeroMemory(&rastDesc, sizeof(D3D11_RASTERIZER_DESC));
-	rastDesc.CullMode = D3D11_CULL_MODE::D3D11_CULL_NONE;
+	rastDesc.CullMode = D3D11_CULL_MODE::D3D11_CULL_BACK;
 	rastDesc.FrontCounterClockwise = false;
 	rastDesc.DepthClipEnable = true;
 	rastDesc.MultisampleEnable = true;
+	//rastDesc.DepthBias = static_cast<INT>(0.0001 * (1 << 24));
+	//rastDesc.DepthBiasClamp = 0.0f;
+	//rastDesc.SlopeScaledDepthBias = 1.0f;
 
 	// solidRS
 	rastDesc.FillMode = D3D11_FILL_MODE::D3D11_FILL_SOLID;
@@ -410,7 +421,7 @@ bool Graphics::InitSamplerStates()
 	desc.MinLOD = 0.0f;
 	desc.MaxLOD = D3D11_FLOAT32_MAX;
 
-	// point clamp
+	// point wrap
 	desc.Filter = D3D11_FILTER_MIN_MAG_POINT_MIP_LINEAR;
 	desc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
 	desc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
@@ -441,7 +452,7 @@ bool Graphics::InitDepthStencilStates()
 	ZeroMemory(&desc, sizeof(desc));
 	desc.DepthEnable = true;
 	desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK::D3D11_DEPTH_WRITE_MASK_ALL;
-	desc.DepthFunc = D3D11_COMPARISON_FUNC::D3D11_COMPARISON_LESS;
+	desc.DepthFunc = D3D11_COMPARISON_FUNC::D3D11_COMPARISON_LESS_EQUAL;
 
 	// basic DSS
 	HRESULT ret = Graphics::device->CreateDepthStencilState(&desc, basicDSS.GetAddressOf());
