@@ -19,47 +19,16 @@ struct vsOutput
 };
 
 float2 getVoxelTexcoord(float3 pos, uint face)
-{    
-    float2 texcoord = float2(0.0, 0.0);
-    
-    if (face == 0) // left
-    {
-        texcoord = float2(abs(pos.z - ceil(pos.z)), abs(pos.y - ceil(pos.y)));
-    }
-    else if (face == 1) // right
-    {
-        texcoord = float2(abs(pos.z - floor(pos.z)), abs(pos.y - ceil(pos.y)));
-    }
-    else if (face == 2) // bottom
-    {
-        texcoord = float2(abs(pos.x - floor(pos.x)), abs(pos.z - floor(pos.z)));
-    }
-    else if (face == 3) // top
-    {
-        texcoord = float2(abs(pos.x - floor(pos.x)), abs(pos.z - ceil(pos.z)));
-    }
-    else if (face == 4) // front
-    {
-        texcoord = float2(abs(pos.x - floor(pos.x)), abs(pos.y - ceil(pos.y)));
-    }
-    else // back
-    {
-        texcoord = float2(abs(pos.x - ceil(pos.x)), abs(pos.y - ceil(pos.y)));
-    }
-    
-    return texcoord;
-}
-
-float2 getVoxelTexcoord2(float3 pos, uint face)
 {
     float2 texcoord = float2(0.0, 0.0);
+    
     if (face == 0) // left
     {
-        texcoord = float2(pos.z, pos.y);
+        texcoord = float2(-pos.z + 32.0, -pos.y + 32.0);
     }
     else if (face == 1) // right
     {
-        texcoord = float2(pos.z, pos.y);
+        texcoord = float2(pos.z, -pos.y + 32.0);
     }
     else if (face == 2) // bottom
     {
@@ -67,23 +36,24 @@ float2 getVoxelTexcoord2(float3 pos, uint face)
     }
     else if (face == 3) // top
     {
-        texcoord = float2(pos.x, pos.z);
+        texcoord = float2(pos.x, -pos.z + 32.0);
     }
     else if (face == 4) // front
     {
-        texcoord = float2(pos.x, pos.y);
+        texcoord = float2(pos.x, -pos.y + 32.0);
     }
     else // back
     {
-        texcoord = float2(pos.x, pos.y);
+        texcoord = float2(-pos.x + 32.0, -pos.y + 32.0);
     }
 
-    return -texcoord;
+    return texcoord;
 }
 
 float4 main(vsOutput input) : SV_TARGET
 {
-    float2 texcoord = getVoxelTexcoord2(input.posModel, input.face);
+    float2 texcoord = getVoxelTexcoord(input.posModel, input.face);
+    
     uint index = (input.type - 1) * 6 + input.face;
     
     float3 color = atlasTextureArray.Sample(pointWrapSS, float3(texcoord, index)).xyz;

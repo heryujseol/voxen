@@ -231,21 +231,26 @@ bool Graphics::InitShaderResourceBuffers(UINT width, UINT height)
 {
 	// Asset Files
 	/*
-	* if (!DXUtils::CreateTexture2DFromFile(
+	
+	if (!DXUtils::CreateTexture2DFromFile(
 			atlasMapBuffer, atlasMapSRV, "../assets/blockatlas1.png")) {
 		std::cout << "failed create texture from atlas file" << std::endl;
 		return false;
 	}
-	
+
+	if (!DXUtils::CreateTextureArrayFromAtlasFile(
+			atlasMapBuffer, atlasMapSRV, "../assets/blender_uv_grid_2k.png")) {
+		std::cout << "failed create texture from atlas file" << std::endl;
+		return false;
+	} 
 	
 	*/
+	
 	if (!DXUtils::CreateTextureArrayFromAtlasFile(
 			atlasMapBuffer, atlasMapSRV, "../assets/blockatlas1.png")) {
 		std::cout << "failed create texture from atlas file" << std::endl;
 		return false;
-	}
-	
-	
+	} 
 	
 
 	/*if (!DXUtils::CreateTextureFromFile(
@@ -390,9 +395,6 @@ bool Graphics::InitRasterizerStates()
 	rastDesc.FrontCounterClockwise = false;
 	rastDesc.DepthClipEnable = true;
 	rastDesc.MultisampleEnable = true;
-	//rastDesc.DepthBias = static_cast<INT>(0.0001 * (1 << 24));
-	//rastDesc.DepthBiasClamp = 0.0f;
-	//rastDesc.SlopeScaledDepthBias = 1.0f;
 
 	// solidRS
 	rastDesc.FillMode = D3D11_FILL_MODE::D3D11_FILL_SOLID;
