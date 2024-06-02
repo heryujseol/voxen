@@ -12,8 +12,8 @@ cbuffer ChunkConstantBuffer : register(b1)
 struct vsOutput
 {
     float4 posProj : SV_POSITION;
-    centroid float3 posWorld : POSITION1;
-    centroid float3 posModel : POSITION2;
+    float3 posWorld : POSITION1;
+    sample float3 posModel : POSITION2;
     uint face : FACE;
     uint type : TYPE;
 };

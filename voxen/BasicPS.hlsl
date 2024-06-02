@@ -12,8 +12,8 @@ cbuffer CameraConstantBuffer : register(b0)
 struct vsOutput
 {
     float4 posProj : SV_POSITION;
-    centroid float3 posWorld : POSITION1;
-    centroid float3 posModel : POSITION2;
+    float3 posWorld : POSITION1;
+    sample float3 posModel : POSITION2;
     uint face : FACE;
     uint type : TYPE;
 };
@@ -50,6 +50,26 @@ float2 getVoxelTexcoord(float3 pos, uint face)
     return texcoord;
 }
 
+float3 getFaceColor(uint face)
+{
+    if (face == 0 || face == 1)
+    {
+        return float3(0.86, 0.86, 0.86);
+    }
+    else if (face == 4 || face == 5)
+    {
+        return float3(0.80, 0.80, 0.80);
+    }
+    else if (face == 3)
+    {
+        return float3(1.0, 1.0, 1.0);
+    }
+    else
+    {
+        return float3(0.75, 0.75, 0.75);
+    }
+}
+
 float4 main(vsOutput input) : SV_TARGET
 {
     float2 texcoord = getVoxelTexcoord(input.posModel, input.face);
@@ -58,6 +78,7 @@ float4 main(vsOutput input) : SV_TARGET
     
     float3 color = atlasTextureArray.Sample(pointWrapSS, float3(texcoord, index)).xyz;
     
+    color *= getFaceColor(input.face);
 
-    return float4(color, 0.0); // Set alpha to 1.0 to ensure full opacity
+    return float4(color, 0.0);
 }
