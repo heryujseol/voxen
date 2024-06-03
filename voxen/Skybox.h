@@ -28,7 +28,7 @@ private:
 	float m_speed;
 
 	const uint32_t DATE_CYCLE_AMOUNT = 24000;
-	const uint32_t DATE_REAL_TIME = 0.5f * 60;
+	const uint32_t DATE_REAL_TIME = 30; // 60
 	const float DATE_TIME_SPEED = (float)DATE_CYCLE_AMOUNT / DATE_REAL_TIME;
 	
 	// normal color

@@ -105,6 +105,7 @@ bool Graphics::InitGraphicsCore(DXGI_FORMAT pixelFormat, HWND& hwnd, UINT width,
 #endif
 
 	D3D_FEATURE_LEVEL levels[] = {
+		D3D_FEATURE_LEVEL_11_1,
 		D3D_FEATURE_LEVEL_11_0,
 		D3D_FEATURE_LEVEL_9_3,
 	};
@@ -211,8 +212,13 @@ bool Graphics::InitDepthStencilBuffers(UINT width, UINT height)
 		std::cout << "failed create depth stencil buffer" << std::endl;
 		return false;
 	}
+
+	D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc;
+	ZeroMemory(&dsvDesc, sizeof(dsvDesc));
+	dsvDesc.Format = format;
+	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DMS;
 	HRESULT ret = Graphics::device->CreateDepthStencilView(
-		basicDepthBuffer.Get(), nullptr, basicDSV.GetAddressOf());
+		basicDepthBuffer.Get(), &dsvDesc, basicDSV.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create depth stencil view" << std::endl;
 		return false;
@@ -224,11 +230,28 @@ bool Graphics::InitDepthStencilBuffers(UINT width, UINT height)
 bool Graphics::InitShaderResourceBuffers(UINT width, UINT height)
 {
 	// Asset Files
-	if (!DXUtils::CreateTextureFromFile(
+	/*
+	
+	if (!DXUtils::CreateTexture2DFromFile(
 			atlasMapBuffer, atlasMapSRV, "../assets/blockatlas1.png")) {
-		std::cout << "failed create texture from a file" << std::endl;
+		std::cout << "failed create texture from atlas file" << std::endl;
 		return false;
 	}
+
+	if (!DXUtils::CreateTextureArrayFromAtlasFile(
+			atlasMapBuffer, atlasMapSRV, "../assets/blender_uv_grid_2k.png")) {
+		std::cout << "failed create texture from atlas file" << std::endl;
+		return false;
+	} 
+	
+	*/
+	
+	if (!DXUtils::CreateTextureArrayFromAtlasFile(
+			atlasMapBuffer, atlasMapSRV, "../assets/blockatlas1.png")) {
+		std::cout << "failed create texture from atlas file" << std::endl;
+		return false;
+	} 
+	
 
 	/*if (!DXUtils::CreateTextureFromFile(
 			grassColorMapBuffer, grassColorMapSRV, "../assets/grass_color_map.png")) {
@@ -236,12 +259,12 @@ bool Graphics::InitShaderResourceBuffers(UINT width, UINT height)
 		return false;
 	}*/
 
-	if (!DXUtils::CreateTextureFromFile(sunBuffer, sunSRV, "../assets/sun.png")) {
+	if (!DXUtils::CreateTexture2DFromFile(sunBuffer, sunSRV, "../assets/sun.png")) {
 		std::cout << "failed create texture from sun file" << std::endl;
 		return false;
 	}
 
-	if (!DXUtils::CreateTextureFromFile(moonBuffer, moonSRV, "../assets/moon.png")) {
+	if (!DXUtils::CreateTexture2DFromFile(moonBuffer, moonSRV, "../assets/moon.png")) {
 		std::cout << "failed create texture from moon file" << std::endl;
 		return false;
 	}
@@ -368,7 +391,7 @@ bool Graphics::InitRasterizerStates()
 {
 	D3D11_RASTERIZER_DESC rastDesc;
 	ZeroMemory(&rastDesc, sizeof(D3D11_RASTERIZER_DESC));
-	rastDesc.CullMode = D3D11_CULL_MODE::D3D11_CULL_NONE;
+	rastDesc.CullMode = D3D11_CULL_MODE::D3D11_CULL_BACK;
 	rastDesc.FrontCounterClockwise = false;
 	rastDesc.DepthClipEnable = true;
 	rastDesc.MultisampleEnable = true;
@@ -400,11 +423,11 @@ bool Graphics::InitSamplerStates()
 	desc.MinLOD = 0.0f;
 	desc.MaxLOD = D3D11_FLOAT32_MAX;
 
-	// point clamp
+	// point wrap
 	desc.Filter = D3D11_FILTER_MIN_MAG_POINT_MIP_LINEAR;
-	desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-	desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-	desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	desc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+	desc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+	desc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
 	HRESULT ret = Graphics::device->CreateSamplerState(&desc, pointClampSS.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create point clamp SS" << std::endl;
@@ -431,7 +454,7 @@ bool Graphics::InitDepthStencilStates()
 	ZeroMemory(&desc, sizeof(desc));
 	desc.DepthEnable = true;
 	desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK::D3D11_DEPTH_WRITE_MASK_ALL;
-	desc.DepthFunc = D3D11_COMPARISON_FUNC::D3D11_COMPARISON_LESS;
+	desc.DepthFunc = D3D11_COMPARISON_FUNC::D3D11_COMPARISON_LESS_EQUAL;
 
 	// basic DSS
 	HRESULT ret = Graphics::device->CreateDepthStencilState(&desc, basicDSS.GetAddressOf());

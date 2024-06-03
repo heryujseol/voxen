@@ -1,7 +1,5 @@
-SamplerState pointClampSS : register(s0);
-
-Texture2D atlasTexture : register(t0);
-Texture2D grassColorMap : register(t1);
+SamplerState pointWrapSS : register(s0);
+Texture2DArray atlasTextureArray : register(t0);
 
 cbuffer CameraConstantBuffer : register(b0)
 {
@@ -14,60 +12,73 @@ cbuffer CameraConstantBuffer : register(b0)
 struct vsOutput
 {
     float4 posProj : SV_POSITION;
-    float3 posWorld : POSITION;
+    float3 posWorld : POSITION1;
+    sample float3 posModel : POSITION2;
     uint face : FACE;
     uint type : TYPE;
 };
 
 float2 getVoxelTexcoord(float3 pos, uint face)
 {
+    float2 texcoord = float2(0.0, 0.0);
+    
     if (face == 0) // left
     {
-        return float2(abs(pos.z - ceil(pos.z)), abs(pos.y - ceil(pos.y)));
+        texcoord = float2(-pos.z + 32.0, -pos.y + 32.0);
     }
     else if (face == 1) // right
     {
-        return float2(abs(pos.z - floor(pos.z)), abs(pos.y - ceil(pos.y)));
+        texcoord = float2(pos.z, -pos.y + 32.0);
     }
     else if (face == 2) // bottom
     {
-        return float2(abs(pos.x - floor(pos.x)), abs(pos.z - floor(pos.z)));
+        texcoord = float2(pos.x, pos.z);
     }
     else if (face == 3) // top
     {
-        return float2(abs(pos.x - floor(pos.x)), abs(pos.z - ceil(pos.z)));
+        texcoord = float2(pos.x, -pos.z + 32.0);
     }
     else if (face == 4) // front
     {
-        return float2(abs(pos.x - floor(pos.x)), abs(pos.y - ceil(pos.y)));
+        texcoord = float2(pos.x, -pos.y + 32.0);
     }
     else // back
     {
-        return float2(abs(pos.x - ceil(pos.x)), abs(pos.y - ceil(pos.y)));
-    }   
+        texcoord = float2(-pos.x + 32.0, -pos.y + 32.0);
+    }
+
+    return texcoord;
+}
+
+float3 getFaceColor(uint face)
+{
+    if (face == 0 || face == 1)
+    {
+        return float3(0.86, 0.86, 0.86);
+    }
+    else if (face == 4 || face == 5)
+    {
+        return float3(0.80, 0.80, 0.80);
+    }
+    else if (face == 3)
+    {
+        return float3(1.0, 1.0, 1.0);
+    }
+    else
+    {
+        return float3(0.75, 0.75, 0.75);
+    }
 }
 
 float4 main(vsOutput input) : SV_TARGET
 {
+    float2 texcoord = getVoxelTexcoord(input.posModel, input.face);
     
-    //float temperature = 0.5;
-    //float downfall = 1.0;
-    //float4 biome = grassColorMap.SampleLevel(pointClampSS, float2(1 - temperature, 1 - temperature / downfall), 0.0);
-    
-    
-    // atlas test
-    // 2048 2048 -> 텍스쳐당 128x128, 그게 16x16
-    float2 texcoord = getVoxelTexcoord(input.posWorld, input.face);
-    uint texCount = 16;  // 한 줄의 텍스쳐 개수
-    
-    // [type * 6 + side] => 1차원 인덱스를 2차원 인덱스 좌표로 변경
     uint index = (input.type - 1) * 6 + input.face;
+    
+    float3 color = atlasTextureArray.Sample(pointWrapSS, float3(texcoord, index)).xyz;
+    
+    color *= getFaceColor(input.face);
 
-    uint2 indexUV = uint2(index % texCount, index / texCount);
-    texcoord += indexUV; // x.u  y.v 
-    texcoord /= texCount;
-    
-    float3 color = atlasTexture.Sample(pointClampSS, texcoord);
-    
     return float4(color, 0.0);
 }
