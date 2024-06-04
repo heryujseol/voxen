@@ -87,7 +87,7 @@ float4 main(vsOutput input) : SV_TARGET
     
     float sunAltitude = sin(sunDir.y);
     float dayAltitude = PI / 12.0;
-    float nightAltitude = -PI * (1.7 / 6.0);
+    float nightAltitude = -PI * 0.5 * (1.7 / 6.0);
     float maxHorizonAltitude = -PI / 24.0;
     if (dayAltitude < sunAltitude)
     {
@@ -101,7 +101,7 @@ float4 main(vsOutput input) : SV_TARGET
     {
         color *= lerp(float3(0.04, 0.05, 0.09), horizonColor, smoothstep(nightAltitude, maxHorizonAltitude, sunAltitude));
     }
-    else
+    else // nightAltitude
     {
         color *= float3(0.04, 0.05, 0.09);
     }
