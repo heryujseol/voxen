@@ -156,7 +156,7 @@ void App::Render()
 
 	// basic
 	Graphics::SetPipelineStates(m_keyToggle[9] ? Graphics::basicWirePSO : Graphics::basicPSO);
-	m_chunkManager.Render(m_camera);
+	m_chunkManager.RenderBasic(m_camera);
 
 
 	// skybox

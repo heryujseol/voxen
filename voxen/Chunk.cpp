@@ -7,7 +7,7 @@
 
 Chunk::Chunk()
 	: m_position(0.0, 0.0, 0.0), m_stride(sizeof(VoxelVertex)), m_offset(0),
-	  m_vertexBuffer(nullptr), m_indexBuffer(nullptr), m_constantBuffer(nullptr), m_isLoaded(false)
+	  m_constantBuffer(nullptr), m_isLoaded(false)
 {
 }
 
@@ -19,33 +19,205 @@ bool Chunk::Initialize()
 	static long long count = 0;
 	auto start_time = std::chrono::steady_clock::now();
 
-	// 1. make axis column bit data
-	static uint64_t axisColBit[CHUNK_SIZE_P2 * 3];
-	std::fill(axisColBit, axisColBit + CHUNK_SIZE_P2 * 3, 0);
-	std::unordered_map<uint8_t, bool> typeMap;
+	// 0. initialize chunk data
+	InitChunkData();
 
+	// 1. intialize vertices data
+	InitSpriteVerticeData();
+	InitMeshVerticeData();
 
+	// 2. make GPU buffer from CPU buffer
+	if (!IsEmpty()) {
+		m_constantData.world = Matrix::CreateTranslation(m_position).Transpose();
+		if (!DXUtils::CreateConstantBuffer(m_constantBuffer, m_constantData)) {
+			std::cout << "failed create constant buffer in chunk" << std::endl;
+			return false;
+		}
+		m_constantData.world = m_constantData.world.Transpose();
+
+		// basic
+		if (!IsEmptyBasic()) {
+			if (!DXUtils::CreateVertexBuffer(m_basicVertexBuffer, m_basicVertice)) {
+				std::cout << "failed create vertex buffer in chunk" << std::endl;
+				return false;
+			}
+			if (!DXUtils::CreateIndexBuffer(m_basicIndexBuffer, m_basicIndice)) {
+				std::cout << "failed create index buffer in chunk" << std::endl;
+				return false;
+			}
+		}
+
+		// sprite
+		if (!IsEmptySprite()) {
+			if (!DXUtils::CreateVertexBuffer(m_spriteVertexBuffer, m_spriteVertice)) {
+				std::cout << "failed create vertex buffer in chunk" << std::endl;
+				return false;
+			}
+		}
+
+		// water
+		if (!IsEmptyWater()) {
+			if (!DXUtils::CreateVertexBuffer(m_waterVertexBuffer, m_waterVertice)) {
+				std::cout << "failed create vertex buffer in chunk" << std::endl;
+				return false;
+			}
+			if (!DXUtils::CreateIndexBuffer(m_waterIndexBuffer, m_waterIndice)) {
+				std::cout << "failed create index buffer in chunk" << std::endl;
+				return false;
+			}
+		}
+	}
+
+	m_isLoaded = true;
+
+	auto end_time = std::chrono::steady_clock::now();
+	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
+	sum += duration.count();
+	count++;
+	std::cout << "Function Average duration: " << (double)sum / (double)count << " microseconds"
+			  << std::endl;
+
+	return true;
+}
+
+void Chunk::Update(float dt)
+{
+	/*
+	m_constantData.world *= Matrix::CreateRotationY(dt);
+
+	ChunkConstantData transposedConstantData = m_constantData;
+	transposedConstantData.world = transposedConstantData.world.Transpose();
+	DXUtils::UpdateConstantBuffer(m_constantBuffer, transposedConstantData);
+	*/
+}
+
+void Chunk::RenderBasic()
+{
+	Graphics::context->IASetIndexBuffer(m_basicIndexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
+	Graphics::context->IASetVertexBuffers(
+		0, 1, m_basicVertexBuffer.GetAddressOf(), &m_stride, &m_offset);
+	Graphics::context->VSSetConstantBuffers(1, 1, m_constantBuffer.GetAddressOf());
+
+	Graphics::context->DrawIndexed((UINT)m_basicIndice.size(), 0, 0);
+}
+
+void Chunk::RenderSprite() {}
+
+void Chunk::RenderWater() {}
+
+void Chunk::Clear()
+{
+	m_isLoaded = false;
+
+	// clear basic
+	std::vector<VoxelVertex>().swap(m_basicVertice);
+	std::vector<uint32_t>().swap(m_basicIndice);
+	if (m_basicVertexBuffer) {
+		m_basicVertexBuffer.Reset();
+		m_basicVertexBuffer = nullptr;
+	}
+	if (m_basicIndexBuffer) {
+		m_basicIndexBuffer.Reset();
+		m_basicIndexBuffer = nullptr;
+	}
+
+	// clear sprite
+	std::vector<VoxelVertex>().swap(m_spriteVertice);
+	if (m_spriteVertexBuffer) {
+		m_spriteVertexBuffer.Reset();
+		m_spriteVertexBuffer = nullptr;
+	}
+
+	// clear water
+	std::vector<VoxelVertex>().swap(m_waterVertice);
+	std::vector<uint32_t>().swap(m_waterIndice);
+	if (m_waterVertexBuffer) {
+		m_waterVertexBuffer.Reset();
+		m_waterVertexBuffer = nullptr;
+	}
+	if (m_waterIndexBuffer) {
+		m_waterIndexBuffer.Reset();
+		m_waterIndexBuffer = nullptr;
+	}
+
+	// clear constant
+	if (m_constantBuffer) {
+		m_constantBuffer.Reset();
+		m_constantBuffer = nullptr;
+	}
+}
+
+void Chunk::InitChunkData()
+{
 	for (int x = 0; x < CHUNK_SIZE_P; ++x) {
 		for (int z = 0; z < CHUNK_SIZE_P; ++z) {
 			int nx = (int)m_position.x + x - 1;
 			int nz = (int)m_position.z + z - 1;
+
 			int height = Terrain::GetHeight(nx, nz);
-			
+			float t = Terrain::GetPerlinNoise2((float)nx / 182.0f, (float)nz / 182.0f);
+
 			for (int y = 0; y < CHUNK_SIZE_P; ++y) {
+				m_blocks[x][y][z].SetType(0);
+
 				int ny = (int)m_position.y + y;
 				if (-64 <= ny && (ny <= height || height <= 62)) {
-					uint8_t type = Terrain::GetType(nx, ny, nz, height);
-					m_blocks[x][y][z].SetType(type);
-					typeMap[type] = true;
+					uint8_t type = Terrain::GetType(nx, ny, nz, height, t);
 
-					if (type) {
-						// x dir column
-						axisColBit[Utils::GetIndexFrom3D(0, y, z, CHUNK_SIZE_P)] |= (1ULL << x);
-						// y dir column
-						axisColBit[Utils::GetIndexFrom3D(1, z, x, CHUNK_SIZE_P)] |= (1ULL << y);
-						// z dir column
-						axisColBit[Utils::GetIndexFrom3D(2, y, x, CHUNK_SIZE_P)] |= (1ULL << z);
-					}
+					m_blocks[x][y][z].SetType(type);
+				}
+			}
+		}
+	}
+}
+void Chunk::InitSpriteVerticeData()
+{
+	for (int x = 0; x < CHUNK_SIZE; ++x) {
+		for (int y = 0; y < CHUNK_SIZE; ++y) {
+			for (int z = 0; z < CHUNK_SIZE; ++z) {
+				uint8_t type = m_blocks[x + 1][y + 1][z + 1].GetType();
+
+				if (Block ::IsSprite(type)) {
+					m_spriteVertice.push_back(MakeVertex(x, y, z, 0, type));
+				}
+			}
+		}
+	}
+}
+
+void Chunk::InitMeshVerticeData()
+{
+	// 1. make axis column bit data
+	static uint64_t basicAxisColBit[CHUNK_SIZE_P2 * 3];
+	static uint64_t waterAxisColBit[CHUNK_SIZE_P2 * 3];
+
+	std::fill(basicAxisColBit, basicAxisColBit + CHUNK_SIZE_P2 * 3, 0);
+	std::fill(waterAxisColBit, waterAxisColBit + CHUNK_SIZE_P2 * 3, 0);
+	std::unordered_map<uint8_t, bool> typeMap;
+
+	for (int x = 0; x < CHUNK_SIZE_P; ++x) {
+		for (int y = 0; y < CHUNK_SIZE_P; ++y) {
+			for (int z = 0; z < CHUNK_SIZE_P; ++z) {
+				uint8_t type = m_blocks[x][y][z].GetType();
+				if (type == Block::Type::AIR || Block::IsSprite(type))
+					continue;
+
+				typeMap[type] = true;
+				if (type == Block::Type::WATER) {
+					// x dir column
+					waterAxisColBit[Utils::GetIndexFrom3D(0, y, z, CHUNK_SIZE_P)] |= (1ULL << x);
+					// y dir column
+					waterAxisColBit[Utils::GetIndexFrom3D(1, z, x, CHUNK_SIZE_P)] |= (1ULL << y);
+					// z dir column
+					waterAxisColBit[Utils::GetIndexFrom3D(2, y, x, CHUNK_SIZE_P)] |= (1ULL << z);
+				}
+				else {
+					// x dir column
+					basicAxisColBit[Utils::GetIndexFrom3D(0, y, z, CHUNK_SIZE_P)] |= (1ULL << x);
+					// y dir column
+					basicAxisColBit[Utils::GetIndexFrom3D(1, z, x, CHUNK_SIZE_P)] |= (1ULL << y);
+					// z dir column
+					basicAxisColBit[Utils::GetIndexFrom3D(2, y, x, CHUNK_SIZE_P)] |= (1ULL << z);
 				}
 			}
 		}
@@ -64,12 +236,15 @@ bool Chunk::Initialize()
 	for (int axis = 0; axis < 3; ++axis) {
 		for (int h = 1; h < CHUNK_SIZE_P - 1; ++h) {
 			for (int w = 1; w < CHUNK_SIZE_P - 1; ++w) {
-				uint64_t colBit = axisColBit[Utils::GetIndexFrom3D(axis, h, w, CHUNK_SIZE_P)];
-
+				uint64_t waterColBit =
+					waterAxisColBit[Utils::GetIndexFrom3D(axis, h, w, CHUNK_SIZE_P)];
+				uint64_t basicColBit =
+					basicAxisColBit[Utils::GetIndexFrom3D(axis, h, w, CHUNK_SIZE_P)];
+				
 				cullColBit[Utils::GetIndexFrom3D(axis * 2 + 0, h, w, CHUNK_SIZE_P)] =
-					colBit & ~(colBit << 1);
+					waterColBit & ~(waterColBit << 1) | basicColBit & ~(basicColBit << 1);
 				cullColBit[Utils::GetIndexFrom3D(axis * 2 + 1, h, w, CHUNK_SIZE_P)] =
-					colBit & ~(colBit >> 1);
+					waterColBit & ~(waterColBit >> 1) | basicColBit & ~(basicColBit >> 1);
 			}
 		}
 	}
@@ -102,18 +277,19 @@ bool Chunk::Initialize()
 					int bitPos = Utils::TrailingZeros(culledBit); // 1110001000 -> trailing zero : 3
 					culledBit = culledBit & (culledBit - 1ULL);	  // 1110000000
 
-					uint8_t type = 0; 
+					uint8_t type = 0;
 					if (face < 2) {
-						type = m_blocks[bitPos+1][h+1][w+1].GetType();
+						type = m_blocks[bitPos + 1][h + 1][w + 1].GetType();
 					}
 					else if (face < 4) {
-						type = m_blocks[w+1][bitPos+1][h+1].GetType();
+						type = m_blocks[w + 1][bitPos + 1][h + 1].GetType();
 					}
 					else { // face < 6
-						type = m_blocks[w+1][h+1][bitPos+1].GetType();
+						type = m_blocks[w + 1][h + 1][bitPos + 1].GetType();
 					}
 
-					faceColBit[type][Utils::GetIndexFrom3D(face, bitPos, w, CHUNK_SIZE)] |= (1ULL << h);
+					faceColBit[type][Utils::GetIndexFrom3D(face, bitPos, w, CHUNK_SIZE)] |=
+						(1ULL << h);
 				}
 			}
 		}
@@ -126,6 +302,7 @@ bool Chunk::Initialize()
 	// face 4, 5 : front-back
 	for (const auto& p : typeMap) {
 		uint8_t type = p.first;
+
 		for (int face = 0; face < 6; ++face) {
 			for (int s = 0; s < CHUNK_SIZE; ++s) {
 				for (int i = 0; i < CHUNK_SIZE; ++i) {
@@ -172,78 +349,6 @@ bool Chunk::Initialize()
 			}
 		}
 	}
-
-
-	// 5. make GPU buffer from CPU buffer
-	if (!IsEmpty()) {
-		if (!DXUtils::CreateVertexBuffer(m_vertexBuffer, m_vertices)) {
-			std::cout << "failed create vertex buffer in chunk" << std::endl;
-			return false;
-		}
-
-		if (!DXUtils::CreateIndexBuffer(m_indexBuffer, m_indices)) {
-			std::cout << "failed create index buffer in chunk" << std::endl;
-			return false;
-		}
-
-		m_constantData.world = Matrix::CreateTranslation(m_position).Transpose();
-		if (!DXUtils::CreateConstantBuffer(m_constantBuffer, m_constantData)) {
-			std::cout << "failed create constant buffer in chunk" << std::endl;
-			return false;
-		}
-		m_constantData.world = m_constantData.world.Transpose();
-	}
-
-	m_isLoaded = true;
-
-	auto end_time = std::chrono::steady_clock::now();
-	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
-	sum += duration.count();
-	count++;
-	std::cout << "Function Average duration: " << (double)sum / (double)count << " microseconds"
-			  << std::endl;
-
-	return true;
-}
-
-void Chunk::Update(float dt)
-{
-	m_constantData.world *= Matrix::CreateRotationY(dt);
-
-	ChunkConstantData transposedConstantData = m_constantData;
-	transposedConstantData.world = transposedConstantData.world.Transpose();
-	DXUtils::UpdateConstantBuffer(m_constantBuffer, transposedConstantData);
-}
-
-void Chunk::Render()
-{
-	Graphics::context->IASetIndexBuffer(m_indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
-	Graphics::context->IASetVertexBuffers(
-		0, 1, m_vertexBuffer.GetAddressOf(), &m_stride, &m_offset);
-	Graphics::context->VSSetConstantBuffers(1, 1, m_constantBuffer.GetAddressOf());
-
-	Graphics::context->DrawIndexed((UINT)m_indices.size(), 0, 0);
-}
-
-void Chunk::Clear()
-{
-	m_isLoaded = false;
-
-	std::vector<VoxelVertex>().swap(m_vertices); // clear container reallocating
-	std::vector<uint32_t>().swap(m_indices);
-
-	if (m_vertexBuffer) {
-		m_vertexBuffer.Reset();
-		m_vertexBuffer = nullptr;
-	}
-	if (m_indexBuffer) {
-		m_vertexBuffer.Reset();
-		m_indexBuffer = nullptr;
-	}
-	if (m_constantBuffer) {
-		m_vertexBuffer.Reset();
-		m_constantBuffer = nullptr;
-	}
 }
 
 VoxelVertex Chunk::MakeVertex(int x, int y, int z, int face, int type)
@@ -255,51 +360,55 @@ VoxelVertex Chunk::MakeVertex(int x, int y, int z, int face, int type)
 
 void Chunk::CreateQuad(int x, int y, int z, int merged, int length, int face, int type)
 {
-	uint32_t originVertexSize = (uint32_t)m_vertices.size();
+	std::vector<VoxelVertex>& tmpVertice =
+		(type == Block::Type::WATER) ? m_waterVertice : m_basicVertice;
+	std::vector<uint32_t>& tmpIndice = (type == Block::Type::WATER) ? m_waterIndice : m_basicIndice;
+
+	uint32_t originVertexSize = (uint32_t)tmpVertice.size();
 
 	// order by vertexID for texcoord
-	if (face == 0) { // left
-		m_vertices.push_back(MakeVertex(x, y + length, z + merged, face, type)); // 0, 0
-		m_vertices.push_back(MakeVertex(x, y + length, z, face, type)); // 1, 0
-		m_vertices.push_back(MakeVertex(x, y, z, face, type)); // 1, 1
-		m_vertices.push_back(MakeVertex(x, y, z + merged, face, type)); // 0, 1
+	if (face == 0) {															 // left
+		tmpVertice.push_back(MakeVertex(x, y + length, z + merged, face, type)); // 0, 0
+		tmpVertice.push_back(MakeVertex(x, y + length, z, face, type));			 // 1, 0
+		tmpVertice.push_back(MakeVertex(x, y, z, face, type));					 // 1, 1
+		tmpVertice.push_back(MakeVertex(x, y, z + merged, face, type));			 // 0, 1
 	}
 	else if (face == 1) { // right
-		m_vertices.push_back(MakeVertex(x, y + length, z, face, type));
-		m_vertices.push_back(MakeVertex(x, y + length, z + merged, face, type));
-		m_vertices.push_back(MakeVertex(x, y, z + merged, face, type));
-		m_vertices.push_back(MakeVertex(x, y, z, face, type));
+		tmpVertice.push_back(MakeVertex(x, y + length, z, face, type));
+		tmpVertice.push_back(MakeVertex(x, y + length, z + merged, face, type));
+		tmpVertice.push_back(MakeVertex(x, y, z + merged, face, type));
+		tmpVertice.push_back(MakeVertex(x, y, z, face, type));
 	}
 	else if (face == 2) { // bottom
-		m_vertices.push_back(MakeVertex(x, y, z, face, type));
-		m_vertices.push_back(MakeVertex(x + merged, y, z, face, type));
-		m_vertices.push_back(MakeVertex(x + merged, y, z + length, face, type));
-		m_vertices.push_back(MakeVertex(x, y, z + length, face, type));
+		tmpVertice.push_back(MakeVertex(x, y, z, face, type));
+		tmpVertice.push_back(MakeVertex(x + merged, y, z, face, type));
+		tmpVertice.push_back(MakeVertex(x + merged, y, z + length, face, type));
+		tmpVertice.push_back(MakeVertex(x, y, z + length, face, type));
 	}
 	else if (face == 3) { // top
-		m_vertices.push_back(MakeVertex(x, y, z + length, face, type));
-		m_vertices.push_back(MakeVertex(x + merged, y, z + length, face, type));
-		m_vertices.push_back(MakeVertex(x + merged, y, z, face, type));
-		m_vertices.push_back(MakeVertex(x, y, z, face, type));
+		tmpVertice.push_back(MakeVertex(x, y, z + length, face, type));
+		tmpVertice.push_back(MakeVertex(x + merged, y, z + length, face, type));
+		tmpVertice.push_back(MakeVertex(x + merged, y, z, face, type));
+		tmpVertice.push_back(MakeVertex(x, y, z, face, type));
 	}
 	else if (face == 4) { // front
-		m_vertices.push_back(MakeVertex(x, y + length, z, face, type));
-		m_vertices.push_back(MakeVertex(x + merged, y + length, z, face, type));
-		m_vertices.push_back(MakeVertex(x + merged, y, z, face, type));
-		m_vertices.push_back(MakeVertex(x, y, z, face, type));
+		tmpVertice.push_back(MakeVertex(x, y + length, z, face, type));
+		tmpVertice.push_back(MakeVertex(x + merged, y + length, z, face, type));
+		tmpVertice.push_back(MakeVertex(x + merged, y, z, face, type));
+		tmpVertice.push_back(MakeVertex(x, y, z, face, type));
 	}
 	else if (face == 5) { // back
-		m_vertices.push_back(MakeVertex(x + merged, y + length, z, face, type));
-		m_vertices.push_back(MakeVertex(x, y + length, z, face, type));
-		m_vertices.push_back(MakeVertex(x, y, z, face, type));
-		m_vertices.push_back(MakeVertex(x + merged, y, z, face, type));
+		tmpVertice.push_back(MakeVertex(x + merged, y + length, z, face, type));
+		tmpVertice.push_back(MakeVertex(x, y + length, z, face, type));
+		tmpVertice.push_back(MakeVertex(x, y, z, face, type));
+		tmpVertice.push_back(MakeVertex(x + merged, y, z, face, type));
 	}
 
-	m_indices.push_back(originVertexSize);
-	m_indices.push_back(originVertexSize + 1);
-	m_indices.push_back(originVertexSize + 2);
+	tmpIndice.push_back(originVertexSize);
+	tmpIndice.push_back(originVertexSize + 1);
+	tmpIndice.push_back(originVertexSize + 2);
 
-	m_indices.push_back(originVertexSize);
-	m_indices.push_back(originVertexSize + 2);
-	m_indices.push_back(originVertexSize + 3);
+	tmpIndice.push_back(originVertexSize);
+	tmpIndice.push_back(originVertexSize + 2);
+	tmpIndice.push_back(originVertexSize + 3);
 }

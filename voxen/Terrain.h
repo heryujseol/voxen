@@ -203,11 +203,10 @@ namespace Terrain {
 	8 = swamp grass
 	9 = swamp grass2
 	*/
-	static uint8_t GetType(int x, int y, int z, int h)
+	static uint8_t GetType(int x, int y, int z, int h, float t)
 	{
 		float thick = Get3DPerlinNoise((float)x / 96.0f, (float)y / 96.0f, (float)z / 96.0f);
-		float t = GetPerlinNoise2((float)x / 182.0f, (float)z / 182.0f);
-
+		
 		uint8_t type = 0;
 
 		if (y == h) { // Áö¸é

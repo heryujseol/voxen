@@ -18,9 +18,9 @@ public:
 
 	bool Initialize(Vector3 cameraChunkPos);
 	void Update(Camera& camera);
-	void Render(Camera& camera);
+	void RenderBasic(Camera& camera);
 
-	static const int CHUNK_COUNT = 21;
+	static const int CHUNK_COUNT = 7;
 	static const int MAX_HEIGHT = 256;
 	static const int MAX_HEIGHT_CHUNK_COUNT = MAX_HEIGHT / Chunk::CHUNK_SIZE;
 	static const int CHUNK_COUNT_P = CHUNK_COUNT + 2;

@@ -30,7 +30,7 @@ void ChunkManager::Update(Camera& camera)
 	UpdateUnloadChunks();
 }
 
-void ChunkManager::Render(Camera& camera)
+void ChunkManager::RenderBasic(Camera& camera)
 {
 	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::atlasMapSRV.Get(),
 		Graphics::grassColorMapSRV.Get() };
@@ -39,14 +39,14 @@ void ChunkManager::Render(Camera& camera)
 	for (auto& c : m_chunkMap) {
 		if (!c.second->IsLoaded())
 			continue;
-
-		if (c.second->IsEmpty())
+		
+		if (c.second->IsEmptyBasic())
 			continue;
 
 		if (!FrustumCulling(c.second->GetPosition(), camera))
 			continue;
 
-		c.second->Render();
+		c.second->RenderBasic();
 	}
 }
 
