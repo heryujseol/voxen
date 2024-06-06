@@ -136,6 +136,38 @@ public:
 	}
 
 
+	static bool CreateGeometryShader(const std::wstring& filename, ComPtr<ID3D11GeometryShader>& gs)
+	{
+		UINT compileFlags = 0;
+#if defined(DEBUG) || defined(_DEBUG)
+		compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+#endif
+
+		ComPtr<ID3DBlob> shaderBlob = nullptr;
+		ComPtr<ID3DBlob> errorBlob = nullptr;
+
+		HRESULT ret = D3DCompileFromFile(
+			filename.c_str(), 0, 0, "main", "gs_5_0", compileFlags, 0, &shaderBlob, &errorBlob);
+		if (FAILED(ret)) {
+			if (errorBlob) {
+				OutputDebugStringA((char*)errorBlob->GetBufferPointer());
+				errorBlob->Release();
+			}
+			if (shaderBlob)
+				shaderBlob->Release();
+
+			return false;
+		}
+
+		ret = Graphics::device->CreateGeometryShader(
+			shaderBlob->GetBufferPointer(), shaderBlob->GetBufferSize(), 0, gs.GetAddressOf());
+		if (FAILED(ret))
+			return false;
+
+		return true;
+	}
+
+
 	static bool CreatePixelShader(const std::wstring& filename, ComPtr<ID3D11PixelShader>& ps)
 	{
 		UINT compileFlags = 0;

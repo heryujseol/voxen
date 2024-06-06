@@ -150,13 +150,19 @@ void App::Render()
 		1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
 
 	Graphics::context->VSSetConstantBuffers(0, 1, m_camera.m_constantBuffer.GetAddressOf());
+	Graphics::context->GSSetConstantBuffers(0, 1, m_camera.m_constantBuffer.GetAddressOf());
 	std::vector<ID3D11Buffer*> pptr = { m_camera.m_constantBuffer.Get(),
 		m_skybox.m_constantBuffer.Get() };
 	Graphics::context->PSSetConstantBuffers(0, 2, pptr.data());
 
+
 	// basic
 	Graphics::SetPipelineStates(m_keyToggle[9] ? Graphics::basicWirePSO : Graphics::basicPSO);
-	m_chunkManager.RenderBasic(m_camera);
+	m_chunkManager.RenderBasic();
+
+	// sprite
+	Graphics::SetPipelineStates(Graphics::spritePSO);
+	m_chunkManager.RenderSprite();
 
 
 	// skybox
@@ -168,7 +174,7 @@ void App::Render()
 	Graphics::SetPipelineStates(Graphics::cloudPSO);
 	m_cloud.Render();
 
-
+	
 	// RTV -> backBuffer
 	Graphics::context->ResolveSubresource(Graphics::backBuffer.Get(), 0,
 		Graphics::basicRenderBuffer.Get(), 0, DXGI_FORMAT_R8G8B8A8_UNORM);

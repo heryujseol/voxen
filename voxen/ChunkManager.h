@@ -18,7 +18,8 @@ public:
 
 	bool Initialize(Vector3 cameraChunkPos);
 	void Update(Camera& camera);
-	void RenderBasic(Camera& camera);
+	void RenderBasic();
+	void RenderSprite();
 
 	static const int CHUNK_COUNT = 7;
 	static const int MAX_HEIGHT = 256;
@@ -31,6 +32,7 @@ private:
 	void UpdateChunkList(Vector3 cameraChunkPos);
 	void UpdateLoadChunks();
 	void UpdateUnloadChunks();
+	void UpdateRenderChunks(Camera& camera);
 	
 	bool FrustumCulling(Vector3 position, Camera& camera);
 
@@ -39,6 +41,8 @@ private:
 
 	std::vector<Chunk*> m_chunkPool;
 	std::map<std::tuple<int, int, int>, Chunk*> m_chunkMap;
+
+	std::vector<Chunk*> m_renderChunkList;
 	std::vector<Chunk*> m_loadChunkList;
 	std::vector<Chunk*> m_unloadChunkList;
 };

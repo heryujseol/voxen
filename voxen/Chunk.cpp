@@ -101,7 +101,14 @@ void Chunk::RenderBasic()
 	Graphics::context->DrawIndexed((UINT)m_basicIndice.size(), 0, 0);
 }
 
-void Chunk::RenderSprite() {}
+void Chunk::RenderSprite() 
+{
+	Graphics::context->IASetVertexBuffers(
+		0, 1, m_spriteVertexBuffer.GetAddressOf(), &m_stride, &m_offset);
+	Graphics::context->GSSetConstantBuffers(1, 1, m_constantBuffer.GetAddressOf());
+
+	Graphics::context->Draw((UINT)m_spriteVertice.size(), 0);
+}
 
 void Chunk::RenderWater() {}
 
@@ -165,6 +172,10 @@ void Chunk::InitChunkData()
 					uint8_t type = Terrain::GetType(nx, ny, nz, height, t);
 
 					m_blocks[x][y][z].SetType(type);
+				}
+				// for sprite testing
+				if (ny == height + 1 && nx % 2 == 0 && nz % 2 == 0) {
+					m_blocks[x][y][z].SetType(128);
 				}
 			}
 		}

@@ -28,25 +28,37 @@ void ChunkManager::Update(Camera& camera)
 
 	UpdateLoadChunks();
 	UpdateUnloadChunks();
+	UpdateRenderChunks(camera);
 }
 
-void ChunkManager::RenderBasic(Camera& camera)
+void ChunkManager::RenderBasic()
 {
 	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::atlasMapSRV.Get(),
 		Graphics::grassColorMapSRV.Get() };
 	Graphics::context->PSSetShaderResources(0, 2, pptr.data());
 
-	for (auto& c : m_chunkMap) {
-		if (!c.second->IsLoaded())
-			continue;
-		
-		if (c.second->IsEmptyBasic())
+	for (auto& c : m_renderChunkList) {
+		if (c->IsEmptyBasic())
 			continue;
 
-		if (!FrustumCulling(c.second->GetPosition(), camera))
-			continue;
+		c->RenderBasic();
+	}
+}
 
-		c.second->RenderBasic();
+void ChunkManager::RenderSprite() {
+	Graphics::context->OMSetRenderTargets(
+		1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
+
+	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::atlasMapSRV.Get(),
+		Graphics::grassColorMapSRV.Get() };
+	Graphics::context->PSSetShaderResources(0, 2, pptr.data());
+
+	for (auto& c : m_renderChunkList) {
+		if (c->IsEmptySprite())
+			continue;
+		// need to check distance
+
+		c->RenderSprite();
 	}
 }
 
@@ -111,6 +123,21 @@ void ChunkManager::UpdateUnloadChunks()
 		chunk->Clear();
 		m_chunkMap.erase(std::make_tuple(x, y, z));
 		ReleaseChunkToPool(chunk);
+	}
+}
+
+void ChunkManager::UpdateRenderChunks(Camera& camera)
+{
+	m_renderChunkList.clear();
+
+	for (auto& p : m_chunkMap) {
+		if (!p.second->IsLoaded())
+			continue;
+
+		if (!FrustumCulling(p.second->GetPosition(), camera))
+			continue;
+
+		m_renderChunkList.push_back(p.second);
 	}
 }
 
