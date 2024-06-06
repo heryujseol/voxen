@@ -53,7 +53,6 @@ namespace Graphics {
 
 	// Blend State
 	ComPtr<ID3D11BlendState> alphaBS;
-	ComPtr<ID3D11BlendState> spriteBS;
 
 
 	// RTV & Buffer
@@ -579,7 +578,6 @@ void Graphics::InitGraphicsPSO()
 	spritePSO.geometryShader = spriteGS;
 	spritePSO.rasterizerState = spriteRS;
 	spritePSO.pixelShader = spritePS;
-	spritePSO.blendState = alphaBS;
 }
 
 void Graphics::SetPipelineStates(GraphicsPSO& pso)

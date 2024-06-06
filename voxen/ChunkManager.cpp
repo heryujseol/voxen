@@ -46,13 +46,6 @@ void ChunkManager::RenderBasic()
 }
 
 void ChunkManager::RenderSprite() {
-	Graphics::context->OMSetRenderTargets(
-		1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
-
-	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::atlasMapSRV.Get(),
-		Graphics::grassColorMapSRV.Get() };
-	Graphics::context->PSSetShaderResources(0, 2, pptr.data());
-
 	for (auto& c : m_renderChunkList) {
 		if (c->IsEmptySprite())
 			continue;
