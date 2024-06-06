@@ -6,7 +6,7 @@
 #include "Camera.h"
 #include "Skybox.h"
 #include "Cloud.h"
-#include "Fog.h"
+#include "PostEffect.h"
 
 using namespace Microsoft::WRL;
 using namespace DirectX;
@@ -39,7 +39,7 @@ private:
 	Camera m_camera;
 	Skybox m_skybox;
 	Cloud m_cloud;
-	Fog m_fog;
+	PostEffect m_postEffect;
 
 	bool m_keyPressed[256];
 	bool m_keyToggle[256];

@@ -209,7 +209,7 @@ public:
 
 		desc.Usage = D3D11_USAGE_DEFAULT;
 		desc.BindFlags = bindFlags;
-		if (bindFlags == 74)
+		if (bindFlags == 72)
 			desc.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
 		HRESULT ret = Graphics::device->CreateTexture2D(&desc, nullptr, buffer.GetAddressOf());
 		if (FAILED(ret))

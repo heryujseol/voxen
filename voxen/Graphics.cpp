@@ -52,6 +52,7 @@ namespace Graphics {
 	// Depth Stencil State
 	ComPtr<ID3D11DepthStencilState> basicDSS;
 
+	ComPtr<ID3D11DepthStencilState> postEffectDSS;
 
 	// Blend State
 	ComPtr<ID3D11BlendState> alphaBS;
@@ -75,6 +76,7 @@ namespace Graphics {
 	ComPtr<ID3D11Texture2D> basicDepthBuffer;
 	ComPtr<ID3D11DepthStencilView> basicDSV;
 
+	ComPtr<ID3D11Texture2D> depthOnlyBuffer;
 	ComPtr<ID3D11DepthStencilView> depthOnlyDSV;
 
 
@@ -93,7 +95,6 @@ namespace Graphics {
 	ComPtr<ID3D11Texture2D> cloudResolvedBuffer;
 	ComPtr<ID3D11ShaderResourceView> cloudSRV;
 
-	ComPtr<ID3D11Texture2D> depthOnlyBuffer;
 	ComPtr<ID3D11ShaderResourceView> depthOnlySRV;
 
 	ComPtr<ID3D11Texture2D> postEffectResolvedBuffer;
@@ -244,7 +245,7 @@ bool Graphics::InitDepthStencilBuffers(UINT width, UINT height)
 
 	// depthOnly
 	format = DXGI_FORMAT_R32_TYPELESS;
-	if (!DXUtils::CreateTextureBuffer(depthOnlyBuffer, width, height, false, format, (UINT)74)) {
+	if (!DXUtils::CreateTextureBuffer(depthOnlyBuffer, width, height, false, format, (UINT)72)) {
 		std::cout << "failed create depth stencil buffer" << std::endl;
 		return false;
 	}
@@ -484,6 +485,7 @@ bool Graphics::InitRasterizerStates()
 
 	// postEffectRS
 	rastDesc.FillMode = D3D11_FILL_MODE::D3D11_FILL_SOLID;
+	
 	rastDesc.DepthClipEnable = false;
 	ret = Graphics::device->CreateRasterizerState(&rastDesc, postEffectRS.GetAddressOf());
 	if (FAILED(ret)) {
@@ -548,6 +550,14 @@ bool Graphics::InitDepthStencilStates()
 	HRESULT ret = Graphics::device->CreateDepthStencilState(&desc, basicDSS.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create basic DSS" << std::endl;
+		return false;
+	}
+
+	// PostEffect DDS
+	desc.DepthFunc = D3D11_COMPARISON_FUNC::D3D11_COMPARISON_ALWAYS;
+	ret = Graphics::device->CreateDepthStencilState(&desc, postEffectDSS.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create postEffect DSS" << std::endl;
 		return false;
 	}
 

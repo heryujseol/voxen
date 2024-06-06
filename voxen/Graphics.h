@@ -54,6 +54,8 @@ namespace Graphics {
 	// Depth Stencil State
 	extern ComPtr<ID3D11DepthStencilState> basicDSS;
 
+	extern ComPtr<ID3D11DepthStencilState> postEffectDSS;
+
 	
 	// Blend State
 	extern ComPtr<ID3D11BlendState> alphaBS;

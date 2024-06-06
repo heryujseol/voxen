@@ -1,17 +1,18 @@
-#include "Fog.h"
+#include "PostEffect.h"
 #include "Graphics.h"
 #include "DXUtils.h"
 
 #include <algorithm>
 
-Fog::Fog()
-	: m_stride(sizeof(FogVertex)), m_offset(0), m_vertexBuffer(nullptr),
+PostEffect::PostEffect()
+	: m_stride(sizeof(SamplingVertex)), m_offset(0), m_vertexBuffer(nullptr),
 	  m_indexBuffer(nullptr)
 {};
 
-Fog::~Fog(){};
+PostEffect::~PostEffect(){};
 
-bool Fog::Initialize() {
+bool PostEffect::Initialize()
+{
 	CreateMesh();
 
 	if (!DXUtils::CreateVertexBuffer(m_vertexBuffer, m_vertices)) {
@@ -27,7 +28,7 @@ bool Fog::Initialize() {
 	return true;
 }
 
-void Fog::Render()
+void PostEffect::Render()
 {
 	Graphics::context->ResolveSubresource(Graphics::postEffectResolvedBuffer.Get(), 0,
 		Graphics::basicRenderBuffer.Get(), 0, DXGI_FORMAT_R8G8B8A8_UNORM);
@@ -43,9 +44,9 @@ void Fog::Render()
 	Graphics::context->DrawIndexed((UINT)m_indices.size(), 0, 0);
 }
 
-void Fog::CreateMesh()
+void PostEffect::CreateMesh()
 {
-	FogVertex v;
+	SamplingVertex v;
 
 	v.position = Vector3(-1.0f, 1.0f, 0.0f);
 	v.texcoord = Vector2(0.0f, 0.0f);

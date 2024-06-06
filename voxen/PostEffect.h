@@ -9,13 +9,12 @@
 
 using namespace Microsoft::WRL;
 
-class Fog {
+class PostEffect {
 public:
-	Fog();
-	~Fog();
+	PostEffect();
+	~PostEffect();
 
 	bool Initialize();
-	//void Update();
 	void Render();
 
 	//ComPtr<ID3D11Buffer> m_constantBuffer;
@@ -23,7 +22,7 @@ public:
 private:
 	void CreateMesh();
 
-	std::vector<FogVertex> m_vertices;
+	std::vector<SamplingVertex> m_vertices;
 	std::vector<uint32_t> m_indices;
 	//SkyboxConstantData m_constantData;
 

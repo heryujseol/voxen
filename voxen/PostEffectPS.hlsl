@@ -5,7 +5,9 @@ SamplerState linearClampSS : register(s0);
 
 cbuffer CameraConstantBuffer : register(b0)
 {
-    matrix invProj;
+    Matrix view;
+    Matrix proj;
+    Matrix invProj;
 }
 
 struct SamplingPixelShaderInput
@@ -34,25 +36,25 @@ float4 TexcoordToView(float2 texcoord)
 float4 main(SamplingPixelShaderInput input) : SV_TARGET
 {
     ////Beer-Lambert law
-    //float3 fogColor = float3(1, 1, 1);
-    //float fogMin = 1.0;
-    //float fogMax = 10.0;
-    //float fogStrength = 5.0;
+    float3 fogColor = float3(1, 1, 1);
+    float fogMin = 280.0;
+    float fogMax = 320.0;
+    float fogStrength = 2.0;
         
-    //float4 posView = TexcoordToView(input.texcoord);
-    //float dist = length(posView.xyz);
+    float4 posView = TexcoordToView(input.texcoord);
+    float dist = length(posView.xyz);
         
-    //float distFog = saturate((dist - fogMin) / (fogMax - fogMin));
-    //float fogFactor = exp(-distFog * fogStrength);
+    float distFog = saturate((dist - fogMin) / (fogMax - fogMin));
+    float fogFactor = exp(-distFog * fogStrength);
         
-    //float3 color = renderTex.Sample(linearClampSS, input.texcoord).rgb;
+    float3 color = renderTex.Sample(linearClampSS, input.texcoord).rgb;
         
-    ////color = lerp(fogColor, color, fogFactor);
+    color = lerp(fogColor, color, fogFactor);
         
-    //return float4(color, 1.0);
+    return float4(color, 1.0);
     
-    float z = TexcoordToView(input.texcoord).z;
-    return float4(z, z, z, 1);
+    //float z = TexcoordToView(input.texcoord).z * 0.1;
+    //return float4(z, z, z, 1);
     
     //return float4(1.0, 0.0, 0.0, 1.0);
 }

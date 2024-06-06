@@ -20,11 +20,6 @@ struct SamplingVertex {
 	Vector2 texcoord;
 };
 
-struct FogVertex {
-	Vector3 position;
-	Vector2 texcoord;
-};
-
 struct CameraConstantData {
 	Matrix view;
 	Matrix proj;

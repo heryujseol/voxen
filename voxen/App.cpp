@@ -158,18 +158,21 @@ void App::Render()
 
 
 	// depthOnly
-	Graphics::context->OMSetRenderTargets(0, NULL, Graphics::depthOnlyDSV.Get());
-	Graphics::context->ClearDepthStencilView(
-		Graphics::depthOnlyDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
+	{
+		Graphics::context->OMSetRenderTargets(0, NULL, Graphics::depthOnlyDSV.Get());
+		Graphics::context->ClearDepthStencilView(
+			Graphics::depthOnlyDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
 
-	//Graphics::SetPipelineStates(Graphics::depthOnlyPSO);
-	Graphics::SetPipelineStates(Graphics::basicPSO);
-	m_chunkManager.Render(m_camera);
+		// Graphics::SetPipelineStates(Graphics::depthOnlyPSO);
+		Graphics::SetPipelineStates(Graphics::basicPSO);
+		m_chunkManager.Render(m_camera);
 
-	Graphics::SetPipelineStates(Graphics::skyboxPSO);
-	m_skybox.Render();
-	//m_cloud.Render();
+		/*Graphics::SetPipelineStates(Graphics::skyboxPSO);
+		m_skybox.Render();
 
+		Graphics::SetPipelineStates(Graphics::cloudPSO);
+		m_cloud.Render();*/
+	}
 
 	Graphics::context->ClearRenderTargetView(Graphics::basicRTV.Get(), clearColor);
 	Graphics::context->OMSetRenderTargets(
@@ -194,9 +197,8 @@ void App::Render()
 	
 
 	// postEffect
-	//Graphics::SetPipelineStates(Graphics::basicPSO);
 	Graphics::SetPipelineStates(Graphics::postEffectPSO);
-	m_fog.Render();
+	m_postEffect.Render();
 
 	
 	// RTV -> backBuffer
@@ -291,7 +293,7 @@ bool App::InitScene()
 	if (!m_cloud.Initialize(m_camera.GetPosition()))
 		return false;
 
-	if (!m_fog.Initialize())
+	if (!m_postEffect.Initialize())
 		return false;
 
 	return true;
