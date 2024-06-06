@@ -45,6 +45,9 @@
     <ClCompile Include="Cloud.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="Fog.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App.h">
@@ -86,6 +89,9 @@
     <ClInclude Include="Terrain.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+    <ClInclude Include="Fog.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include=".clang-format" />
@@ -114,6 +120,15 @@
       <Filter>쉐이더 파일</Filter>
     </FxCompile>
     <FxCompile Include="SamplingPS.hlsl">
+      <Filter>쉐이더 파일</Filter>
+    </FxCompile>
+    <FxCompile Include="DepthOnlyVS.hlsl">
+      <Filter>쉐이더 파일</Filter>
+    </FxCompile>
+    <FxCompile Include="DepthOnlyPS.hlsl">
+      <Filter>쉐이더 파일</Filter>
+    </FxCompile>
+    <FxCompile Include="PostEffectPS.hlsl">
       <Filter>쉐이더 파일</Filter>
     </FxCompile>
   </ItemGroup>

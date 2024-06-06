@@ -100,11 +100,6 @@ float4 main(vsOutput input) : SV_TARGET
     
     // atlas test
     // 2048 2048 -> 텍스쳐당 128x128, 그게 16x16
-    float3 dir = sunDir;
-    float3 normal = getNormal(input.face);
-    
-    float ndotl = max(dot(dir, normal), 0.0);
-    
     float2 texcoord = getVoxelTexcoord(input.posWorld, input.face);
     uint texCount = 16;  // 한 줄의 텍스쳐 개수
     
@@ -115,25 +110,43 @@ float4 main(vsOutput input) : SV_TARGET
     texcoord += indexUV; // x.u  y.v 
     texcoord /= texCount;
     
-    float4 color = atlasTexture.Sample(pointClampSS, texcoord);
+    float4 color = atlasTexture.Sample(pointClampSS, texcoord) * 0.3;
     
-    float strength = 0.0;
-    if (sunDir.y > 0.0)
-        strength = sunStrength;
-    else
-        strength = moonStrength;
+    float3 moonDir = -sunDir;
+    float3 normal = getNormal(input.face);
     
-    //color *= strength;
-    color *= 0.6;
+    float ndotl = max(dot(sunDir, normal), 0.0);
+    //if (sunDir.y < 0.0)
+    //    ndotl = max(dot(moonDir, normal), 0.0);
     
-    if (ndotl == 0)
+    float strength = sunStrength;
+    //if (sunDir.y < 0.0)
+    //    strength = moonStrength * 0.5;
+    
+    
+    if (13700 <= dateTime && dateTime <= 14700)
     {
-        color = color;
+        float w = (dateTime - 13700) / 1000.0;
+        color = lerp(color * (strength + 1.0) * (ndotl + 1.0), color, w);
+    }
+    else if (21300 <= dateTime && dateTime <= 22300)
+    {
+        float w = (dateTime - 21300) / 1000.0;
+        color = lerp(color, color * (strength + 1.0) * (ndotl + 1.0), w);
+    }
+    else if (14700 < dateTime && dateTime < 21300)
+    {
+        color = color * (strength + 1.0);
     }
     else
     {
-        color *= ndotl + 1.0;
+        color = color * (strength + 1.0) * (ndotl + 1.0);
     }
+    
+    //if (13700 <= dateTime && dateTime < 22300)
+    //    color = color * (strength + 1.0);
+    //else
+    //    color = color * (strength + 1.0) * (ndotl + 1.0);
     
     return color;
 }

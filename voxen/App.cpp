@@ -106,8 +106,10 @@ void App::Run()
 			ImGui::Begin("Scene Control");
 			ImGui::Text("Average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate,
 				ImGui::GetIO().Framerate);
-			ImGui::Text("x : %.0f y : %.0f z : %.0f", m_camera.GetPosition().x,
-				m_camera.GetPosition().y, m_camera.GetPosition().z);
+			Vector3 sun = m_skybox.GetSun();
+			ImGui::Text("SunDir : %.2f %.2f", sun.x, sun.y);
+			uint32_t time = m_skybox.GetTime();
+			ImGui::Text("time : %d", time);
 			ImGui::End();
 			ImGui::Render(); // 렌더링할 것들 기록 끝
 
@@ -142,17 +144,39 @@ void App::Render()
 	Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
 
 	const FLOAT clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-	Graphics::context->ClearRenderTargetView(Graphics::basicRTV.Get(), clearColor);
+	/*Graphics::context->ClearRenderTargetView(Graphics::basicRTV.Get(), clearColor);
 	Graphics::context->ClearDepthStencilView(
-		Graphics::basicDSV.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+		Graphics::basicDSV.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);*/
 
-	Graphics::context->OMSetRenderTargets(
-		1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
+	/*Graphics::context->OMSetRenderTargets(
+		1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());*/
 
 	Graphics::context->VSSetConstantBuffers(0, 1, m_camera.m_constantBuffer.GetAddressOf());
 	std::vector<ID3D11Buffer*> pptr = { m_camera.m_constantBuffer.Get(),
 		m_skybox.m_constantBuffer.Get() };
 	Graphics::context->PSSetConstantBuffers(0, 2, pptr.data());
+
+
+	// depthOnly
+	Graphics::context->OMSetRenderTargets(0, NULL, Graphics::depthOnlyDSV.Get());
+	Graphics::context->ClearDepthStencilView(
+		Graphics::depthOnlyDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
+
+	//Graphics::SetPipelineStates(Graphics::depthOnlyPSO);
+	Graphics::SetPipelineStates(Graphics::basicPSO);
+	m_chunkManager.Render(m_camera);
+
+	Graphics::SetPipelineStates(Graphics::skyboxPSO);
+	m_skybox.Render();
+	//m_cloud.Render();
+
+
+	Graphics::context->ClearRenderTargetView(Graphics::basicRTV.Get(), clearColor);
+	Graphics::context->OMSetRenderTargets(
+		1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
+	Graphics::context->ClearDepthStencilView(
+		Graphics::basicDSV.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+
 
 	// basic
 	Graphics::SetPipelineStates(m_keyToggle[9] ? Graphics::basicWirePSO : Graphics::basicPSO);
@@ -167,11 +191,18 @@ void App::Render()
 	// cloud
 	Graphics::SetPipelineStates(Graphics::cloudPSO);
 	m_cloud.Render();
+	
 
+	// postEffect
+	//Graphics::SetPipelineStates(Graphics::basicPSO);
+	Graphics::SetPipelineStates(Graphics::postEffectPSO);
+	m_fog.Render();
 
+	
 	// RTV -> backBuffer
 	Graphics::context->ResolveSubresource(Graphics::backBuffer.Get(), 0,
 		Graphics::basicRenderBuffer.Get(), 0, DXGI_FORMAT_R8G8B8A8_UNORM);
+
 	// GUI 렌더링을 위한 RTV 재설정
 	Graphics::context->OMSetRenderTargets(1, Graphics::backBufferRTV.GetAddressOf(), nullptr);
 }
@@ -258,6 +289,9 @@ bool App::InitScene()
 		return false;
 
 	if (!m_cloud.Initialize(m_camera.GetPosition()))
+		return false;
+
+	if (!m_fog.Initialize())
 		return false;
 
 	return true;
