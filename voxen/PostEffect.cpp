@@ -35,7 +35,7 @@ void PostEffect::Render()
 
 	Graphics::context->IASetIndexBuffer(m_indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
 	Graphics::context->IASetVertexBuffers(0, 1, m_vertexBuffer.GetAddressOf(), &m_stride, &m_offset);
-	//Graphics::context->OMSetRenderTargets(1, Graphics::basicRTV.GetAddressOf(), nullptr);
+	Graphics::context->OMSetRenderTargets(1, Graphics::basicRTV.GetAddressOf(), nullptr);
 
 	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::postEffectSRV.Get(),
 		Graphics::depthOnlySRV.Get() };

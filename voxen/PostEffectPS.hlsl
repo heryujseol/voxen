@@ -50,9 +50,9 @@ float4 TexcoordToView(float2 texcoord)
 float4 main(SamplingPixelShaderInput input) : SV_TARGET
 {
     ////Beer-Lambert law
-    float3 fogColor = float3(1, 1, 1);
+    float3 fogColor = normalHorizonColor;
     float fogMin = 280.0;
-    float fogMax = 550.0;
+    float fogMax = 320.0;
     float fogStrength = 2.0;
         
     float4 posView = TexcoordToView(input.texcoord);
