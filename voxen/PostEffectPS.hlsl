@@ -10,6 +10,20 @@ cbuffer CameraConstantBuffer : register(b0)
     Matrix invProj;
 }
 
+cbuffer SkyboxConstantBuffer : register(b1)
+{
+    float3 sunDir;
+    float skyScale;
+    float3 normalHorizonColor;
+    uint dateTime;
+    float3 normalZenithColor;
+    float sunStrength;
+    float3 sunHorizonColor;
+    float moonStrength;
+    float3 sunZenithColor;
+    float dummy3;
+};
+
 struct SamplingPixelShaderInput
 {
     float4 posProj : SV_POSITION;
@@ -38,7 +52,7 @@ float4 main(SamplingPixelShaderInput input) : SV_TARGET
     ////Beer-Lambert law
     float3 fogColor = float3(1, 1, 1);
     float fogMin = 280.0;
-    float fogMax = 320.0;
+    float fogMax = 550.0;
     float fogStrength = 2.0;
         
     float4 posView = TexcoordToView(input.texcoord);

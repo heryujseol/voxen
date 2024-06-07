@@ -167,11 +167,11 @@ void App::Render()
 		Graphics::SetPipelineStates(Graphics::basicPSO);
 		m_chunkManager.Render(m_camera);
 
-		/*Graphics::SetPipelineStates(Graphics::skyboxPSO);
+		Graphics::SetPipelineStates(Graphics::skyboxPSO);
 		m_skybox.Render();
 
-		Graphics::SetPipelineStates(Graphics::cloudPSO);
-		m_cloud.Render();*/
+		//Graphics::SetPipelineStates(Graphics::cloudPSO);
+		//m_cloud.Render();
 	}
 
 	Graphics::context->ClearRenderTargetView(Graphics::basicRTV.Get(), clearColor);
@@ -200,6 +200,21 @@ void App::Render()
 	Graphics::SetPipelineStates(Graphics::postEffectPSO);
 	m_postEffect.Render();
 
+	
+	//Graphics::context->OMSetRenderTargets(
+	//	1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
+	//Graphics::context->ClearDepthStencilView(
+	//	Graphics::basicDSV.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+
+	//// skybox
+	//Graphics::SetPipelineStates(Graphics::skyboxPSO);
+	//m_skybox.Render();
+
+
+	// cloud
+	Graphics::SetPipelineStates(Graphics::cloudPSO);
+	m_cloud.Render();
+	
 	
 	// RTV -> backBuffer
 	Graphics::context->ResolveSubresource(Graphics::backBuffer.Get(), 0,
