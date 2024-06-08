@@ -1,18 +1,30 @@
 #include "ChunkManager.h"
 #include "Graphics.h"
 #include "Utils.h"
+#include "DXUtils.h"
 
 #include <iostream>
 
-ChunkManager::ChunkManager() {}
+ChunkManager::ChunkManager() : m_stride(sizeof(VoxelVertex)), m_offset(0) {}
 
 ChunkManager::~ChunkManager() {}
 
 bool ChunkManager::Initialize(Vector3 cameraChunkPos)
 {
-	for (int i = 0; i < CHUNK_COUNT_P * CHUNK_COUNT_P * MAX_HEIGHT_CHUNK_COUNT_P; ++i) {
-		m_chunkPool.push_back(new Chunk());
+	UINT poolSize = CHUNK_COUNT_P * CHUNK_COUNT_P * MAX_HEIGHT_CHUNK_COUNT_P;
+	for (UINT i = 0; i < poolSize; ++i) {
+		m_chunkPool.push_back(new Chunk(i));
 	}
+
+	m_basicVertexBuffers.resize(poolSize);
+	m_basicIndexBuffers.resize(poolSize);
+
+	m_waterVertexBuffers.resize(poolSize);
+	m_waterIndexBuffers.resize(poolSize);
+
+	m_spriteInstanceBuffers.resize(poolSize);
+
+	m_constantBuffers.resize(poolSize);
 
 	UpdateChunkList(cameraChunkPos);
 
@@ -41,19 +53,29 @@ void ChunkManager::RenderBasic()
 		if (c->IsEmptyBasic())
 			continue;
 
-		c->RenderBasic();
+		UINT id = c->GetID();
+
+		Graphics::context->IASetIndexBuffer(m_basicIndexBuffers[id].Get(), DXGI_FORMAT_R32_UINT, 0);
+		Graphics::context->IASetVertexBuffers(
+			0, 1, m_basicVertexBuffers[id].GetAddressOf(), &m_stride, &m_offset);
+		Graphics::context->VSSetConstantBuffers(1, 1, m_constantBuffers[id].GetAddressOf());
+
+		Graphics::context->DrawIndexed((UINT)c->GetBasicIndice().size(), 0, 0);
 	}
 }
 
-void ChunkManager::RenderSprite() {
+void ChunkManager::RenderSprite()
+{
 	for (auto& c : m_renderChunkList) {
 		if (c->IsEmptySprite())
 			continue;
 		// need to check distance
 
-		c->RenderSprite();
+		
 	}
 }
+
+void ChunkManager::RenderWater() {}
 
 void ChunkManager::UpdateChunkList(Vector3 cameraChunkPos)
 {
@@ -65,7 +87,7 @@ void ChunkManager::UpdateChunkList(Vector3 cameraChunkPos)
 				int x = (int)cameraChunkPos.x + Chunk::CHUNK_SIZE * (j - CHUNK_COUNT / 2);
 				int z = (int)cameraChunkPos.z + Chunk::CHUNK_SIZE * (k - CHUNK_COUNT / 2);
 
-				if (m_chunkMap.find(std::make_tuple(x, y, z)) == m_chunkMap.end()) { // loading
+				if (m_chunkMap.find(std::make_tuple(x, y, z)) == m_chunkMap.end()) { // found chunk to be loaded
 					Chunk* chunk = GetChunkFromPool();
 					if (chunk) {
 						chunk->SetPosition(Vector3((float)x, (float)y, (float)z));
@@ -80,7 +102,7 @@ void ChunkManager::UpdateChunkList(Vector3 cameraChunkPos)
 		}
 	}
 
-	for (auto& p : m_chunkMap) { // {1 , 2, 3} -> {1, 2}
+	for (auto& p : m_chunkMap) { // { 1, 2, 3 } -> { 1, 2 } : 3 unload
 		if (loadedChunkMap.find(p.first) == loadedChunkMap.end() &&
 			m_chunkMap[p.first]->IsLoaded()) {
 
@@ -97,8 +119,33 @@ void ChunkManager::UpdateLoadChunks()
 		Chunk* chunk = m_loadChunkList.back();
 		m_loadChunkList.pop_back();
 
+		////////////////////////////////////
+		// check start time
+		static long long sum = 0;
+		static long long count = 0;
+		auto start_time = std::chrono::steady_clock::now();
+		////////////////////////////////////
+		
+
+		// load chunk
 		chunk->Initialize();
+		MakeBuffer(chunk);
+		
+		// set load value
 		loadCount++;
+		chunk->SetLoad(true);
+
+
+		////////////////////////////////////
+		// check end time
+		auto end_time = std::chrono::steady_clock::now();
+		auto duration =
+			std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
+		sum += duration.count();
+		count++;
+		std::cout << "Function Average duration: " << (double)sum / (double)count << " microseconds"
+				  << std::endl;
+		////////////////////////////////////
 	}
 }
 
@@ -112,10 +159,13 @@ void ChunkManager::UpdateUnloadChunks()
 		int x = (int)pos.x;
 		int y = (int)pos.y;
 		int z = (int)pos.z;
+		m_chunkMap.erase(std::make_tuple(x, y, z));
+
+		ClearChunkBuffer(chunk);
+		ReleaseChunkToPool(chunk);
 
 		chunk->Clear();
-		m_chunkMap.erase(std::make_tuple(x, y, z));
-		ReleaseChunkToPool(chunk);
+		chunk->SetLoad(false);
 	}
 }
 
@@ -125,6 +175,9 @@ void ChunkManager::UpdateRenderChunks(Camera& camera)
 
 	for (auto& p : m_chunkMap) {
 		if (!p.second->IsLoaded())
+			continue;
+
+		if (p.second->IsEmpty())
 			continue;
 
 		if (!FrustumCulling(p.second->GetPosition(), camera))
@@ -178,6 +231,65 @@ bool ChunkManager::FrustumCulling(Vector3 position, Camera& camera)
 		return false;
 	}
 	return true;
+}
+
+bool ChunkManager::MakeBuffer(Chunk* chunk) 
+{ 
+	if (!chunk->IsEmpty()) {
+		UINT id = chunk->GetID();
+		
+		ChunkConstantData tempConstantData = chunk->GetConstantData();
+		tempConstantData.world = tempConstantData.world.Transpose();
+		if (!DXUtils::CreateConstantBuffer(m_constantBuffers[id], tempConstantData)) {
+			std::cout << "failed create constant buffer in chunk" << std::endl;
+			return false;
+		}
+
+		// basic
+		if (!chunk->IsEmptyBasic()) {
+			if (!DXUtils::CreateVertexBuffer(m_basicVertexBuffers[id], chunk->GetBasicVertice())) {
+				std::cout << "failed create vertex buffer in chunk" << std::endl;
+				return false;
+			}
+			if (!DXUtils::CreateIndexBuffer(m_basicIndexBuffers[id], chunk->GetBasicIndice())) {
+				std::cout << "failed create index buffer in chunk" << std::endl;
+				return false;
+			}
+		}
+		
+		// water
+		if (!chunk->IsEmptyWater()) {
+			if (!DXUtils::CreateVertexBuffer(m_waterVertexBuffers[id], chunk->GetWaterVertice())) {
+				std::cout << "failed create vertex buffer in chunk" << std::endl;
+				return false;
+			}
+			if (!DXUtils::CreateIndexBuffer(m_waterIndexBuffers[id], chunk->GetWaterIndice())) {
+				std::cout << "failed create index buffer in chunk" << std::endl;
+				return false;
+			}
+		}
+	}
+
+	return true;
+}
+
+void ChunkManager::ClearChunkBuffer(Chunk* chunk) 
+{ 
+	UINT id = chunk->GetID();
+
+	m_basicVertexBuffers[id].Reset();
+	m_basicIndexBuffers[id].Reset();
+	m_waterVertexBuffers[id].Reset();
+	m_waterIndexBuffers[id].Reset();
+	m_spriteInstanceBuffers[id].Reset();
+	m_constantBuffers[id].Reset();
+
+	m_basicVertexBuffers[id] = nullptr;
+	m_basicIndexBuffers[id] = nullptr;
+	m_waterVertexBuffers[id] = nullptr;
+	m_waterIndexBuffers[id] = nullptr;
+	m_spriteInstanceBuffers[id] = nullptr;
+	m_constantBuffers[id] = nullptr;
 }
 
 Chunk* ChunkManager::GetChunkFromPool()

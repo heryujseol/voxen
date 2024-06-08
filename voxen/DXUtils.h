@@ -20,7 +20,7 @@ using namespace DirectX;
 class DXUtils {
 public:
 	template <typename V>
-	static bool CreateVertexBuffer(ComPtr<ID3D11Buffer>& vertexBuffer, std::vector<V>& vertices)
+	static bool CreateVertexBuffer(ComPtr<ID3D11Buffer>& vertexBuffer, const std::vector<V>& vertices)
 	{
 		D3D11_BUFFER_DESC desc;
 		ZeroMemory(&desc, sizeof(desc));
@@ -42,7 +42,8 @@ public:
 	}
 
 
-	static bool CreateIndexBuffer(ComPtr<ID3D11Buffer>& indexBuffer, std::vector<uint32_t>& indices)
+	static bool CreateIndexBuffer(
+		ComPtr<ID3D11Buffer>& indexBuffer, const std::vector<uint32_t>& indices)
 	{
 		D3D11_BUFFER_DESC desc;
 		ZeroMemory(&desc, sizeof(desc));
@@ -65,7 +66,7 @@ public:
 
 	template <typename ConstantData>
 	static bool CreateConstantBuffer(
-		ComPtr<ID3D11Buffer>& constantBuffer, ConstantData& constantData)
+		ComPtr<ID3D11Buffer>& constantBuffer, const ConstantData& constantData)
 	{
 		D3D11_BUFFER_DESC desc;
 		ZeroMemory(&desc, sizeof(desc));
@@ -88,7 +89,7 @@ public:
 
 	template <typename ConstantData>
 	static void UpdateConstantBuffer(
-		ComPtr<ID3D11Buffer>& constantBuffer, ConstantData& constantData)
+		ComPtr<ID3D11Buffer>& constantBuffer, const ConstantData& constantData)
 	{
 		D3D11_MAPPED_SUBRESOURCE ms;
 
@@ -100,7 +101,7 @@ public:
 
 	static bool CreateVertexShaderAndInputLayout(const std::wstring& filename,
 		ComPtr<ID3D11VertexShader>& vs, ComPtr<ID3D11InputLayout>& il,
-		std::vector<D3D11_INPUT_ELEMENT_DESC>& elementDesc)
+		const std::vector<D3D11_INPUT_ELEMENT_DESC>& elementDesc)
 	{
 		UINT compileFlags = 0;
 #if defined(DEBUG) || defined(_DEBUG)
@@ -248,7 +249,7 @@ public:
 	}
 
 	static ComPtr<ID3D11Texture2D> CreateStagingTexture(UINT width, UINT height,
-		std::vector<uint8_t>& image, UINT mipLevels = 1, UINT arraySize = 1,
+		const std::vector<uint8_t>& image, UINT mipLevels = 1, UINT arraySize = 1,
 		DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM, size_t pixelSize = sizeof(uint8_t) * 4)
 	{
 		D3D11_TEXTURE2D_DESC desc;

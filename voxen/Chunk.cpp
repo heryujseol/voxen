@@ -5,153 +5,39 @@
 #include <algorithm>
 #include <unordered_map>
 
-Chunk::Chunk()
-	: m_position(0.0, 0.0, 0.0), m_stride(sizeof(VoxelVertex)), m_offset(0),
-	  m_constantBuffer(nullptr), m_isLoaded(false)
-{
-}
+Chunk::Chunk(UINT id) : m_id(id), m_position(0.0, 0.0, 0.0), m_isLoaded(false) {}
 
 Chunk::~Chunk() { Clear(); }
 
-bool Chunk::Initialize()
+void Chunk::Initialize()
 {
-	static long long sum = 0;
-	static long long count = 0;
-	auto start_time = std::chrono::steady_clock::now();
-
 	// 0. initialize chunk data
 	InitChunkData();
 
-	// 1. intialize vertices data
+	// 1. intialize sprite vertcie data
 	InitSpriteVerticeData();
+
+	// 2. initialize mesh(basic & water) vertice data 
 	InitMeshVerticeData();
 
-	// 2. make GPU buffer from CPU buffer
-	if (!IsEmpty()) {
-		m_constantData.world = Matrix::CreateTranslation(m_position).Transpose();
-		if (!DXUtils::CreateConstantBuffer(m_constantBuffer, m_constantData)) {
-			std::cout << "failed create constant buffer in chunk" << std::endl;
-			return false;
-		}
-		m_constantData.world = m_constantData.world.Transpose();
-
-		// basic
-		if (!IsEmptyBasic()) {
-			if (!DXUtils::CreateVertexBuffer(m_basicVertexBuffer, m_basicVertice)) {
-				std::cout << "failed create vertex buffer in chunk" << std::endl;
-				return false;
-			}
-			if (!DXUtils::CreateIndexBuffer(m_basicIndexBuffer, m_basicIndice)) {
-				std::cout << "failed create index buffer in chunk" << std::endl;
-				return false;
-			}
-		}
-
-		// sprite
-		if (!IsEmptySprite()) {
-			if (!DXUtils::CreateVertexBuffer(m_spriteVertexBuffer, m_spriteVertice)) {
-				std::cout << "failed create vertex buffer in chunk" << std::endl;
-				return false;
-			}
-		}
-
-		// water
-		if (!IsEmptyWater()) {
-			if (!DXUtils::CreateVertexBuffer(m_waterVertexBuffer, m_waterVertice)) {
-				std::cout << "failed create vertex buffer in chunk" << std::endl;
-				return false;
-			}
-			if (!DXUtils::CreateIndexBuffer(m_waterIndexBuffer, m_waterIndice)) {
-				std::cout << "failed create index buffer in chunk" << std::endl;
-				return false;
-			}
-		}
-	}
-
-	m_isLoaded = true;
-
-	auto end_time = std::chrono::steady_clock::now();
-	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
-	sum += duration.count();
-	count++;
-	std::cout << "Function Average duration: " << (double)sum / (double)count << " microseconds"
-			  << std::endl;
-
-	return true;
+	// 3. initialize constant data
+	m_constantData.world = Matrix::CreateTranslation(m_position);
 }
 
 void Chunk::Update(float dt)
 {
-	/*
-	m_constantData.world *= Matrix::CreateRotationY(dt);
-
-	ChunkConstantData transposedConstantData = m_constantData;
-	transposedConstantData.world = transposedConstantData.world.Transpose();
-	DXUtils::UpdateConstantBuffer(m_constantBuffer, transposedConstantData);
-	*/
+	// m_constantData.world *= Matrix::CreateRotationY(dt);
 }
-
-void Chunk::RenderBasic()
-{
-	Graphics::context->IASetIndexBuffer(m_basicIndexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
-	Graphics::context->IASetVertexBuffers(
-		0, 1, m_basicVertexBuffer.GetAddressOf(), &m_stride, &m_offset);
-	Graphics::context->VSSetConstantBuffers(1, 1, m_constantBuffer.GetAddressOf());
-
-	Graphics::context->DrawIndexed((UINT)m_basicIndice.size(), 0, 0);
-}
-
-void Chunk::RenderSprite() 
-{
-	Graphics::context->IASetVertexBuffers(
-		0, 1, m_spriteVertexBuffer.GetAddressOf(), &m_stride, &m_offset);
-	Graphics::context->GSSetConstantBuffers(1, 1, m_constantBuffer.GetAddressOf());
-
-	Graphics::context->Draw((UINT)m_spriteVertice.size(), 0);
-}
-
-void Chunk::RenderWater() {}
 
 void Chunk::Clear()
 {
-	m_isLoaded = false;
+	m_basicVertice.clear();
+	m_basicIndice.clear();
 
-	// clear basic
-	std::vector<VoxelVertex>().swap(m_basicVertice);
-	std::vector<uint32_t>().swap(m_basicIndice);
-	if (m_basicVertexBuffer) {
-		m_basicVertexBuffer.Reset();
-		m_basicVertexBuffer = nullptr;
-	}
-	if (m_basicIndexBuffer) {
-		m_basicIndexBuffer.Reset();
-		m_basicIndexBuffer = nullptr;
-	}
+	m_waterVertice.clear();
+	m_waterIndice.clear();
 
-	// clear sprite
-	std::vector<VoxelVertex>().swap(m_spriteVertice);
-	if (m_spriteVertexBuffer) {
-		m_spriteVertexBuffer.Reset();
-		m_spriteVertexBuffer = nullptr;
-	}
-
-	// clear water
-	std::vector<VoxelVertex>().swap(m_waterVertice);
-	std::vector<uint32_t>().swap(m_waterIndice);
-	if (m_waterVertexBuffer) {
-		m_waterVertexBuffer.Reset();
-		m_waterVertexBuffer = nullptr;
-	}
-	if (m_waterIndexBuffer) {
-		m_waterIndexBuffer.Reset();
-		m_waterIndexBuffer = nullptr;
-	}
-
-	// clear constant
-	if (m_constantBuffer) {
-		m_constantBuffer.Reset();
-		m_constantBuffer = nullptr;
-	}
+	m_spriteVertice.clear();
 }
 
 void Chunk::InitChunkData()
@@ -251,7 +137,7 @@ void Chunk::InitMeshVerticeData()
 					waterAxisColBit[Utils::GetIndexFrom3D(axis, h, w, CHUNK_SIZE_P)];
 				uint64_t basicColBit =
 					basicAxisColBit[Utils::GetIndexFrom3D(axis, h, w, CHUNK_SIZE_P)];
-				
+
 				cullColBit[Utils::GetIndexFrom3D(axis * 2 + 0, h, w, CHUNK_SIZE_P)] =
 					waterColBit & ~(waterColBit << 1) | basicColBit & ~(basicColBit << 1);
 				cullColBit[Utils::GetIndexFrom3D(axis * 2 + 1, h, w, CHUNK_SIZE_P)] =
