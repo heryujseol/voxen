@@ -22,8 +22,6 @@ public:
 	ComPtr<ID3D11Buffer> m_constantBuffer;
 
 private:
-	void CreateMesh(float scale);
-
 	uint32_t m_dateTime;
 	float m_speed;
 

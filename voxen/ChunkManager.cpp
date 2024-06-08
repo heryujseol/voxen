@@ -22,7 +22,8 @@ bool ChunkManager::Initialize(Vector3 cameraChunkPos)
 	m_waterVertexBuffers.resize(poolSize);
 	m_waterIndexBuffers.resize(poolSize);
 
-	m_spriteInstanceBuffers.resize(poolSize);
+	m_spriteVertexBuffers.resize(Block::BLOCK_SPRITE_COUNT);
+	m_spriteInstanceBuffers.resize(Block::BLOCK_SPRITE_COUNT);
 
 	m_constantBuffers.resize(poolSize);
 
@@ -60,7 +61,7 @@ void ChunkManager::RenderBasic()
 			0, 1, m_basicVertexBuffers[id].GetAddressOf(), &m_stride, &m_offset);
 		Graphics::context->VSSetConstantBuffers(1, 1, m_constantBuffers[id].GetAddressOf());
 
-		Graphics::context->DrawIndexed((UINT)c->GetBasicIndice().size(), 0, 0);
+		Graphics::context->DrawIndexed((UINT)c->GetBasicIndices().size(), 0, 0);
 	}
 }
 
@@ -247,11 +248,11 @@ bool ChunkManager::MakeBuffer(Chunk* chunk)
 
 		// basic
 		if (!chunk->IsEmptyBasic()) {
-			if (!DXUtils::CreateVertexBuffer(m_basicVertexBuffers[id], chunk->GetBasicVertice())) {
+			if (!DXUtils::CreateVertexBuffer(m_basicVertexBuffers[id], chunk->GetBasicVertices())) {
 				std::cout << "failed create vertex buffer in chunk" << std::endl;
 				return false;
 			}
-			if (!DXUtils::CreateIndexBuffer(m_basicIndexBuffers[id], chunk->GetBasicIndice())) {
+			if (!DXUtils::CreateIndexBuffer(m_basicIndexBuffers[id], chunk->GetBasicIndices())) {
 				std::cout << "failed create index buffer in chunk" << std::endl;
 				return false;
 			}
@@ -259,11 +260,11 @@ bool ChunkManager::MakeBuffer(Chunk* chunk)
 		
 		// water
 		if (!chunk->IsEmptyWater()) {
-			if (!DXUtils::CreateVertexBuffer(m_waterVertexBuffers[id], chunk->GetWaterVertice())) {
+			if (!DXUtils::CreateVertexBuffer(m_waterVertexBuffers[id], chunk->GetWaterVertices())) {
 				std::cout << "failed create vertex buffer in chunk" << std::endl;
 				return false;
 			}
-			if (!DXUtils::CreateIndexBuffer(m_waterIndexBuffers[id], chunk->GetWaterIndice())) {
+			if (!DXUtils::CreateIndexBuffer(m_waterIndexBuffers[id], chunk->GetWaterIndices())) {
 				std::cout << "failed create index buffer in chunk" << std::endl;
 				return false;
 			}
@@ -281,14 +282,12 @@ void ChunkManager::ClearChunkBuffer(Chunk* chunk)
 	m_basicIndexBuffers[id].Reset();
 	m_waterVertexBuffers[id].Reset();
 	m_waterIndexBuffers[id].Reset();
-	m_spriteInstanceBuffers[id].Reset();
 	m_constantBuffers[id].Reset();
 
 	m_basicVertexBuffers[id] = nullptr;
 	m_basicIndexBuffers[id] = nullptr;
 	m_waterVertexBuffers[id] = nullptr;
 	m_waterIndexBuffers[id] = nullptr;
-	m_spriteInstanceBuffers[id] = nullptr;
 	m_constantBuffers[id] = nullptr;
 }
 

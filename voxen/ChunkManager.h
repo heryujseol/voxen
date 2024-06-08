@@ -13,7 +13,7 @@ using namespace DirectX::SimpleMath;
 class ChunkManager {
 
 public:
-	static const int CHUNK_COUNT = 21;
+	static const int CHUNK_COUNT = 7;
 	static const int MAX_HEIGHT = 256;
 	static const int MAX_HEIGHT_CHUNK_COUNT = 8;
 	static const int CHUNK_COUNT_P = CHUNK_COUNT + 2;
@@ -58,9 +58,8 @@ private:
 	std::vector<ComPtr<ID3D11Buffer>> m_waterVertexBuffers;
 	std::vector<ComPtr<ID3D11Buffer>> m_waterIndexBuffers;
 
+	std::vector<ComPtr<ID3D11Buffer>> m_spriteVertexBuffers;
 	std::vector<ComPtr<ID3D11Buffer>> m_spriteInstanceBuffers;
 
 	std::vector<ComPtr<ID3D11Buffer>> m_constantBuffers;
-
-
 };

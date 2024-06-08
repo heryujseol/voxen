@@ -1,6 +1,7 @@
 #include "Skybox.h"
 #include "Graphics.h"
 #include "DXUtils.h"
+#include "MeshGenerator.h"
 
 #include <algorithm>
 
@@ -16,7 +17,8 @@ bool Skybox::Initialize(float scale, float speed)
 {
 	m_speed = speed;
 
-	CreateMesh(scale);
+	MeshGenerator::CreateSkyboxMesh(m_vertices, m_indices, scale);
+	std::reverse(m_indices.begin(), m_indices.end()); // for front CW at inner
 
 	if (!DXUtils::CreateVertexBuffer(m_vertexBuffer, m_vertices)) {
 		std::cout << "failed create vertex buffer in skybox" << std::endl;
@@ -141,82 +143,4 @@ void Skybox::Render()
 	Graphics::context->PSSetShaderResources(0, 2, pptr.data());
 
 	Graphics::context->DrawIndexed((UINT)m_indices.size(), 0, 0);
-}
-
-void Skybox::CreateMesh(float scale)
-{
-	SkyboxVertex v;
-	// ¿ÞÂÊ
-	v.position = Vector3(-1.0f, 1.0f, 1.0f) * scale;
-	m_vertices.push_back(v);
-	v.position = Vector3(-1.0f, 1.0f, -1.0f) * scale;
-	m_vertices.push_back(v);
-	v.position = Vector3(-1.0f, -1.0f, -1.0f) * scale;
-	m_vertices.push_back(v);
-	v.position = Vector3(-1.0f, -1.0f, 1.0f) * scale;
-	m_vertices.push_back(v);
-
-
-	// ¿À¸¥ÂÊ
-	v.position = Vector3(1.0f, 1.0f, -1.0f) * scale;
-	m_vertices.push_back(v);
-	v.position = Vector3(1.0f, 1.0f, 1.0f) * scale;
-	m_vertices.push_back(v);
-	v.position = Vector3(1.0f, -1.0f, 1.0f) * scale;
-	m_vertices.push_back(v);
-	v.position = Vector3(1.0f, -1.0f, -1.0f) * scale;
-	m_vertices.push_back(v);
-
-
-	// ¾Æ·§¸é
-	v.position = Vector3(-1.0f, -1.0f, -1.0f) * scale;
-	m_vertices.push_back(v);
-	v.position = Vector3(1.0f, -1.0f, -1.0f) * scale;
-	m_vertices.push_back(v);
-	v.position = Vector3(1.0f, -1.0f, 1.0f) * scale;
-	m_vertices.push_back(v);
-	v.position = Vector3(-1.0f, -1.0f, 1.0f) * scale;
-	m_vertices.push_back(v);
-
-	// À­¸é
-	v.position = Vector3(-1.0f, 1.0f, 1.0f) * scale;
-	m_vertices.push_back(v);
-	v.position = Vector3(1.0f, 1.0f, 1.0f) * scale;
-	m_vertices.push_back(v);
-	v.position = Vector3(1.0f, 1.0f, -1.0f) * scale;
-	m_vertices.push_back(v);
-	v.position = Vector3(-1.0f, 1.0f, -1.0f) * scale;
-	m_vertices.push_back(v);
-
-	// ¾Õ¸é
-	v.position = Vector3(-1.0f, 1.0f, -1.0f) * scale;
-	m_vertices.push_back(v);
-	v.position = Vector3(1.0f, 1.0f, -1.0f) * scale;
-	m_vertices.push_back(v);
-	v.position = Vector3(1.0f, -1.0f, -1.0f) * scale;
-	m_vertices.push_back(v);
-	v.position = Vector3(-1.0f, -1.0f, -1.0f) * scale;
-	m_vertices.push_back(v);
-
-	// µÞ¸é
-	v.position = Vector3(1.0f, 1.0f, 1.0f) * scale;
-	m_vertices.push_back(v);
-	v.position = Vector3(-1.0f, 1.0f, 1.0f) * scale;
-	m_vertices.push_back(v);
-	v.position = Vector3(-1.0f, -1.0f, 1.0f) * scale;
-	m_vertices.push_back(v);
-	v.position = Vector3(1.0f, -1.0f, 1.0f) * scale;
-	m_vertices.push_back(v);
-
-	for (int i = 0; i < 24; i += 4) {
-		m_indices.push_back(i);
-		m_indices.push_back(i + 1);
-		m_indices.push_back(i + 2);
-
-		m_indices.push_back(i);
-		m_indices.push_back(i + 2);
-		m_indices.push_back(i + 3);
-	}
-
-	std::reverse(m_indices.begin(), m_indices.end()); // for front CW at inner
 }

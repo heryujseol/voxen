@@ -21,10 +21,7 @@ public:
 private:
 	void Blend();
 	bool BuildCloud();
-	void CreateCloudMesh(int x, int z, bool x_n, bool x_p, bool z_n, bool z_p);
 	bool BuildSquare();
-	void CreateSquareMesh();
-	
 	
 	static const int CLOUD_DATA_MAP_SIZE = 512;
 	static const int CLOUD_SCALE_SIZE = 16;

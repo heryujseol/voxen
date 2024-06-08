@@ -17,8 +17,8 @@ using namespace Microsoft::WRL;
 using namespace DirectX;
 
 
-class DXUtils {
-public:
+namespace DXUtils {
+
 	template <typename V>
 	static bool CreateVertexBuffer(ComPtr<ID3D11Buffer>& vertexBuffer, const std::vector<V>& vertices)
 	{

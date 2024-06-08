@@ -1,5 +1,6 @@
 #include "Chunk.h"
 #include "DXUtils.h"
+#include "MeshGenerator.h"
 
 #include <future>
 #include <algorithm>
@@ -15,10 +16,10 @@ void Chunk::Initialize()
 	InitChunkData();
 
 	// 1. intialize sprite vertcie data
-	InitSpriteVerticeData();
+	InitSpriteVerticesData();
 
-	// 2. initialize mesh(basic & water) vertice data 
-	InitMeshVerticeData();
+	// 2. initialize mesh(basic & water) vertice data
+	InitMeshVerticesData();
 
 	// 3. initialize constant data
 	m_constantData.world = Matrix::CreateTranslation(m_position);
@@ -31,13 +32,13 @@ void Chunk::Update(float dt)
 
 void Chunk::Clear()
 {
-	m_basicVertice.clear();
-	m_basicIndice.clear();
+	m_basicVertices.clear();
+	m_basicIndices.clear();
 
-	m_waterVertice.clear();
-	m_waterIndice.clear();
+	m_waterVertices.clear();
+	m_waterIndices.clear();
 
-	m_spriteVertice.clear();
+	m_spriteVertices.clear();
 }
 
 void Chunk::InitChunkData()
@@ -67,22 +68,20 @@ void Chunk::InitChunkData()
 		}
 	}
 }
-void Chunk::InitSpriteVerticeData()
+void Chunk::InitSpriteVerticesData()
 {
 	for (int x = 0; x < CHUNK_SIZE; ++x) {
 		for (int y = 0; y < CHUNK_SIZE; ++y) {
 			for (int z = 0; z < CHUNK_SIZE; ++z) {
 				uint8_t type = m_blocks[x + 1][y + 1][z + 1].GetType();
 
-				if (Block ::IsSprite(type)) {
-					m_spriteVertice.push_back(MakeVertex(x, y, z, 0, type));
-				}
+				if (Block ::IsSprite(type)) {}
 			}
 		}
 	}
 }
 
-void Chunk::InitMeshVerticeData()
+void Chunk::InitMeshVerticesData()
 {
 	// 1. make axis column bit data
 	static uint64_t basicAxisColBit[CHUNK_SIZE_P2 * 3];
@@ -227,18 +226,29 @@ void Chunk::InitMeshVerticeData()
 							w++;
 						}
 
+						std::vector<VoxelVertex>& vertices =
+							(type == Block::Type::WATER) ? m_waterVertices : m_basicVertices;
+						std::vector<uint32_t>& indices =
+							(type == Block::Type::WATER) ? m_waterIndices : m_basicIndices;
+
 						if (face == 0)
-							CreateQuad(s, step, i, w, ones, face, type);
+							MeshGenerator::CreateQuadMesh(
+								vertices, indices, s, step, i, w, ones, face, type);
 						else if (face == 1)
-							CreateQuad(s + 1, step, i, w, ones, face, type);
+							MeshGenerator::CreateQuadMesh(
+								vertices, indices, s + 1, step, i, w, ones, face, type);
 						else if (face == 2)
-							CreateQuad(i, s, step, w, ones, face, type);
+							MeshGenerator::CreateQuadMesh(
+								vertices, indices, i, s, step, w, ones, face, type);
 						else if (face == 3)
-							CreateQuad(i, s + 1, step, w, ones, face, type);
+							MeshGenerator::CreateQuadMesh(
+								vertices, indices, i, s + 1, step, w, ones, face, type);
 						else if (face == 4)
-							CreateQuad(i, step, s, w, ones, face, type);
+							MeshGenerator::CreateQuadMesh(
+								vertices, indices, i, step, s, w, ones, face, type);
 						else // face == 5
-							CreateQuad(i, step, s + 1, w, ones, face, type);
+							MeshGenerator::CreateQuadMesh(
+								vertices, indices, i, step, s + 1, w, ones, face, type);
 
 						step += ones;
 					}
@@ -246,66 +256,4 @@ void Chunk::InitMeshVerticeData()
 			}
 		}
 	}
-}
-
-VoxelVertex Chunk::MakeVertex(int x, int y, int z, int face, int type)
-{
-	//|x:6||y:6||z:6||face:3||type:8|
-	return ((uint32_t)x << 23) | ((uint32_t)y << 17) | ((uint32_t)z << 11) | ((uint32_t)face << 8) |
-		   (uint32_t)(type);
-}
-
-void Chunk::CreateQuad(int x, int y, int z, int merged, int length, int face, int type)
-{
-	std::vector<VoxelVertex>& tmpVertice =
-		(type == Block::Type::WATER) ? m_waterVertice : m_basicVertice;
-	std::vector<uint32_t>& tmpIndice = (type == Block::Type::WATER) ? m_waterIndice : m_basicIndice;
-
-	uint32_t originVertexSize = (uint32_t)tmpVertice.size();
-
-	// order by vertexID for texcoord
-	if (face == 0) {															 // left
-		tmpVertice.push_back(MakeVertex(x, y + length, z + merged, face, type)); // 0, 0
-		tmpVertice.push_back(MakeVertex(x, y + length, z, face, type));			 // 1, 0
-		tmpVertice.push_back(MakeVertex(x, y, z, face, type));					 // 1, 1
-		tmpVertice.push_back(MakeVertex(x, y, z + merged, face, type));			 // 0, 1
-	}
-	else if (face == 1) { // right
-		tmpVertice.push_back(MakeVertex(x, y + length, z, face, type));
-		tmpVertice.push_back(MakeVertex(x, y + length, z + merged, face, type));
-		tmpVertice.push_back(MakeVertex(x, y, z + merged, face, type));
-		tmpVertice.push_back(MakeVertex(x, y, z, face, type));
-	}
-	else if (face == 2) { // bottom
-		tmpVertice.push_back(MakeVertex(x, y, z, face, type));
-		tmpVertice.push_back(MakeVertex(x + merged, y, z, face, type));
-		tmpVertice.push_back(MakeVertex(x + merged, y, z + length, face, type));
-		tmpVertice.push_back(MakeVertex(x, y, z + length, face, type));
-	}
-	else if (face == 3) { // top
-		tmpVertice.push_back(MakeVertex(x, y, z + length, face, type));
-		tmpVertice.push_back(MakeVertex(x + merged, y, z + length, face, type));
-		tmpVertice.push_back(MakeVertex(x + merged, y, z, face, type));
-		tmpVertice.push_back(MakeVertex(x, y, z, face, type));
-	}
-	else if (face == 4) { // front
-		tmpVertice.push_back(MakeVertex(x, y + length, z, face, type));
-		tmpVertice.push_back(MakeVertex(x + merged, y + length, z, face, type));
-		tmpVertice.push_back(MakeVertex(x + merged, y, z, face, type));
-		tmpVertice.push_back(MakeVertex(x, y, z, face, type));
-	}
-	else if (face == 5) { // back
-		tmpVertice.push_back(MakeVertex(x + merged, y + length, z, face, type));
-		tmpVertice.push_back(MakeVertex(x, y + length, z, face, type));
-		tmpVertice.push_back(MakeVertex(x, y, z, face, type));
-		tmpVertice.push_back(MakeVertex(x + merged, y, z, face, type));
-	}
-
-	tmpIndice.push_back(originVertexSize);
-	tmpIndice.push_back(originVertexSize + 1);
-	tmpIndice.push_back(originVertexSize + 2);
-
-	tmpIndice.push_back(originVertexSize);
-	tmpIndice.push_back(originVertexSize + 2);
-	tmpIndice.push_back(originVertexSize + 3);
 }

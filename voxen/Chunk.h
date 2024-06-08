@@ -36,27 +36,25 @@ public:
 	inline Vector3 GetPosition() { return m_position; }
 	inline void SetPosition(Vector3 position) { m_position = position; }
 
-	inline bool IsEmptyBasic() { return m_basicVertice.empty(); }
-	inline bool IsEmptyWater() { return m_waterVertice.empty(); }
-	inline bool IsEmptySprite() { return m_spriteVertice.empty(); }
+	inline bool IsEmptyBasic() { return m_basicVertices.empty(); }
+	inline bool IsEmptyWater() { return m_waterVertices.empty(); }
+	inline bool IsEmptySprite() { return m_spriteVertices.empty(); }
 
-	inline const std::vector<VoxelVertex>& GetBasicVertice() const { return m_basicVertice; }
-	inline const std::vector<uint32_t>& GetBasicIndice() const { return m_basicIndice; }
+	inline const std::vector<VoxelVertex>& GetBasicVertices() const { return m_basicVertices; }
+	inline const std::vector<uint32_t>& GetBasicIndices() const { return m_basicIndices; }
 
-	inline const std::vector<VoxelVertex>& GetWaterVertice() const { return m_waterVertice; }
-	inline const std::vector<uint32_t>& GetWaterIndice() const { return m_waterIndice; }
+	inline const std::vector<VoxelVertex>& GetWaterVertices() const { return m_waterVertices; }
+	inline const std::vector<uint32_t>& GetWaterIndices() const { return m_waterIndices; }
 
-	inline const std::vector<VoxelVertex>& GetSpriteVertice() const { return m_spriteVertice; }
+	inline const std::vector<VoxelVertex>& GetSpriteVertices() const { return m_spriteVertices; }
 
 	inline const ChunkConstantData& GetConstantData() const { return m_constantData; }
 	
 
 private:
 	void InitChunkData();
-	void InitSpriteVerticeData();
-	void InitMeshVerticeData();
-	void CreateQuad(int x, int y, int z, int merged, int length, int face, int type);
-	VoxelVertex MakeVertex(int x, int y, int z, int face, int type);
+	void InitSpriteVerticesData();
+	void InitMeshVerticesData();
 
 	Block m_blocks[CHUNK_SIZE_P][CHUNK_SIZE_P][CHUNK_SIZE_P];
 
@@ -64,13 +62,13 @@ private:
 	bool m_isLoaded;
 	Vector3 m_position;
 
-	std::vector<VoxelVertex> m_basicVertice;
-	std::vector<uint32_t> m_basicIndice;
+	std::vector<VoxelVertex> m_basicVertices;
+	std::vector<uint32_t> m_basicIndices;
 
-	std::vector<VoxelVertex> m_waterVertice;
-	std::vector<uint32_t> m_waterIndice;
+	std::vector<VoxelVertex> m_waterVertices;
+	std::vector<uint32_t> m_waterIndices;
 
-	std::vector<VoxelVertex> m_spriteVertice;
+	std::vector<VoxelVertex> m_spriteVertices;
 
 	ChunkConstantData m_constantData;
 };
