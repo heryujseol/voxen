@@ -12,10 +12,9 @@ public:
 	};
 
 	static const int BLOCK_TYPE_COUNT = 256;
-	static const int BLOCK_SPRITE_COUNT = 64;
-	static const int SPRITE_GEOMETRY_COUNT = 4;
+	static const int BLOCK_INSTANCE_COUNT = 64;
 
-	static inline bool IsSprite(uint8_t type) { return type >= 128; }
+	static inline bool IsInstance(uint8_t type) { return type >= 128; }
 
 	Block() : m_type(0) {}
 	~Block() {}

@@ -160,9 +160,9 @@ void App::Render()
 	Graphics::SetPipelineStates(m_keyToggle[9] ? Graphics::basicWirePSO : Graphics::basicPSO);
 	m_chunkManager.RenderBasic();
 
-	// sprite
-	Graphics::SetPipelineStates(Graphics::spritePSO);
-	m_chunkManager.RenderSprite();
+	// instance
+	//Graphics::SetPipelineStates(Graphics::instancePSO);
+	//m_chunkManager.RenderInstance();
 
 
 	// skybox

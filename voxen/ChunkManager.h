@@ -26,7 +26,7 @@ public:
 	bool Initialize(Vector3 cameraChunkPos);
 	void Update(Camera& camera);
 	void RenderBasic();
-	void RenderSprite();
+	void RenderInstance();
 	void RenderWater();
 
 private:
@@ -58,8 +58,8 @@ private:
 	std::vector<ComPtr<ID3D11Buffer>> m_waterVertexBuffers;
 	std::vector<ComPtr<ID3D11Buffer>> m_waterIndexBuffers;
 
-	std::vector<ComPtr<ID3D11Buffer>> m_spriteVertexBuffers;
-	std::vector<ComPtr<ID3D11Buffer>> m_spriteInstanceBuffers;
+	std::vector<ComPtr<ID3D11Buffer>> m_instanceVertexBuffers;
+	std::vector<ComPtr<ID3D11Buffer>> m_instanceInfoBuffers;
 
 	std::vector<ComPtr<ID3D11Buffer>> m_constantBuffers;
 };

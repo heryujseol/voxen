@@ -119,14 +119,5 @@
     <FxCompile Include="SamplingPS.hlsl">
       <Filter>쉐이더 파일</Filter>
     </FxCompile>
-    <FxCompile Include="SpriteGS.hlsl">
-      <Filter>쉐이더 파일</Filter>
-    </FxCompile>
-    <FxCompile Include="SpriteVS.hlsl">
-      <Filter>쉐이더 파일</Filter>
-    </FxCompile>
-    <FxCompile Include="SpritePS.hlsl">
-      <Filter>쉐이더 파일</Filter>
-    </FxCompile>
   </ItemGroup>
 </Project>

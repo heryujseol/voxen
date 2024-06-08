@@ -22,8 +22,8 @@ bool ChunkManager::Initialize(Vector3 cameraChunkPos)
 	m_waterVertexBuffers.resize(poolSize);
 	m_waterIndexBuffers.resize(poolSize);
 
-	m_spriteVertexBuffers.resize(Block::BLOCK_SPRITE_COUNT);
-	m_spriteInstanceBuffers.resize(Block::BLOCK_SPRITE_COUNT);
+	m_instanceVertexBuffers.resize(Block::BLOCK_INSTANCE_COUNT);
+	m_instanceInfoBuffers.resize(Block::BLOCK_INSTANCE_COUNT);
 
 	m_constantBuffers.resize(poolSize);
 
@@ -65,11 +65,10 @@ void ChunkManager::RenderBasic()
 	}
 }
 
-void ChunkManager::RenderSprite()
+void ChunkManager::RenderInstance()
 {
 	for (auto& c : m_renderChunkList) {
-		if (c->IsEmptySprite())
-			continue;
+		
 		// need to check distance
 
 		

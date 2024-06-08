@@ -20,11 +20,6 @@ namespace Graphics {
 	ComPtr<ID3D11VertexShader> skyboxVS;
 	ComPtr<ID3D11VertexShader> cloudVS;
 	ComPtr<ID3D11VertexShader> samplingVS;
-	ComPtr<ID3D11VertexShader> spriteVS;
-
-
-	// Geometry Shader
-	ComPtr<ID3D11GeometryShader> spriteGS;
 
 
 	// Pixel Shader
@@ -32,13 +27,11 @@ namespace Graphics {
 	ComPtr<ID3D11PixelShader> skyboxPS;
 	ComPtr<ID3D11PixelShader> cloudPS;
 	ComPtr<ID3D11PixelShader> samplingPS;
-	ComPtr<ID3D11PixelShader> spritePS;
 
 
 	// Rasterizer State
 	ComPtr<ID3D11RasterizerState> solidRS;
 	ComPtr<ID3D11RasterizerState> wireRS;
-	ComPtr<ID3D11RasterizerState> spriteRS;
 
 
 	// Sampler State
@@ -48,7 +41,6 @@ namespace Graphics {
 
 	// Depth Stencil State
 	ComPtr<ID3D11DepthStencilState> basicDSS;
-	ComPtr<ID3D11DepthStencilState> spriteDSS;
 
 
 	// Blend State
@@ -99,7 +91,6 @@ namespace Graphics {
 	GraphicsPSO skyboxPSO;
 	GraphicsPSO cloudPSO;
 	GraphicsPSO cloudBlendPSO;
-	GraphicsPSO spritePSO;
 }
 
 
@@ -367,24 +358,11 @@ bool Graphics::InitVertexShaderAndInputLayouts()
 		return false;
 	}
 
-	// Sprite
-	if (!DXUtils::CreateVertexShaderAndInputLayout(
-			L"SpriteVS.hlsl", spriteVS, basicIL, elementDesc)) {
-		std::cout << "failed create sprite vs" << std::endl;
-		return false;
-	}
-
 	return true;
 }
 
 bool Graphics::InitGeometryShaders() 
 { 
-	// SpriteGS
-	if (!DXUtils::CreateGeometryShader(L"SpriteGS.hlsl", spriteGS)) {
-		std::cout << "failed create sprite gs" << std::endl;
-		return false;
-	}
-
 	return true;
 }
 
@@ -414,12 +392,6 @@ bool Graphics::InitPixelShaders()
 		return false;
 	}
 
-	// SpritePS
-	if (!DXUtils::CreatePixelShader(L"SpritePS.hlsl", spritePS)) {
-		std::cout << "failed create sprite ps" << std::endl;
-		return false;
-	}
-
 	return true;
 }
 
@@ -445,15 +417,6 @@ bool Graphics::InitRasterizerStates()
 	ret = Graphics::device->CreateRasterizerState(&rastDesc, wireRS.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create wire RS" << std::endl;
-		return false;
-	}
-
-	// sprite
-	rastDesc.FillMode = D3D11_FILL_MODE::D3D11_FILL_SOLID;
-	rastDesc.CullMode = D3D11_CULL_MODE::D3D11_CULL_NONE;
-	ret = Graphics::device->CreateRasterizerState(&rastDesc, spriteRS.GetAddressOf());
-	if (FAILED(ret)) {
-		std::cout << "failed create sprite RS" << std::endl;
 		return false;
 	}
 
@@ -570,14 +533,6 @@ void Graphics::InitGraphicsPSO()
 	cloudBlendPSO.vertexShader = samplingVS;
 	cloudBlendPSO.pixelShader = samplingPS;
 	cloudBlendPSO.blendState = alphaBS;
-
-	// spritePSO
-	spritePSO = basicPSO;
-	spritePSO.topology = D3D11_PRIMITIVE_TOPOLOGY_POINTLIST;
-	spritePSO.vertexShader = spriteVS;
-	spritePSO.geometryShader = spriteGS;
-	spritePSO.rasterizerState = spriteRS;
-	spritePSO.pixelShader = spritePS;
 }
 
 void Graphics::SetPipelineStates(GraphicsPSO& pso)

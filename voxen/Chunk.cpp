@@ -15,11 +15,11 @@ void Chunk::Initialize()
 	// 0. initialize chunk data
 	InitChunkData();
 
-	// 1. intialize sprite vertcie data
-	InitSpriteVerticesData();
+	// 1. intialize instance vertcie data
+	InitInstanceVerticesData();
 
-	// 2. initialize mesh(basic & water) vertice data
-	InitMeshVerticesData();
+	// 2. initialize world(basic & water) vertice data by greedy meshing
+	InitWorldVerticesData();
 
 	// 3. initialize constant data
 	m_constantData.world = Matrix::CreateTranslation(m_position);
@@ -37,8 +37,6 @@ void Chunk::Clear()
 
 	m_waterVertices.clear();
 	m_waterIndices.clear();
-
-	m_spriteVertices.clear();
 }
 
 void Chunk::InitChunkData()
@@ -60,28 +58,31 @@ void Chunk::InitChunkData()
 
 					m_blocks[x][y][z].SetType(type);
 				}
-				// for sprite testing
+
+				/////////////////////////////
+				// for instance testing
 				if (ny == height + 1 && nx % 2 == 0 && nz % 2 == 0) {
 					m_blocks[x][y][z].SetType(128);
 				}
+				/////////////////////////////
 			}
 		}
 	}
 }
-void Chunk::InitSpriteVerticesData()
+void Chunk::InitInstanceVerticesData()
 {
 	for (int x = 0; x < CHUNK_SIZE; ++x) {
 		for (int y = 0; y < CHUNK_SIZE; ++y) {
 			for (int z = 0; z < CHUNK_SIZE; ++z) {
 				uint8_t type = m_blocks[x + 1][y + 1][z + 1].GetType();
 
-				if (Block ::IsSprite(type)) {}
+				if (Block ::IsInstance(type)) {}
 			}
 		}
 	}
 }
 
-void Chunk::InitMeshVerticesData()
+void Chunk::InitWorldVerticesData()
 {
 	// 1. make axis column bit data
 	static uint64_t basicAxisColBit[CHUNK_SIZE_P2 * 3];
@@ -95,7 +96,7 @@ void Chunk::InitMeshVerticesData()
 		for (int y = 0; y < CHUNK_SIZE_P; ++y) {
 			for (int z = 0; z < CHUNK_SIZE_P; ++z) {
 				uint8_t type = m_blocks[x][y][z].GetType();
-				if (type == Block::Type::AIR || Block::IsSprite(type))
+				if (type == Block::Type::AIR || Block::IsInstance(type))
 					continue;
 
 				typeMap[type] = true;
