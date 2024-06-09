@@ -20,6 +20,17 @@ struct SamplingVertex {
 	Vector2 texcoord;
 };
 
+struct InstanceVertex {
+	Vector3 position;
+	Vector3 normal;
+	Vector2 texcoord;
+};
+
+struct InstanceInfo {
+	Matrix instanceWorld;
+	uint32_t type;
+};
+
 struct CameraConstantData {
 	Matrix view;
 	Matrix proj;

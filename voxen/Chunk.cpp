@@ -16,7 +16,7 @@ void Chunk::Initialize()
 	InitChunkData();
 
 	// 1. intialize instance vertcie data
-	InitInstanceVerticesData();
+	InitInstanceInfoData();
 
 	// 2. initialize world(basic & water) vertice data by greedy meshing
 	InitWorldVerticesData();
@@ -37,6 +37,8 @@ void Chunk::Clear()
 
 	m_waterVertices.clear();
 	m_waterIndices.clear();
+
+	m_instanceMap.clear();
 }
 
 void Chunk::InitChunkData()
@@ -62,21 +64,26 @@ void Chunk::InitChunkData()
 				/////////////////////////////
 				// for instance testing
 				if (ny == height + 1 && nx % 2 == 0 && nz % 2 == 0) {
-					m_blocks[x][y][z].SetType(128);
+					m_blocks[x][y][z].SetType(128+16);
 				}
+				
 				/////////////////////////////
 			}
 		}
 	}
 }
-void Chunk::InitInstanceVerticesData()
+
+void Chunk::InitInstanceInfoData()
 {
 	for (int x = 0; x < CHUNK_SIZE; ++x) {
 		for (int y = 0; y < CHUNK_SIZE; ++y) {
 			for (int z = 0; z < CHUNK_SIZE; ++z) {
 				uint8_t type = m_blocks[x + 1][y + 1][z + 1].GetType();
 
-				if (Block ::IsInstance(type)) {}
+				if (Block::IsInstance(type)) 
+				{
+					m_instanceMap[type].push_back(Vector3((float)x, (float)y, (float)z));
+				}
 			}
 		}
 	}
@@ -96,11 +103,11 @@ void Chunk::InitWorldVerticesData()
 		for (int y = 0; y < CHUNK_SIZE_P; ++y) {
 			for (int z = 0; z < CHUNK_SIZE_P; ++z) {
 				uint8_t type = m_blocks[x][y][z].GetType();
-				if (type == Block::Type::AIR || Block::IsInstance(type))
+				if (type == BLOCK_TYPE::AIR || Block::IsInstance(type))
 					continue;
 
 				typeMap[type] = true;
-				if (type == Block::Type::WATER) {
+				if (type == BLOCK_TYPE::WATER) {
 					// x dir column
 					waterAxisColBit[Utils::GetIndexFrom3D(0, y, z, CHUNK_SIZE_P)] |= (1ULL << x);
 					// y dir column
@@ -228,9 +235,9 @@ void Chunk::InitWorldVerticesData()
 						}
 
 						std::vector<VoxelVertex>& vertices =
-							(type == Block::Type::WATER) ? m_waterVertices : m_basicVertices;
+							(type == BLOCK_TYPE::WATER) ? m_waterVertices : m_basicVertices;
 						std::vector<uint32_t>& indices =
-							(type == Block::Type::WATER) ? m_waterIndices : m_basicIndices;
+							(type == BLOCK_TYPE::WATER) ? m_waterIndices : m_basicIndices;
 
 						if (face == 0)
 							MeshGenerator::CreateQuadMesh(

@@ -45,12 +45,17 @@ public:
 	inline const std::vector<VoxelVertex>& GetWaterVertices() const { return m_waterVertices; }
 	inline const std::vector<uint32_t>& GetWaterIndices() const { return m_waterIndices; }
 
+	inline const std::unordered_map<uint8_t, std::vector<Vector3>>& GetInstanceMap() const
+	{
+		return m_instanceMap;
+	}
+
 	inline const ChunkConstantData& GetConstantData() const { return m_constantData; }
 	
 
 private:
 	void InitChunkData();
-	void InitInstanceVerticesData();
+	void InitInstanceInfoData();
 	void InitWorldVerticesData();
 
 	Block m_blocks[CHUNK_SIZE_P][CHUNK_SIZE_P][CHUNK_SIZE_P];
@@ -66,4 +71,6 @@ private:
 	std::vector<uint32_t> m_waterIndices;
 
 	ChunkConstantData m_constantData;
+
+	std::unordered_map<uint8_t, std::vector<Vector3>> m_instanceMap;
 };

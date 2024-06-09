@@ -6,6 +6,293 @@
 
 namespace MeshGenerator {
 
+	static void CreateBoxInstanceMesh(
+		std::vector<InstanceVertex>& vertices, std::vector<uint32_t>& indices)
+	{
+		std::vector<Vector3> positions;
+		std::vector<Vector3> normals;
+		std::vector<Vector2> texcoords;
+
+		// 윗면
+		positions.push_back(Vector3(-0.5f, 0.5f, 0.5f));
+		positions.push_back(Vector3(0.5f, 0.5f, 0.5f));
+		positions.push_back(Vector3(0.5f, 0.5f, -0.5f));
+		positions.push_back(Vector3(-0.5f, 0.5f, -0.5f));
+		normals.push_back(Vector3(0.0f, 1.0f, 0.0f));
+		normals.push_back(Vector3(0.0f, 1.0f, 0.0f));
+		normals.push_back(Vector3(0.0f, 1.0f, 0.0f));
+		normals.push_back(Vector3(0.0f, 1.0f, 0.0f));
+		texcoords.push_back(Vector2(0.0f, 0.0f));
+		texcoords.push_back(Vector2(1.0f, 0.0f));
+		texcoords.push_back(Vector2(1.0f, 1.0f));
+		texcoords.push_back(Vector2(0.0f, 1.0f));
+
+		// 아랫면
+		positions.push_back(Vector3(-0.5f, -0.5f, -0.5f));
+		positions.push_back(Vector3(0.5f, -0.5f, -0.5f));
+		positions.push_back(Vector3(0.5f, -0.5f, 0.5f));
+		positions.push_back(Vector3(-0.5f, -0.5f, 0.5f));
+		normals.push_back(Vector3(0.0f, -1.0f, 0.0f));
+		normals.push_back(Vector3(0.0f, -1.0f, 0.0f));
+		normals.push_back(Vector3(0.0f, -1.0f, 0.0f));
+		normals.push_back(Vector3(0.0f, -1.0f, 0.0f));
+		texcoords.push_back(Vector2(0.0f, 0.0f));
+		texcoords.push_back(Vector2(1.0f, 0.0f));
+		texcoords.push_back(Vector2(1.0f, 1.0f));
+		texcoords.push_back(Vector2(0.0f, 1.0f));
+
+		// 앞면
+		positions.push_back(Vector3(-0.5f, 0.5f, -0.5f));
+		positions.push_back(Vector3(0.5f, 0.5f, -0.5f));
+		positions.push_back(Vector3(0.5f, -0.5f, -0.5f));
+		positions.push_back(Vector3(-0.5f, -0.5f, -0.5f));
+		normals.push_back(Vector3(0.0f, 0.0f, -1.0f));
+		normals.push_back(Vector3(0.0f, 0.0f, -1.0f));
+		normals.push_back(Vector3(0.0f, 0.0f, -1.0f));
+		normals.push_back(Vector3(0.0f, 0.0f, -1.0f));
+		texcoords.push_back(Vector2(0.0f, 0.0f));
+		texcoords.push_back(Vector2(1.0f, 0.0f));
+		texcoords.push_back(Vector2(1.0f, 1.0f));
+		texcoords.push_back(Vector2(0.0f, 1.0f));
+
+		// 뒷면
+		positions.push_back(Vector3(0.5f, 0.5f, 0.5f));
+		positions.push_back(Vector3(-0.5f, 0.5f, 0.5f));
+		positions.push_back(Vector3(-0.5f, -0.5f, 0.5f));
+		positions.push_back(Vector3(0.5f, -0.5f, 0.5f));
+		normals.push_back(Vector3(0.0f, 0.0f, 1.0f));
+		normals.push_back(Vector3(0.0f, 0.0f, 1.0f));
+		normals.push_back(Vector3(0.0f, 0.0f, 1.0f));
+		normals.push_back(Vector3(0.0f, 0.0f, 1.0f));
+		texcoords.push_back(Vector2(0.0f, 0.0f));
+		texcoords.push_back(Vector2(1.0f, 0.0f));
+		texcoords.push_back(Vector2(1.0f, 1.0f));
+		texcoords.push_back(Vector2(0.0f, 1.0f));
+
+		// 왼쪽
+		positions.push_back(Vector3(-0.5f, 0.5f, 0.5f));
+		positions.push_back(Vector3(-0.5f, 0.5f, -0.5f));
+		positions.push_back(Vector3(-0.5f, -0.5f, -0.5f));
+		positions.push_back(Vector3(-0.5f, -0.5f, 0.5f));
+		normals.push_back(Vector3(-1.0f, 0.0f, 0.0f));
+		normals.push_back(Vector3(-1.0f, 0.0f, 0.0f));
+		normals.push_back(Vector3(-1.0f, 0.0f, 0.0f));
+		normals.push_back(Vector3(-1.0f, 0.0f, 0.0f));
+		texcoords.push_back(Vector2(0.0f, 0.0f));
+		texcoords.push_back(Vector2(1.0f, 0.0f));
+		texcoords.push_back(Vector2(1.0f, 1.0f));
+		texcoords.push_back(Vector2(0.0f, 1.0f));
+
+		// 오른쪽
+		positions.push_back(Vector3(0.5f, 0.5f, -0.5f));
+		positions.push_back(Vector3(0.5f, 0.5f, 0.5f));
+		positions.push_back(Vector3(0.5f, -0.5f, 0.5f));
+		positions.push_back(Vector3(0.5f, -0.5f, -0.5f));
+		normals.push_back(Vector3(1.0f, 0.0f, 0.0f));
+		normals.push_back(Vector3(1.0f, 0.0f, 0.0f));
+		normals.push_back(Vector3(1.0f, 0.0f, 0.0f));
+		normals.push_back(Vector3(1.0f, 0.0f, 0.0f));
+		texcoords.push_back(Vector2(0.0f, 0.0f));
+		texcoords.push_back(Vector2(1.0f, 0.0f));
+		texcoords.push_back(Vector2(1.0f, 1.0f));
+		texcoords.push_back(Vector2(0.0f, 1.0f));
+
+		for (int i = 0; i < 24; i++) {
+			InstanceVertex v;
+			v.position = positions[i];
+			v.normal = normals[i];
+			v.texcoord = texcoords[i];
+			vertices.push_back(v);
+		}
+
+		for (int i = 0; i < 24; i += 4) {
+			indices.push_back(i);
+			indices.push_back(i + 1);
+			indices.push_back(i + 2);
+
+			indices.push_back(i);
+			indices.push_back(i + 2);
+			indices.push_back(i + 3);
+		}
+	}
+
+	static void CreateCrossInstanceMesh(
+		std::vector<InstanceVertex>& vertices, std::vector<uint32_t>& indices)
+	{
+		std::vector<Vector3> positions;
+		std::vector<Vector3> normals;
+		std::vector<Vector2> texcoords;
+
+		// 방향 '/'
+		positions.push_back(Vector3(-0.5f, 0.5f, -0.5f));
+		positions.push_back(Vector3(0.5f, 0.5f, 0.5f));
+		positions.push_back(Vector3(0.5f, -0.5f, 0.5f));
+		positions.push_back(Vector3(-0.5f, -0.5f, -0.5f));
+		Vector3 normal = Vector3(0.5f, 0.0f, -0.5f);
+		normal.Normalize();
+		normals.push_back(normal);
+		normals.push_back(normal);
+		normals.push_back(normal);
+		normals.push_back(normal);
+		texcoords.push_back(Vector2(0.0f, 0.0f));
+		texcoords.push_back(Vector2(1.0f, 0.0f));
+		texcoords.push_back(Vector2(1.0f, 1.0f));
+		texcoords.push_back(Vector2(0.0f, 1.0f));
+
+		// 방향 '\'
+		positions.push_back(Vector3(-0.5f, 0.5f, 0.5f));
+		positions.push_back(Vector3(0.5f, 0.5f, -0.5f));
+		positions.push_back(Vector3(0.5f, -0.5f, -0.5f));
+		positions.push_back(Vector3(-0.5f, -0.5f, 0.5f));
+		normal = Vector3(0.5f, 0.0f, 0.5f);
+		normal.Normalize();
+		normals.push_back(normal);
+		normals.push_back(normal);
+		normals.push_back(normal);
+		normals.push_back(normal);
+		texcoords.push_back(Vector2(0.0f, 0.0f));
+		texcoords.push_back(Vector2(1.0f, 0.0f));
+		texcoords.push_back(Vector2(1.0f, 1.0f));
+		texcoords.push_back(Vector2(0.0f, 1.0f));
+
+		for (int i = 0; i < 8; i++) {
+			InstanceVertex v;
+			v.position = positions[i];
+			v.normal = normals[i];
+			v.texcoord = texcoords[i];
+			vertices.push_back(v);
+		}
+
+		for (int i = 0; i < 8; i += 4) {
+			indices.push_back(i);
+			indices.push_back(i + 1);
+			indices.push_back(i + 2);
+
+			indices.push_back(i);
+			indices.push_back(i + 2);
+			indices.push_back(i + 3);
+		}
+	}
+
+	static void CreateFenceInstanceMesh(
+		std::vector<InstanceVertex>& vertices, std::vector<uint32_t>& indices)
+	{
+		std::vector<Vector3> positions;
+		std::vector<Vector3> normals;
+		std::vector<Vector2> texcoords;
+
+		// 위 'ㅡ'
+		positions.push_back(Vector3(0.5f, 0.5f, 0.25f));
+		positions.push_back(Vector3(-0.5f, 0.5f, 0.25f));
+		positions.push_back(Vector3(-0.5f, -0.5f, 0.25f));
+		positions.push_back(Vector3(0.5f, -0.5f, 0.25f));
+		normals.push_back(Vector3(0.0f, 0.0f, 1.0f));
+		normals.push_back(Vector3(0.0f, 0.0f, 1.0f));
+		normals.push_back(Vector3(0.0f, 0.0f, 1.0f));
+		normals.push_back(Vector3(0.0f, 0.0f, 1.0f));
+		texcoords.push_back(Vector2(0.0f, 0.0f));
+		texcoords.push_back(Vector2(1.0f, 0.0f));
+		texcoords.push_back(Vector2(1.0f, 1.0f));
+		texcoords.push_back(Vector2(0.0f, 1.0f));
+
+		// 아래 'ㅡ'
+		positions.push_back(Vector3(-0.5f, 0.5f, -0.25f));
+		positions.push_back(Vector3(0.5f, 0.5f, -0.25f));
+		positions.push_back(Vector3(0.5f, -0.5f, -0.25f));
+		positions.push_back(Vector3(-0.5f, -0.5f, -0.25f));
+		normals.push_back(Vector3(0.0f, 0.0f, -1.0f));
+		normals.push_back(Vector3(0.0f, 0.0f, -1.0f));
+		normals.push_back(Vector3(0.0f, 0.0f, -1.0f));
+		normals.push_back(Vector3(0.0f, 0.0f, -1.0f));
+		texcoords.push_back(Vector2(0.0f, 0.0f));
+		texcoords.push_back(Vector2(1.0f, 0.0f));
+		texcoords.push_back(Vector2(1.0f, 1.0f));
+		texcoords.push_back(Vector2(0.0f, 1.0f));
+
+		// 왼쪽 '|'
+		positions.push_back(Vector3(-0.25f, 0.5f, 0.5f));
+		positions.push_back(Vector3(-0.25f, 0.5f, -0.5f));
+		positions.push_back(Vector3(-0.25f, -0.5f, -0.5f));
+		positions.push_back(Vector3(-0.25f, -0.5f, 0.5f));
+		normals.push_back(Vector3(-1.0f, 0.0f, 0.0f));
+		normals.push_back(Vector3(-1.0f, 0.0f, 0.0f));
+		normals.push_back(Vector3(-1.0f, 0.0f, 0.0f));
+		normals.push_back(Vector3(-1.0f, 0.0f, 0.0f));
+		texcoords.push_back(Vector2(0.0f, 0.0f));
+		texcoords.push_back(Vector2(1.0f, 0.0f));
+		texcoords.push_back(Vector2(1.0f, 1.0f));
+		texcoords.push_back(Vector2(0.0f, 1.0f));
+		
+		// 오른쪽 '|'
+		positions.push_back(Vector3(0.25f, 0.5f, -0.5f));
+		positions.push_back(Vector3(0.25f, 0.5f, 0.5f));
+		positions.push_back(Vector3(0.25f, -0.5f, 0.5f));
+		positions.push_back(Vector3(0.25f, -0.5f, -0.5f));
+		normals.push_back(Vector3(1.0f, 0.0f, 0.0f));
+		normals.push_back(Vector3(1.0f, 0.0f, 0.0f));
+		normals.push_back(Vector3(1.0f, 0.0f, 0.0f));
+		normals.push_back(Vector3(1.0f, 0.0f, 0.0f));
+		texcoords.push_back(Vector2(0.0f, 0.0f));
+		texcoords.push_back(Vector2(1.0f, 0.0f));
+		texcoords.push_back(Vector2(1.0f, 1.0f));
+		texcoords.push_back(Vector2(0.0f, 1.0f));
+
+		for (int i = 0; i < 16; i++) {
+			InstanceVertex v;
+			v.position = positions[i];
+			v.normal = normals[i];
+			v.texcoord = texcoords[i];
+			vertices.push_back(v);
+		}
+
+		for (int i = 0; i < 16; i += 4) {
+			indices.push_back(i);
+			indices.push_back(i + 1);
+			indices.push_back(i + 2);
+
+			indices.push_back(i);
+			indices.push_back(i + 2);
+			indices.push_back(i + 3);
+		}
+	}
+
+	static void CreateSquareInstanceMesh(
+		std::vector<InstanceVertex>& vertices, std::vector<uint32_t>& indices)
+	{
+		std::vector<Vector3> positions;
+		std::vector<Vector3> normals;
+		std::vector<Vector2> texcoords;
+
+		// Z+ 방향
+		positions.push_back(Vector3(-0.5f, 0.5f, 0.5f));
+		positions.push_back(Vector3(0.5f, 0.5f, 0.5f));
+		positions.push_back(Vector3(0.5f, -0.5f, 0.5f));
+		positions.push_back(Vector3(-0.5f, -0.5f, 0.5f));
+		normals.push_back(Vector3(0.0f, 0.0f, 1.0f));
+		normals.push_back(Vector3(0.0f, 0.0f, 1.0f));
+		normals.push_back(Vector3(0.0f, 0.0f, 1.0f));
+		normals.push_back(Vector3(0.0f, 0.0f, 1.0f));
+		texcoords.push_back(Vector2(0.0f, 0.0f));
+		texcoords.push_back(Vector2(1.0f, 0.0f));
+		texcoords.push_back(Vector2(1.0f, 1.0f));
+		texcoords.push_back(Vector2(0.0f, 1.0f));
+
+		for (int i = 0; i < 4; i++) {
+			InstanceVertex v;
+			v.position = positions[i];
+			v.normal = normals[i];
+			v.texcoord = texcoords[i];
+			vertices.push_back(v);
+		}
+
+		indices.push_back(0);
+		indices.push_back(1);
+		indices.push_back(2);
+		indices.push_back(0);
+		indices.push_back(2);
+		indices.push_back(3);
+	}
+
 	static void SetSquareIndices(std::vector<uint32_t>& indices, uint32_t offset)
 	{
 		indices.push_back(offset);
@@ -262,5 +549,5 @@ namespace MeshGenerator {
 		SetSquareIndices(indices, 0);
 	}
 
-	
+
 }

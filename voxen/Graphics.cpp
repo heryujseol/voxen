@@ -13,6 +13,7 @@ namespace Graphics {
 	ComPtr<ID3D11InputLayout> skyboxIL;
 	ComPtr<ID3D11InputLayout> cloudIL;
 	ComPtr<ID3D11InputLayout> samplingIL;
+	ComPtr<ID3D11InputLayout> instanceIL;
 
 
 	// Vertex Shader
@@ -20,6 +21,7 @@ namespace Graphics {
 	ComPtr<ID3D11VertexShader> skyboxVS;
 	ComPtr<ID3D11VertexShader> cloudVS;
 	ComPtr<ID3D11VertexShader> samplingVS;
+	ComPtr<ID3D11VertexShader> instanceVS;
 
 
 	// Pixel Shader
@@ -27,11 +29,13 @@ namespace Graphics {
 	ComPtr<ID3D11PixelShader> skyboxPS;
 	ComPtr<ID3D11PixelShader> cloudPS;
 	ComPtr<ID3D11PixelShader> samplingPS;
+	ComPtr<ID3D11PixelShader> instancePS;
 
 
 	// Rasterizer State
 	ComPtr<ID3D11RasterizerState> solidRS;
 	ComPtr<ID3D11RasterizerState> wireRS;
+	ComPtr<ID3D11RasterizerState> instanceRS;
 
 
 	// Sampler State
@@ -91,6 +95,7 @@ namespace Graphics {
 	GraphicsPSO skyboxPSO;
 	GraphicsPSO cloudPSO;
 	GraphicsPSO cloudBlendPSO;
+	GraphicsPSO instancePSO;
 }
 
 
@@ -188,8 +193,7 @@ bool Graphics::InitRenderTargetBuffers(UINT width, UINT height)
 
 
 	// Cloud RTV
-	if (!DXUtils::CreateTextureBuffer(cloudRenderBuffer, width, height, true, format, bindFlag))
-	{
+	if (!DXUtils::CreateTextureBuffer(cloudRenderBuffer, width, height, true, format, bindFlag)) {
 		std::cout << "failed create render target buffer" << std::endl;
 		return false;
 	}
@@ -231,7 +235,7 @@ bool Graphics::InitShaderResourceBuffers(UINT width, UINT height)
 {
 	// Asset Files
 	/*
-	
+
 	if (!DXUtils::CreateTexture2DFromFile(
 			atlasMapBuffer, atlasMapSRV, "../assets/blockatlas1.png")) {
 		std::cout << "failed create texture from atlas file" << std::endl;
@@ -242,16 +246,16 @@ bool Graphics::InitShaderResourceBuffers(UINT width, UINT height)
 			atlasMapBuffer, atlasMapSRV, "../assets/blender_uv_grid_2k.png")) {
 		std::cout << "failed create texture from atlas file" << std::endl;
 		return false;
-	} 
-	
+	}
+
 	*/
-	
+
 	if (!DXUtils::CreateTextureArrayFromAtlasFile(
 			atlasMapBuffer, atlasMapSRV, "../assets/blockatlas1.png")) {
 		std::cout << "failed create texture from atlas file" << std::endl;
 		return false;
-	} 
-	
+	}
+
 
 	/*if (!DXUtils::CreateTextureFromFile(
 			grassColorMapBuffer, grassColorMapSRV, "../assets/grass_color_map.png")) {
@@ -273,7 +277,8 @@ bool Graphics::InitShaderResourceBuffers(UINT width, UINT height)
 	// cloudSRV
 	DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	UINT bindFlag = D3D11_BIND_SHADER_RESOURCE;
-	if (!DXUtils::CreateTextureBuffer(cloudResolvedBuffer, width, height, false, format, bindFlag)) {
+	if (!DXUtils::CreateTextureBuffer(
+			cloudResolvedBuffer, width, height, false, format, bindFlag)) {
 		std::cout << "failed create shader resource buffer" << std::endl;
 		return false;
 	}
@@ -327,9 +332,8 @@ bool Graphics::InitVertexShaderAndInputLayouts()
 	}
 
 	// SkyBox
-	std::vector<D3D11_INPUT_ELEMENT_DESC> elementDesc2 = {
-		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 }
-	};
+	std::vector<D3D11_INPUT_ELEMENT_DESC> elementDesc2 = { { "POSITION", 0,
+		DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 } };
 	if (!DXUtils::CreateVertexShaderAndInputLayout(
 			L"SkyboxVS.hlsl", skyboxVS, skyboxIL, elementDesc2)) {
 		std::cout << "failed create skybox vs" << std::endl;
@@ -337,8 +341,8 @@ bool Graphics::InitVertexShaderAndInputLayouts()
 	}
 
 	// Cloud
-	std::vector<D3D11_INPUT_ELEMENT_DESC> elementDesc3 = { 
-		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 }, 
+	std::vector<D3D11_INPUT_ELEMENT_DESC> elementDesc3 = {
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		{ "FACE", 0, DXGI_FORMAT_R8_UINT, 0, 4 * 3, D3D11_INPUT_PER_VERTEX_DATA, 0 }
 	};
 	if (!DXUtils::CreateVertexShaderAndInputLayout(
@@ -358,13 +362,28 @@ bool Graphics::InitVertexShaderAndInputLayouts()
 		return false;
 	}
 
+	// Instance
+	std::vector<D3D11_INPUT_ELEMENT_DESC> elementDesc5 = {
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+
+		{ "WORLD", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 0, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
+		{ "WORLD", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 16, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
+		{ "WORLD", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 32, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
+		{ "WORLD", 3, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 48, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
+		{ "TYPE", 0, DXGI_FORMAT_R32_UINT, 1, 64, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
+	};
+	if (!DXUtils::CreateVertexShaderAndInputLayout(
+		L"InstanceVS.hlsl", instanceVS, instanceIL, elementDesc5)) {
+		std::cout << "failed create instance vs" << std::endl;
+		return false;
+	}
+
 	return true;
 }
 
-bool Graphics::InitGeometryShaders() 
-{ 
-	return true;
-}
+bool Graphics::InitGeometryShaders() { return true; }
 
 bool Graphics::InitPixelShaders()
 {
@@ -389,6 +408,12 @@ bool Graphics::InitPixelShaders()
 	// SamplingPS
 	if (!DXUtils::CreatePixelShader(L"SamplingPS.hlsl", samplingPS)) {
 		std::cout << "failed create sampling ps" << std::endl;
+		return false;
+	}
+
+	// InstancePS
+	if (!DXUtils::CreatePixelShader(L"InstancePS.hlsl", instancePS)) {
+		std::cout << "failed create instance ps" << std::endl;
 		return false;
 	}
 
@@ -417,6 +442,14 @@ bool Graphics::InitRasterizerStates()
 	ret = Graphics::device->CreateRasterizerState(&rastDesc, wireRS.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create wire RS" << std::endl;
+		return false;
+	}
+
+	rastDesc.FillMode = D3D11_FILL_MODE::D3D11_FILL_SOLID;
+	rastDesc.CullMode = D3D11_CULL_MODE::D3D11_CULL_NONE;
+	ret = Graphics::device->CreateRasterizerState(&rastDesc, instanceRS.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create instance RS" << std::endl;
 		return false;
 	}
 
@@ -474,7 +507,7 @@ bool Graphics::InitDepthStencilStates()
 	return true;
 }
 
-bool Graphics::InitBlendStates() 
+bool Graphics::InitBlendStates()
 {
 	D3D11_BLEND_DESC desc;
 	ZeroMemory(&desc, sizeof(desc));
@@ -533,6 +566,13 @@ void Graphics::InitGraphicsPSO()
 	cloudBlendPSO.vertexShader = samplingVS;
 	cloudBlendPSO.pixelShader = samplingPS;
 	cloudBlendPSO.blendState = alphaBS;
+
+	// InstancePSO
+	instancePSO = basicPSO;
+	instancePSO.inputLayout = instanceIL;
+	instancePSO.vertexShader = instanceVS;
+	instancePSO.rasterizerState = instanceRS;
+	instancePSO.pixelShader = instancePS;
 }
 
 void Graphics::SetPipelineStates(GraphicsPSO& pso)
@@ -552,8 +592,8 @@ void Graphics::SetPipelineStates(GraphicsPSO& pso)
 		context->PSSetSamplers(0, 0, nullptr);
 	else
 		context->PSSetSamplers(0, (UINT)pso.samplerStates.size(), pso.samplerStates.data());
-	
+
 	context->OMSetDepthStencilState(pso.depthStencilState.Get(), 0);
 
-	context->OMSetBlendState(pso.blendState.Get(), pso.blendFactor , 0xffffffff);
+	context->OMSetBlendState(pso.blendState.Get(), pso.blendFactor, 0xffffffff);
 }

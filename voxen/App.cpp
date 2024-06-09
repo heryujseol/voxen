@@ -150,7 +150,6 @@ void App::Render()
 		1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
 
 	Graphics::context->VSSetConstantBuffers(0, 1, m_camera.m_constantBuffer.GetAddressOf());
-	Graphics::context->GSSetConstantBuffers(0, 1, m_camera.m_constantBuffer.GetAddressOf());
 	std::vector<ID3D11Buffer*> pptr = { m_camera.m_constantBuffer.Get(),
 		m_skybox.m_constantBuffer.Get() };
 	Graphics::context->PSSetConstantBuffers(0, 2, pptr.data());
@@ -161,8 +160,8 @@ void App::Render()
 	m_chunkManager.RenderBasic();
 
 	// instance
-	//Graphics::SetPipelineStates(Graphics::instancePSO);
-	//m_chunkManager.RenderInstance();
+	Graphics::SetPipelineStates(Graphics::instancePSO);
+	m_chunkManager.RenderInstance();
 
 
 	// skybox

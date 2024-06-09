@@ -19,6 +19,7 @@ namespace Graphics {
 	extern ComPtr<ID3D11InputLayout> skyboxIL;
 	extern ComPtr<ID3D11InputLayout> cloudIL;
 	extern ComPtr<ID3D11InputLayout> samplingIL;
+	extern ComPtr<ID3D11InputLayout> instanceIL;
 
 
 	// Vertex Shader
@@ -26,6 +27,7 @@ namespace Graphics {
 	extern ComPtr<ID3D11VertexShader> skyboxVS;
 	extern ComPtr<ID3D11VertexShader> cloudVS;
 	extern ComPtr<ID3D11VertexShader> samplingVS;
+	extern ComPtr<ID3D11VertexShader> instanceVS;
 
 
 	// Pixel Shader
@@ -33,11 +35,13 @@ namespace Graphics {
 	extern ComPtr<ID3D11PixelShader> skyboxPS;
 	extern ComPtr<ID3D11PixelShader> cloudPS;
 	extern ComPtr<ID3D11PixelShader> samplingPS;
+	extern ComPtr<ID3D11PixelShader> instancePS;
 
 
 	// Rasterizer State
 	extern ComPtr<ID3D11RasterizerState> solidRS;
 	extern ComPtr<ID3D11RasterizerState> wireRS;
+	extern ComPtr<ID3D11RasterizerState> instanceRS;
 
 
 	// Sampler State
@@ -119,4 +123,5 @@ namespace Graphics {
 	extern GraphicsPSO skyboxPSO;
 	extern GraphicsPSO cloudPSO;
 	extern GraphicsPSO cloudBlendPSO;
+	extern GraphicsPSO instancePSO;
 }

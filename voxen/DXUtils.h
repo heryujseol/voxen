@@ -20,7 +20,8 @@ using namespace DirectX;
 namespace DXUtils {
 
 	template <typename V>
-	static bool CreateVertexBuffer(ComPtr<ID3D11Buffer>& vertexBuffer, const std::vector<V>& vertices)
+	static bool CreateVertexBuffer(
+		ComPtr<ID3D11Buffer>& vertexBuffer, const std::vector<V>& vertices)
 	{
 		D3D11_BUFFER_DESC desc;
 		ZeroMemory(&desc, sizeof(desc));
@@ -86,6 +87,23 @@ namespace DXUtils {
 		return true;
 	}
 
+	static bool CreateInstanceBuffer(
+		ComPtr<ID3D11Buffer>& instanceBuffer, UINT maxCount)
+	{
+		D3D11_BUFFER_DESC desc;
+		ZeroMemory(&desc, sizeof(desc));
+		desc.ByteWidth = UINT(maxCount * sizeof(InstanceInfo));
+		desc.Usage = D3D11_USAGE_DYNAMIC;
+		desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+		desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+
+		HRESULT ret = Graphics::device->CreateBuffer(&desc, nullptr, instanceBuffer.GetAddressOf());
+		if (FAILED(ret))
+			return false;
+
+		return true;
+	}
+
 
 	template <typename ConstantData>
 	static void UpdateConstantBuffer(
@@ -93,9 +111,20 @@ namespace DXUtils {
 	{
 		D3D11_MAPPED_SUBRESOURCE ms;
 
-		Graphics::context->Map(constantBuffer.Get(), NULL, D3D11_MAP_WRITE_DISCARD, NULL, &ms);
+		Graphics::context->Map(constantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &ms);
 		memcpy(ms.pData, &constantData, sizeof(ConstantData));
-		Graphics::context->Unmap(constantBuffer.Get(), NULL);
+		Graphics::context->Unmap(constantBuffer.Get(), 0);
+	}
+
+
+	static void UpdateInstanceBuffer(
+		ComPtr<ID3D11Buffer>& instanceBuffer, const std::vector<InstanceInfo>& instanceInfo)
+	{
+		D3D11_MAPPED_SUBRESOURCE ms;
+
+		Graphics::context->Map(instanceBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &ms);
+		memcpy(ms.pData, instanceInfo.data(), sizeof(InstanceInfo) * instanceInfo.size());
+		Graphics::context->Unmap(instanceBuffer.Get(), 0);
 	}
 
 
