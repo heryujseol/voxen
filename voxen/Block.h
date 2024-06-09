@@ -30,9 +30,9 @@ public:
 			return INSTANCE_TYPE::BOX;
 		else if (type < 128 + 16 * 2)
 			return INSTANCE_TYPE::CROSS;
-		else if (type < 128 * 16 * 3)
+		else if (type < 128 + 16 * 3)
 			return INSTANCE_TYPE::FENCE;
-		else if (type < 128 * 16 * 4)
+		else if (type < 128 + 16 * 4)
 			return INSTANCE_TYPE::SQUARE;
 		else
 			return INSTANCE_TYPE::NONE;

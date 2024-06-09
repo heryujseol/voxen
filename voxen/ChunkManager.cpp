@@ -77,7 +77,7 @@ void ChunkManager::RenderBasic()
 
 void ChunkManager::RenderInstance()
 {
-	UINT indexCountPerInstance[4] = { 36, 12, 24, 4 };
+	UINT indexCountPerInstance[4] = { 36, 12, 24, 6 };
 	for (int i = 0; i < Block::INSTANCE_TYPE_COUNT; ++i) {
 		Graphics::context->IASetIndexBuffer(
 			m_instanceIndexBuffers[i].Get(), DXGI_FORMAT_R32_UINT, 0);

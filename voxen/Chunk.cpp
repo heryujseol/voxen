@@ -64,7 +64,7 @@ void Chunk::InitChunkData()
 				/////////////////////////////
 				// for instance testing
 				if (ny == height + 1 && nx % 2 == 0 && nz % 2 == 0) {
-					m_blocks[x][y][z].SetType(128+16);
+					m_blocks[x][y][z].SetType(128+16+16+16);
 				}
 				
 				/////////////////////////////
