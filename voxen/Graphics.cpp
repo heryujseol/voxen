@@ -445,6 +445,7 @@ bool Graphics::InitRasterizerStates()
 		return false;
 	}
 
+	// instanceRS
 	rastDesc.FillMode = D3D11_FILL_MODE::D3D11_FILL_SOLID;
 	rastDesc.CullMode = D3D11_CULL_MODE::D3D11_CULL_NONE;
 	ret = Graphics::device->CreateRasterizerState(&rastDesc, instanceRS.GetAddressOf());

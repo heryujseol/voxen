@@ -75,7 +75,11 @@ float4 main(vsOutput input) : SV_TARGET
     float2 texcoord = getVoxelTexcoord(input.posModel, input.face);
     
     uint index = (input.type - 1) * 6 + input.face;
-    
+
+    float alpha = atlasTextureArray.SampleLevel(pointWrapSS, float3(texcoord, index), 0.0).a;
+    if (alpha != 1.0)
+        discard;
+
     float3 color = atlasTextureArray.Sample(pointWrapSS, float3(texcoord, index)).xyz;
     
     color *= getFaceColor(input.face);

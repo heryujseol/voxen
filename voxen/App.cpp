@@ -157,12 +157,15 @@ void App::Render()
 
 	// basic
 	Graphics::SetPipelineStates(m_keyToggle[9] ? Graphics::basicWirePSO : Graphics::basicPSO);
-	m_chunkManager.RenderBasic();
+	m_chunkManager.RenderOpaque();
+	if (!m_keyToggle['L'])
+		m_chunkManager.RenderSemiAlpha();
+
 
 	// instance
 	Graphics::SetPipelineStates(Graphics::instancePSO);
 	m_chunkManager.RenderInstance();
-
+	
 
 	// skybox
 	Graphics::SetPipelineStates(Graphics::skyboxPSO);

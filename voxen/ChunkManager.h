@@ -14,7 +14,7 @@ using namespace DirectX::SimpleMath;
 class ChunkManager {
 
 public:
-	static const int CHUNK_COUNT = 21;
+	static const int CHUNK_COUNT = 19;
 	static const int MAX_HEIGHT = 256;
 	static const int MAX_HEIGHT_CHUNK_COUNT = 8;
 	static const int CHUNK_COUNT_P = CHUNK_COUNT + 2;
@@ -23,15 +23,16 @@ public:
 	static const int MAX_INSTANCE_RENDER_DISTANCE = 160;
 	static const int MAX_INSTANCE_BUFFER_SIZE = 1024 * 1024 * 8;
 	static const int MAX_INSTANCE_BUFFER_COUNT = MAX_INSTANCE_BUFFER_SIZE / sizeof(InstanceInfo);
-	
+
 	ChunkManager();
 	~ChunkManager();
 
 	bool Initialize(Vector3 cameraChunkPos);
 	void Update(Camera& camera);
-	void RenderBasic();
+	void RenderOpaque();
 	void RenderInstance();
-	void RenderWater();
+	void RenderSemiAlpha();
+	void RenderTransparency();
 
 private:
 	void UpdateChunkList(Vector3 cameraChunkPos);
@@ -57,11 +58,14 @@ private:
 	std::vector<Chunk*> m_unloadChunkList;
 	std::vector<Chunk*> m_renderChunkList;
 
-	std::vector<ComPtr<ID3D11Buffer>> m_basicVertexBuffers;
-	std::vector<ComPtr<ID3D11Buffer>> m_basicIndexBuffers;
+	std::vector<ComPtr<ID3D11Buffer>> m_opaqueVertexBuffers;
+	std::vector<ComPtr<ID3D11Buffer>> m_opaqueIndexBuffers;
 
-	std::vector<ComPtr<ID3D11Buffer>> m_waterVertexBuffers;
-	std::vector<ComPtr<ID3D11Buffer>> m_waterIndexBuffers;
+	std::vector<ComPtr<ID3D11Buffer>> m_transparencyVertexBuffers;
+	std::vector<ComPtr<ID3D11Buffer>> m_transparencyIndexBuffers;
+
+	std::vector<ComPtr<ID3D11Buffer>> m_semiAlphaVertexBuffers;
+	std::vector<ComPtr<ID3D11Buffer>> m_semiAlphaIndexBuffers;
 
 	std::vector<ComPtr<ID3D11Buffer>> m_constantBuffers;
 
