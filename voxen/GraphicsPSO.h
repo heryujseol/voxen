@@ -19,6 +19,8 @@ public:
 
 	ComPtr<ID3D11VertexShader> vertexShader;
 
+	ComPtr<ID3D11GeometryShader> geometryShader;
+
 	ComPtr<ID3D11RasterizerState> rasterizerState;
 
 	ComPtr<ID3D11PixelShader> pixelShader;
@@ -33,7 +35,7 @@ public:
 	/*
 	ComPtr<ID3D11HullShader> m_hullShader;
     ComPtr<ID3D11DomainShader> m_domainShader;
-    ComPtr<ID3D11GeometryShader> m_geometryShader;
+    
 	UINT m_stencilRef = 0;
 	*/
 };

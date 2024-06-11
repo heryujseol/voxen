@@ -24,8 +24,6 @@ public:
 	uint32_t GetTime() { return m_constantData.dateTime; };
 
 private:
-	void CreateMesh(float scale);
-
 	uint32_t m_dateTime;
 	float m_speed;
 

@@ -1,6 +1,7 @@
 #include "Cloud.h"
 #include "Utils.h"
 #include "DXUtils.h"
+#include "MeshGenerator.h"
 
 #include <algorithm>
 Cloud::Cloud()
@@ -131,7 +132,7 @@ bool Cloud::BuildCloud()
 			int z =
 				((int)(m_mapDataOffset.z / CLOUD_SCALE_SIZE) + j - (int)(CLOUD_MAP_SIZE * 0.5f)) %
 				CLOUD_DATA_MAP_SIZE;
-		
+
 			if (x < 0)
 				x += CLOUD_DATA_MAP_SIZE;
 			if (z < 0)
@@ -159,7 +160,9 @@ bool Cloud::BuildCloud()
 
 			int x = i - (int)(CLOUD_MAP_SIZE * 0.5f);
 			int z = j - (int)(CLOUD_MAP_SIZE * 0.5f);
-			CreateCloudMesh(x, z, x_n, x_p, z_n, z_p);
+
+			MeshGenerator::CreateCloudMesh(
+				m_vertices, m_indices, x, 0, z, x_n, x_p, true, true, z_n, z_p);
 		}
 	}
 
@@ -189,106 +192,9 @@ bool Cloud::BuildCloud()
 	return true;
 }
 
-void Cloud::CreateCloudMesh(int x, int z, bool x_n, bool x_p, bool z_n, bool z_p)
-{
-	uint32_t originVertexSize = (uint32_t)m_vertices.size();
-	uint32_t faceCount = 0;
-
-	CloudVertex vertex;
-	// ¿ÞÂÊ
-	if (x_n) {
-		vertex.face = 0;
-		vertex.position = Vector3(x + 0.0f, 1.0f, z + 1.0f);
-		m_vertices.push_back(vertex);
-		vertex.position = Vector3(x + 0.0f, 1.0f, z + 0.0f);
-		m_vertices.push_back(vertex);
-		vertex.position = Vector3(x + 0.0f, 0.0f, z + 0.0f);
-		m_vertices.push_back(vertex);
-		vertex.position = Vector3(x + 0.0f, 0.0f, z + 1.0f);
-		m_vertices.push_back(vertex);
-		faceCount++;
-	}
-
-	// ¿À¸¥ÂÊ
-	if (x_p) {
-		vertex.face = 1;
-		vertex.position = Vector3(x + 1.0f, 1.0f, z + 0.0f);
-		m_vertices.push_back(vertex);
-		vertex.position = Vector3(x + 1.0f, 1.0f, z + 1.0f);
-		m_vertices.push_back(vertex);
-		vertex.position = Vector3(x + 1.0f, 0.0f, z + 1.0f);
-		m_vertices.push_back(vertex);
-		vertex.position = Vector3(x + 1.0f, 0.0f, z + 0.0f);
-		m_vertices.push_back(vertex);
-		faceCount++;
-	}
-
-	// ¾Æ·§¸é
-	vertex.face = 2;
-	vertex.position = Vector3(x + 0.0f, 0.0f, z + 0.0f);
-	m_vertices.push_back(vertex);
-	vertex.position = Vector3(x + 1.0f, 0.0f, z + 0.0f);
-	m_vertices.push_back(vertex);
-	vertex.position = Vector3(x + 1.0f, 0.0f, z + 1.0f);
-	m_vertices.push_back(vertex);
-	vertex.position = Vector3(x + 0.0f, 0.0f, z + 1.0f);
-	m_vertices.push_back(vertex);
-	faceCount++;
-
-	// À­¸é
-	vertex.face = 3;
-	vertex.position = Vector3(x + 0.0f, 1.0f, z + 1.0f);
-	m_vertices.push_back(vertex);
-	vertex.position = Vector3(x + 1.0f, 1.0f, z + 1.0f);
-	m_vertices.push_back(vertex);
-	vertex.position = Vector3(x + 1.0f, 1.0f, z + 0.0f);
-	m_vertices.push_back(vertex);
-	vertex.position = Vector3(x + 0.0f, 1.0f, z + 0.0f);
-	m_vertices.push_back(vertex);
-	faceCount++;
-
-	// ¾Õ¸é
-	if (z_n) {
-		vertex.face = 4;
-		vertex.position = Vector3(x + 0.0f, 1.0f, z + 0.0f);
-		m_vertices.push_back(vertex);
-		vertex.position = Vector3(x + 1.0f, 1.0f, z + 0.0f);
-		m_vertices.push_back(vertex);
-		vertex.position = Vector3(x + 1.0f, 0.0f, z + 0.0f);
-		m_vertices.push_back(vertex);
-		vertex.position = Vector3(x + 0.0f, 0.0f, z + 0.0f);
-		m_vertices.push_back(vertex);
-		faceCount++;
-	}
-
-	// µÞ¸é
-	if (z_p) {
-		vertex.face = 5;
-		vertex.position = Vector3(x + 1.0f, 1.0f, z + 1.0f);
-		m_vertices.push_back(vertex);
-		vertex.position = Vector3(x + 0.0f, 1.0f, z + 1.0f);
-		m_vertices.push_back(vertex);
-		vertex.position = Vector3(x + 0.0f, 0.0f, z + 1.0f);
-		m_vertices.push_back(vertex);
-		vertex.position = Vector3(x + 1.0f, 0.0f, z + 1.0f);
-		m_vertices.push_back(vertex);
-		faceCount++;
-	}
-
-	for (uint32_t i = 0; i < faceCount; ++i) {
-		m_indices.push_back(originVertexSize + i * 4);
-		m_indices.push_back(originVertexSize + 1 + i * 4);
-		m_indices.push_back(originVertexSize + 2 + i * 4);
-
-		m_indices.push_back(originVertexSize + i * 4);
-		m_indices.push_back(originVertexSize + 2 + i * 4);
-		m_indices.push_back(originVertexSize + 3 + i * 4);
-	}
-}
-
 bool Cloud::BuildSquare()
 {
-	CreateSquareMesh();
+	MeshGenerator::CreateSampleSquareMesh(m_samplingVertices, m_samplingIndices);
 
 	if (!DXUtils::CreateVertexBuffer(m_samplingVertexBuffer, m_samplingVertices)) {
 		std::cout << "failed create sampling vertex buffer in cloud" << std::endl;
@@ -301,34 +207,4 @@ bool Cloud::BuildSquare()
 	}
 
 	return true;
-}
-
-void Cloud::CreateSquareMesh()
-{
-	SamplingVertex vertex;
-
-	vertex.position = Vector3(-1.0f, 1.0f, 0.0f);
-	vertex.texcoord = Vector2(0.0f, 0.0f);
-	m_samplingVertices.push_back(vertex);
-
-	vertex.position = Vector3(1.0f, 1.0f, 0.0f);
-	vertex.texcoord = Vector2(1.0f, 0.0f);
-	m_samplingVertices.push_back(vertex);
-
-	vertex.position = Vector3(1.0f, -1.0f, 0.0f);
-	vertex.texcoord = Vector2(1.0f, 1.0f);
-	m_samplingVertices.push_back(vertex);
-
-	vertex.position = Vector3(-1.0f, -1.0f, 0.0f);
-	vertex.texcoord = Vector2(0.0f, 1.0f);
-	m_samplingVertices.push_back(vertex);
-
-
-	m_samplingIndices.push_back(0);
-	m_samplingIndices.push_back(1);
-	m_samplingIndices.push_back(2);
-
-	m_samplingIndices.push_back(0);
-	m_samplingIndices.push_back(2);
-	m_samplingIndices.push_back(3);
 }

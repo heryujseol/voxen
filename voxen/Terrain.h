@@ -37,7 +37,7 @@ namespace Terrain {
 	
 	static float Smootherstep(float a, float b, float w)
 	{
-		return (b - a) * ((w * (w * 6.0 - 15.0) + 10.0) * w * w * w) + a;
+		return (b - a) * ((w * (w * 6.0f - 15.0f) + 10.0f) * w * w * w) + a;
 	}
 
 	static float CubicLerp(float a, float b, float w)
@@ -203,11 +203,10 @@ namespace Terrain {
 	8 = swamp grass
 	9 = swamp grass2
 	*/
-	static uint8_t GetType(int x, int y, int z, int h)
+	static uint8_t GetType(int x, int y, int z, int h, float t)
 	{
 		float thick = Get3DPerlinNoise((float)x / 96.0f, (float)y / 96.0f, (float)z / 96.0f);
-		float t = GetPerlinNoise2((float)x / 182.0f, (float)z / 182.0f);
-
+		
 		uint8_t type = 0;
 
 		if (y == h) { // Áö¸é

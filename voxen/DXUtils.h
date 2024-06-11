@@ -17,10 +17,11 @@ using namespace Microsoft::WRL;
 using namespace DirectX;
 
 
-class DXUtils {
-public:
+namespace DXUtils {
+
 	template <typename V>
-	static bool CreateVertexBuffer(ComPtr<ID3D11Buffer>& vertexBuffer, std::vector<V>& vertices)
+	static bool CreateVertexBuffer(
+		ComPtr<ID3D11Buffer>& vertexBuffer, const std::vector<V>& vertices)
 	{
 		D3D11_BUFFER_DESC desc;
 		ZeroMemory(&desc, sizeof(desc));
@@ -42,7 +43,8 @@ public:
 	}
 
 
-	static bool CreateIndexBuffer(ComPtr<ID3D11Buffer>& indexBuffer, std::vector<uint32_t>& indices)
+	static bool CreateIndexBuffer(
+		ComPtr<ID3D11Buffer>& indexBuffer, const std::vector<uint32_t>& indices)
 	{
 		D3D11_BUFFER_DESC desc;
 		ZeroMemory(&desc, sizeof(desc));
@@ -65,7 +67,7 @@ public:
 
 	template <typename ConstantData>
 	static bool CreateConstantBuffer(
-		ComPtr<ID3D11Buffer>& constantBuffer, ConstantData& constantData)
+		ComPtr<ID3D11Buffer>& constantBuffer, const ConstantData& constantData)
 	{
 		D3D11_BUFFER_DESC desc;
 		ZeroMemory(&desc, sizeof(desc));
@@ -85,22 +87,50 @@ public:
 		return true;
 	}
 
+	static bool CreateInstanceBuffer(
+		ComPtr<ID3D11Buffer>& instanceBuffer, UINT maxCount)
+	{
+		D3D11_BUFFER_DESC desc;
+		ZeroMemory(&desc, sizeof(desc));
+		desc.ByteWidth = UINT(maxCount * sizeof(InstanceInfo));
+		desc.Usage = D3D11_USAGE_DYNAMIC;
+		desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+		desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+
+		HRESULT ret = Graphics::device->CreateBuffer(&desc, nullptr, instanceBuffer.GetAddressOf());
+		if (FAILED(ret))
+			return false;
+
+		return true;
+	}
+
 
 	template <typename ConstantData>
 	static void UpdateConstantBuffer(
-		ComPtr<ID3D11Buffer>& constantBuffer, ConstantData& constantData)
+		ComPtr<ID3D11Buffer>& constantBuffer, const ConstantData& constantData)
 	{
 		D3D11_MAPPED_SUBRESOURCE ms;
 
-		Graphics::context->Map(constantBuffer.Get(), NULL, D3D11_MAP_WRITE_DISCARD, NULL, &ms);
+		Graphics::context->Map(constantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &ms);
 		memcpy(ms.pData, &constantData, sizeof(ConstantData));
-		Graphics::context->Unmap(constantBuffer.Get(), NULL);
+		Graphics::context->Unmap(constantBuffer.Get(), 0);
+	}
+
+
+	static void UpdateInstanceBuffer(
+		ComPtr<ID3D11Buffer>& instanceBuffer, const std::vector<InstanceInfo>& instanceInfo)
+	{
+		D3D11_MAPPED_SUBRESOURCE ms;
+
+		Graphics::context->Map(instanceBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &ms);
+		memcpy(ms.pData, instanceInfo.data(), sizeof(InstanceInfo) * instanceInfo.size());
+		Graphics::context->Unmap(instanceBuffer.Get(), 0);
 	}
 
 
 	static bool CreateVertexShaderAndInputLayout(const std::wstring& filename,
 		ComPtr<ID3D11VertexShader>& vs, ComPtr<ID3D11InputLayout>& il,
-		std::vector<D3D11_INPUT_ELEMENT_DESC>& elementDesc)
+		const std::vector<D3D11_INPUT_ELEMENT_DESC>& elementDesc)
 	{
 		UINT compileFlags = 0;
 #if defined(DEBUG) || defined(_DEBUG)
@@ -132,6 +162,38 @@ public:
 			shaderBlob->GetBufferPointer(), shaderBlob->GetBufferSize(), il.GetAddressOf());
 		if (FAILED(ret))
 			return false;
+		return true;
+	}
+
+
+	static bool CreateGeometryShader(const std::wstring& filename, ComPtr<ID3D11GeometryShader>& gs)
+	{
+		UINT compileFlags = 0;
+#if defined(DEBUG) || defined(_DEBUG)
+		compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+#endif
+
+		ComPtr<ID3DBlob> shaderBlob = nullptr;
+		ComPtr<ID3DBlob> errorBlob = nullptr;
+
+		HRESULT ret = D3DCompileFromFile(
+			filename.c_str(), 0, 0, "main", "gs_5_0", compileFlags, 0, &shaderBlob, &errorBlob);
+		if (FAILED(ret)) {
+			if (errorBlob) {
+				OutputDebugStringA((char*)errorBlob->GetBufferPointer());
+				errorBlob->Release();
+			}
+			if (shaderBlob)
+				shaderBlob->Release();
+
+			return false;
+		}
+
+		ret = Graphics::device->CreateGeometryShader(
+			shaderBlob->GetBufferPointer(), shaderBlob->GetBufferSize(), 0, gs.GetAddressOf());
+		if (FAILED(ret))
+			return false;
+
 		return true;
 	}
 
@@ -218,7 +280,7 @@ public:
 	}
 
 	static ComPtr<ID3D11Texture2D> CreateStagingTexture(UINT width, UINT height,
-		std::vector<uint8_t>& image, UINT mipLevels = 1, UINT arraySize = 1,
+		const std::vector<uint8_t>& image, UINT mipLevels = 1, UINT arraySize = 1,
 		DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM, size_t pixelSize = sizeof(uint8_t) * 4)
 	{
 		D3D11_TEXTURE2D_DESC desc;

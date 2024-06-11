@@ -6,51 +6,94 @@
 
 #include <d3d11.h>
 #include <wrl.h>
-#include <vector>
 #include <directxtk/SimpleMath.h>
+#include <vector>
 
-using namespace Microsoft::WRL; 
+using namespace Microsoft::WRL;
 using namespace DirectX::SimpleMath;
 
 class Chunk {
 
 public:
-	Chunk();
-	~Chunk();
-
-	bool Initialize();
-	void Update(float dt);
-	void Render();
-	void Clear();
-
-	inline bool IsLoaded() { return m_isLoaded; }
-	inline bool IsEmpty() { return m_vertices.empty(); }
-
-	inline Vector3 GetPosition() { return m_position; }
-	inline void SetPosition(Vector3 position) { m_position = position; }
-
 	static const int CHUNK_SIZE = 32;
 	static const int CHUNK_SIZE2 = CHUNK_SIZE * CHUNK_SIZE;
 	static const int CHUNK_SIZE_P = CHUNK_SIZE + 2;
 	static const int CHUNK_SIZE_P2 = CHUNK_SIZE_P * CHUNK_SIZE_P;
 
+	Chunk(UINT id);
+	~Chunk();
+
+	void Initialize();
+	void Update(float dt);
+	void Clear();
+
+	inline UINT GetID() { return m_id; }
+
+	inline void SetLoad(bool isLoaded) { m_isLoaded = isLoaded; }
+	inline bool IsLoaded() { return m_isLoaded; }
+	inline bool IsEmpty() { return IsEmptyOpaque() && IsEmptyTransparency() && IsEmptySemiAlpha(); }
+
+	inline Vector3 GetPosition() { return m_position; }
+	inline void SetPosition(Vector3 position) { m_position = position; }
+
+	inline bool IsEmptyOpaque() { return m_opaqueVertices.empty(); }
+	inline bool IsEmptyTransparency() { return m_transparencyVertices.empty(); }
+	inline bool IsEmptySemiAlpha() { return m_semiAlphaVertices.empty(); }
+
+	inline const std::vector<VoxelVertex>& GetOpaqueVertices() const { return m_opaqueVertices; }
+	inline const std::vector<uint32_t>& GetOpaqueIndices() const { return m_opaqueIndices; }
+
+	inline const std::vector<VoxelVertex>& GetTransparencyVertices() const
+	{
+		return m_transparencyVertices;
+	}
+	inline const std::vector<uint32_t>& GetTransparantIndices() const
+	{
+		return m_transparencyIndices;
+	}
+
+	inline const std::vector<VoxelVertex>& GetSemiAlphaVertices() const
+	{
+		return m_semiAlphaVertices;
+	}
+	inline const std::vector<uint32_t>& GetSemiAlphaIndices() const { return m_semiAlphaIndices; }
+
+	inline const std::unordered_map<uint8_t, std::vector<Vector3>>& GetInstanceMap() const
+	{
+		return m_instanceMap;
+	}
+
+	inline const ChunkConstantData& GetConstantData() const { return m_constantData; }
+
+
 private:
-	void CreateQuad(int x, int y, int z, int merged, int length, int face, int type);
-	VoxelVertex MakeVertex(int x, int y, int z, int face, int type);
+	void InitChunkData();
+	void InitInstanceInfoData();
+	void InitWorldVerticesData();
 
-	bool m_isLoaded;
+	void MakeFaceSliceColumnBit(uint64_t cullColBit[CHUNK_SIZE_P2 * 6],
+		uint64_t sliceColBit[Block::BLOCK_TYPE_COUNT][CHUNK_SIZE2 * 6]);
+	void GreedyMeshing(uint64_t faceColBit[CHUNK_SIZE2 * 6], std::vector<VoxelVertex>& vertices,
+		std::vector<uint32_t>& indices, uint8_t type);
 
-	Vector3 m_position;
+	bool IsOuter(int x, int y, int z);
 
 	Block m_blocks[CHUNK_SIZE_P][CHUNK_SIZE_P][CHUNK_SIZE_P];
 
-	std::vector<VoxelVertex> m_vertices;
-	std::vector<uint32_t> m_indices;
+	UINT m_id;
+	bool m_isLoaded;
+	Vector3 m_position;
+
+	std::vector<VoxelVertex> m_opaqueVertices;
+	std::vector<uint32_t> m_opaqueIndices;
+
+	std::vector<VoxelVertex> m_transparencyVertices;
+	std::vector<uint32_t> m_transparencyIndices;
+
+	std::vector<VoxelVertex> m_semiAlphaVertices;
+	std::vector<uint32_t> m_semiAlphaIndices;
+
 	ChunkConstantData m_constantData;
 
-	UINT m_stride;
-	UINT m_offset;
-	ComPtr<ID3D11Buffer> m_vertexBuffer;
-	ComPtr<ID3D11Buffer> m_indexBuffer;
-	ComPtr<ID3D11Buffer> m_constantBuffer;
+	std::unordered_map<uint8_t, std::vector<Vector3>> m_instanceMap;
 };

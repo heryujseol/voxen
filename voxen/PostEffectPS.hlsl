@@ -66,7 +66,7 @@ float HenyeyGreensteinPhase(float3 L, float3 V, float aniso)
 
 float4 main(SamplingPixelShaderInput input) : SV_TARGET
 {
-    ////Beer-Lambert law
+    //Beer-Lambert law
     float3 fogColor = normalHorizonColor;
     float fogMin = 280.0;
     float fogMax = 320.0;

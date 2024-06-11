@@ -19,6 +19,7 @@ namespace Graphics {
 	extern ComPtr<ID3D11InputLayout> skyboxIL;
 	extern ComPtr<ID3D11InputLayout> cloudIL;
 	extern ComPtr<ID3D11InputLayout> samplingIL;
+	extern ComPtr<ID3D11InputLayout> instanceIL;
 
 	extern ComPtr<ID3D11InputLayout> depthOnlyIL;
 
@@ -30,6 +31,8 @@ namespace Graphics {
 	extern ComPtr<ID3D11VertexShader> samplingVS;
 	
 	extern ComPtr<ID3D11VertexShader> depthOnlyVS;
+	extern ComPtr<ID3D11VertexShader> instanceVS;
+
 
 
 	// Pixel Shader
@@ -37,6 +40,7 @@ namespace Graphics {
 	extern ComPtr<ID3D11PixelShader> skyboxPS;
 	extern ComPtr<ID3D11PixelShader> cloudPS;
 	extern ComPtr<ID3D11PixelShader> samplingPS;
+	extern ComPtr<ID3D11PixelShader> instancePS;
 
 	extern ComPtr<ID3D11PixelShader> depthOnlyPS;
 
@@ -44,6 +48,7 @@ namespace Graphics {
 	// Rasterizer State
 	extern ComPtr<ID3D11RasterizerState> solidRS;
 	extern ComPtr<ID3D11RasterizerState> wireRS;
+	extern ComPtr<ID3D11RasterizerState> instanceRS;
 
 
 	// Sampler State
@@ -121,6 +126,7 @@ namespace Graphics {
 	// VS, IL, PS, RS, SS, DSS (+ HS, DS, GS, BS ...)
 	extern bool InitGraphicsState();
 	extern bool InitVertexShaderAndInputLayouts();
+	extern bool InitGeometryShaders();
 	extern bool InitPixelShaders();
 	extern bool InitRasterizerStates();
 	extern bool InitSamplerStates();
@@ -139,4 +145,5 @@ namespace Graphics {
 
 	extern GraphicsPSO depthOnlyPSO;
 	extern GraphicsPSO postEffectPSO;
+	extern GraphicsPSO instancePSO;
 }
