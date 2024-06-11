@@ -20,8 +20,7 @@ using namespace DirectX;
 class DXUtils {
 public:
 	template <typename V>
-	static bool CreateVertexBuffer(ComPtr<ID3D11Buffer>& vertexBuffer,
-		std::vector<V>& vertices)
+	static bool CreateVertexBuffer(ComPtr<ID3D11Buffer>& vertexBuffer, std::vector<V>& vertices)
 	{
 		D3D11_BUFFER_DESC desc;
 		ZeroMemory(&desc, sizeof(desc));
@@ -181,8 +180,8 @@ public:
 		viewport.MaxDepth = 1.0f;
 	}
 
-	static bool CreateTextureBuffer(
-		ComPtr<ID3D11Texture2D>& buffer, UINT width, UINT height, bool isMSAA, DXGI_FORMAT format, UINT bindFlags)
+	static bool CreateTextureBuffer(ComPtr<ID3D11Texture2D>& buffer, UINT width, UINT height,
+		bool isMSAA, DXGI_FORMAT format, UINT bindFlags)
 	{
 		D3D11_TEXTURE2D_DESC desc;
 		ZeroMemory(&desc, sizeof(desc));
@@ -242,14 +241,112 @@ public:
 		Graphics::context->Map(stagingTexture.Get(), NULL, D3D11_MAP_WRITE, NULL, &ms);
 		uint8_t* pData = (uint8_t*)ms.pData;
 		for (UINT h = 0; h < UINT(height); h++) { // °¡·ÎÁÙ ÇÑ ÁÙ¾¿ º¹»ç
-			memcpy(&pData[h * ms.RowPitch], &image[(size_t)h * width * pixelSize], width * pixelSize);
+			memcpy(
+				&pData[h * ms.RowPitch], &image[(size_t)h * width * pixelSize], width * pixelSize);
 		}
 		Graphics::context->Unmap(stagingTexture.Get(), NULL);
 
 		return stagingTexture;
 	}
 
-	static bool CreateTextureFromFile(ComPtr<ID3D11Texture2D>& texture,
+	static bool CreateTextureArrayFromAtlasFile(ComPtr<ID3D11Texture2D>& texture,
+		ComPtr<ID3D11ShaderResourceView>& srv, std::string filename,
+		DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM, size_t pixelSize = 4, UINT tileSizeW = 128,
+		UINT tileSizeH = 128, UINT tileCountW = 16, UINT tileCountH = 16)
+	{
+		// Read Atlas image
+		int width, height, channel = 4;
+		std::vector<uint8_t> imageData;
+		Utils::ReadImage(filename, imageData, width, height);
+
+
+		// Convert image data to tile image data array
+		std::vector<std::vector<uint8_t>> imageArray;
+
+		UINT rowPitch = tileSizeW * channel * tileCountW;
+		UINT sliceRowPitch = tileSizeH * rowPitch;
+
+		for (UINT y = 0; y < tileCountH; ++y) {
+			UINT sliceHeight = sliceRowPitch * y;
+			for (UINT x = 0; x < tileCountW; ++x) {
+				UINT sliceWidth = tileSizeW * channel * x;
+
+				std::vector<uint8_t> tileData;
+				for (UINT h = 0; h < tileSizeH; ++h) {
+					for (UINT w = 0; w < tileSizeW; ++w) {
+						tileData.push_back(
+							imageData[sliceHeight + sliceWidth + h * rowPitch + channel * w]);
+						tileData.push_back(
+							imageData[sliceHeight + sliceWidth + h * rowPitch + channel * w + 1]);
+						tileData.push_back(
+							imageData[sliceHeight + sliceWidth + h * rowPitch + channel * w + 2]);
+						tileData.push_back(
+							imageData[sliceHeight + sliceWidth + h * rowPitch + channel * w + 3]);
+					}
+				}
+
+				imageArray.push_back(tileData);
+			}
+		}
+
+
+		// Create TextureArray without initData
+		D3D11_TEXTURE2D_DESC desc;
+		ZeroMemory(&desc, sizeof(desc));
+		desc.Width = tileSizeW;
+		desc.Height = tileSizeH;
+		desc.MipLevels = 0;
+		desc.ArraySize = tileCountW * tileCountH;
+		desc.Format = format;
+		desc.SampleDesc.Count = 1;
+		desc.SampleDesc.Quality = 0;
+		desc.Usage = D3D11_USAGE_DEFAULT; // ½ºÅ×ÀÌÂ¡ ÅØ½ºÃç·ÎºÎÅÍ º¹»ç
+		desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET; // ¹Ó¸Ê »ç¿ë
+		desc.MiscFlags = D3D11_RESOURCE_MISC_GENERATE_MIPS;						// ¹Ó¸Ê »ç¿ë
+
+		HRESULT ret = Graphics::device->CreateTexture2D(&desc, nullptr, texture.GetAddressOf());
+		if (FAILED(ret)) {
+			return false;
+		}
+		texture->GetDesc(&desc);
+
+		// Create StagingTexture, Copy to Origin Texture
+		for (UINT i = 0; i < desc.ArraySize; ++i) {
+			auto& image = imageArray[i];
+
+			ComPtr<ID3D11Texture2D> tempStagingTexture =
+				CreateStagingTexture(tileSizeW, tileSizeH, image, 1, 1, format, pixelSize);
+			if (!tempStagingTexture)
+				return false;
+
+			UINT subresourceIndex =
+				D3D11CalcSubresource(0, i, desc.MipLevels); // MipSlice + ArraySlice * MipLevels
+
+			Graphics::context->CopySubresourceRegion(
+				texture.Get(), subresourceIndex, 0, 0, 0, tempStagingTexture.Get(), 0, nullptr);
+		}
+
+		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+		ZeroMemory(&srvDesc, sizeof(srvDesc));
+		srvDesc.Format = desc.Format;
+		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+		srvDesc.Texture2DArray.MostDetailedMip = 0;
+		srvDesc.Texture2DArray.MipLevels = desc.MipLevels;
+		srvDesc.Texture2DArray.FirstArraySlice = 0;
+		srvDesc.Texture2DArray.ArraySize = desc.ArraySize;
+
+		// Generate Mips
+		ret =
+			Graphics::device->CreateShaderResourceView(texture.Get(), nullptr, srv.GetAddressOf());
+		if (FAILED(ret))
+			return false;
+
+		Graphics::context->GenerateMips(srv.Get());
+
+		return true;
+	}
+
+	static bool CreateTexture2DFromFile(ComPtr<ID3D11Texture2D>& texture,
 		ComPtr<ID3D11ShaderResourceView>& srv, std::string filename,
 		DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM, size_t pixelSize = 4)
 	{
@@ -257,7 +354,8 @@ public:
 		std::vector<uint8_t> image;
 		Utils::ReadImage(filename, image, width, height);
 
-		ComPtr<ID3D11Texture2D> stagingTexture = CreateStagingTexture(width, height, image, 0, 1, format, pixelSize);
+		ComPtr<ID3D11Texture2D> stagingTexture =
+			CreateStagingTexture(width, height, image, 0, 1, format, pixelSize);
 
 		D3D11_TEXTURE2D_DESC desc;
 		ZeroMemory(&desc, sizeof(desc));
@@ -282,9 +380,9 @@ public:
 		ret = Graphics::device->CreateShaderResourceView(texture.Get(), 0, srv.GetAddressOf());
 		if (FAILED(ret))
 			return false;
-			
+
 		Graphics::context->GenerateMips(srv.Get());
-		
+
 		return true;
 	}
 
@@ -300,8 +398,8 @@ public:
 
 		HRESULT ret = CreateDDSTextureFromFileEx(Graphics::device.Get(), filename.c_str(), 0,
 			D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE, 0, miscFlags,
-			DDS_LOADER_FLAGS(DDS_LOADER_DEFAULT),
-			(ID3D11Resource**)texture.GetAddressOf(), srv.GetAddressOf(), nullptr);
+			DDS_LOADER_FLAGS(DDS_LOADER_DEFAULT), (ID3D11Resource**)texture.GetAddressOf(),
+			srv.GetAddressOf(), nullptr);
 		if (FAILED(ret))
 			return false;
 

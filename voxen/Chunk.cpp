@@ -24,6 +24,7 @@ bool Chunk::Initialize()
 	std::fill(axisColBit, axisColBit + CHUNK_SIZE_P2 * 3, 0);
 	std::unordered_map<uint8_t, bool> typeMap;
 
+
 	for (int x = 0; x < CHUNK_SIZE_P; ++x) {
 		for (int z = 0; z < CHUNK_SIZE_P; ++z) {
 			int nx = (int)m_position.x + x - 1;
@@ -31,29 +32,26 @@ bool Chunk::Initialize()
 			int height = Terrain::GetHeight(nx, nz);
 			
 			for (int y = 0; y < CHUNK_SIZE_P; ++y) {
+
 				int ny = m_position.y + y;
 				if (-64 <= ny && (ny <= height /* || height <= 62*/)) {
 					uint8_t type = 8;
-					//Terrain::GetType(nx, ny, nz, height);
+					//Terrain::GetType(nx, ny, nz, height
 					m_blocks[x][y][z].SetType(type);
 					typeMap[type] = true;
 
 					if (type) {
 						// x dir column
-						axisColBit[Utils::GetIndexFrom3D(0, y, z, CHUNK_SIZE_P)] |=
-							(1ULL << x);
+						axisColBit[Utils::GetIndexFrom3D(0, y, z, CHUNK_SIZE_P)] |= (1ULL << x);
 						// y dir column
-						axisColBit[Utils::GetIndexFrom3D(1, z, x, CHUNK_SIZE_P)] |=
-							(1ULL << y);
+						axisColBit[Utils::GetIndexFrom3D(1, z, x, CHUNK_SIZE_P)] |= (1ULL << y);
 						// z dir column
-						axisColBit[Utils::GetIndexFrom3D(2, y, x, CHUNK_SIZE_P)] |=
-							(1ULL << z);
+						axisColBit[Utils::GetIndexFrom3D(2, y, x, CHUNK_SIZE_P)] |= (1ULL << z);
 					}
 				}
 			}
 		}
 	}
-
 
 	// 2. cull face column bit
 	// 0: x axis & left->right side (- => + : dir +)
@@ -261,17 +259,18 @@ void Chunk::CreateQuad(int x, int y, int z, int merged, int length, int face, in
 {
 	uint32_t originVertexSize = (uint32_t)m_vertices.size();
 
+	// order by vertexID for texcoord
 	if (face == 0) { // left
-		m_vertices.push_back(MakeVertex(x, y, z, face, type));
-		m_vertices.push_back(MakeVertex(x, y, z + merged, face, type));
-		m_vertices.push_back(MakeVertex(x, y + length, z + merged, face, type));
-		m_vertices.push_back(MakeVertex(x, y + length, z, face, type));
+		m_vertices.push_back(MakeVertex(x, y + length, z + merged, face, type)); // 0, 0
+		m_vertices.push_back(MakeVertex(x, y + length, z, face, type)); // 1, 0
+		m_vertices.push_back(MakeVertex(x, y, z, face, type)); // 1, 1
+		m_vertices.push_back(MakeVertex(x, y, z + merged, face, type)); // 0, 1
 	}
 	else if (face == 1) { // right
-		m_vertices.push_back(MakeVertex(x, y, z, face, type));
 		m_vertices.push_back(MakeVertex(x, y + length, z, face, type));
 		m_vertices.push_back(MakeVertex(x, y + length, z + merged, face, type));
 		m_vertices.push_back(MakeVertex(x, y, z + merged, face, type));
+		m_vertices.push_back(MakeVertex(x, y, z, face, type));
 	}
 	else if (face == 2) { // bottom
 		m_vertices.push_back(MakeVertex(x, y, z, face, type));
@@ -280,22 +279,22 @@ void Chunk::CreateQuad(int x, int y, int z, int merged, int length, int face, in
 		m_vertices.push_back(MakeVertex(x, y, z + length, face, type));
 	}
 	else if (face == 3) { // top
-		m_vertices.push_back(MakeVertex(x, y, z, face, type));
 		m_vertices.push_back(MakeVertex(x, y, z + length, face, type));
 		m_vertices.push_back(MakeVertex(x + merged, y, z + length, face, type));
 		m_vertices.push_back(MakeVertex(x + merged, y, z, face, type));
+		m_vertices.push_back(MakeVertex(x, y, z, face, type));
 	}
 	else if (face == 4) { // front
-		m_vertices.push_back(MakeVertex(x, y, z, face, type));
 		m_vertices.push_back(MakeVertex(x, y + length, z, face, type));
 		m_vertices.push_back(MakeVertex(x + merged, y + length, z, face, type));
 		m_vertices.push_back(MakeVertex(x + merged, y, z, face, type));
+		m_vertices.push_back(MakeVertex(x, y, z, face, type));
 	}
 	else if (face == 5) { // back
-		m_vertices.push_back(MakeVertex(x, y, z, face, type));
-		m_vertices.push_back(MakeVertex(x + merged, y, z, face, type));
 		m_vertices.push_back(MakeVertex(x + merged, y + length, z, face, type));
 		m_vertices.push_back(MakeVertex(x, y + length, z, face, type));
+		m_vertices.push_back(MakeVertex(x, y, z, face, type));
+		m_vertices.push_back(MakeVertex(x + merged, y, z, face, type));
 	}
 
 	m_indices.push_back(originVertexSize);

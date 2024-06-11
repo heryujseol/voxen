@@ -109,7 +109,7 @@ float4 main(vsOutput input) : SV_TARGET
     float3 posDir = normalize(input.posWorld);
     
     float sunAltitude = sin(sunDir.y);
-    float showSectionAltitude = -PI / 6.0;
+    float showSectionAltitude = -PI * 0.5 * (1.7 / 6.0);
     
     // sun
     float maxSunSize = 220.0f;

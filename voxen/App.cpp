@@ -99,10 +99,10 @@ void App::Run()
 			DispatchMessage(&msg);
 		}
 		else {
-			ImGui_ImplDX11_NewFrame(); // GUI ÇÁ·¹ÀÓ ½ÃÀÛ
+			ImGui_ImplDX11_NewFrame(); // GUI í”„ë ˆìž„ ì‹œìž‘
 			ImGui_ImplWin32_NewFrame();
 
-			ImGui::NewFrame(); // ¾î¶² °ÍµéÀ» ·»´õ¸µ ÇÒÁö ±â·Ï ½ÃÀÛ
+			ImGui::NewFrame(); // ì–´ë–¤ ê²ƒë“¤ì„ ë Œë”ë§ í• ì§€ ê¸°ë¡ ì‹œìž‘
 			ImGui::Begin("Scene Control");
 			ImGui::Text("Average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate,
 				ImGui::GetIO().Framerate);
@@ -110,13 +110,15 @@ void App::Run()
 			ImGui::Text("SunDir : %.2f %.2f", sun.x, sun.y);
 			uint32_t time = m_skybox.GetTime();
 			ImGui::Text("time : %d", time);
+			ImGui::Text("x : %.0f y : %.0f z : %.0f", m_camera.GetPosition().x,
+				m_camera.GetPosition().y, m_camera.GetPosition().z);
 			ImGui::End();
-			ImGui::Render(); // ·»´õ¸µÇÒ °Íµé ±â·Ï ³¡
+			ImGui::Render(); // ë Œë”ë§í•  ê²ƒë“¤ ê¸°ë¡ ë
 
 			Update(ImGui::GetIO().DeltaTime);
-			Render(); // ¿ì¸®°¡ ±¸ÇöÇÑ ·»´õ¸µ
+			Render(); // ìš°ë¦¬ê°€ êµ¬í˜„í•œ ë Œë”ë§
 
-			ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData()); // GUI ·»´õ¸µ
+			ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData()); // GUI ë Œë”ë§
 
 			Graphics::swapChain->Present(1, 0);
 		}
@@ -139,7 +141,7 @@ void App::Update(float dt)
 
 void App::Render()
 {
-	// °øÅë ·ÎÁ÷
+	// ê³µí†µ ë¡œì§
 	DXUtils::UpdateViewport(Graphics::basicViewport, 0, 0, m_width, m_height);
 	Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
 
@@ -189,7 +191,7 @@ void App::Render()
 	Graphics::context->ResolveSubresource(Graphics::backBuffer.Get(), 0,
 		Graphics::basicRenderBuffer.Get(), 0, DXGI_FORMAT_R8G8B8A8_UNORM);
 
-	// GUI ·»´õ¸µÀ» À§ÇÑ RTV Àç¼³Á¤
+	// GUI ë Œë”ë§ì„ ìœ„í•œ RTV ìž¬ì„¤ì •
 	Graphics::context->OMSetRenderTargets(1, Graphics::backBufferRTV.GetAddressOf(), nullptr);
 }
 

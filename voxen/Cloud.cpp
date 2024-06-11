@@ -8,11 +8,16 @@ Cloud::Cloud()
 	  m_height(192.0f), m_stride(sizeof(CloudVertex)), m_offset(0),
 	  m_samplingStride(sizeof(SamplingVertex)), m_samplingOffset(0)
 {
+	m_map.resize(CLOUD_MAP_SIZE);
 	for (int i = 0; i < CLOUD_MAP_SIZE; ++i) {
-		std::fill(m_map[i], m_map[i] + CLOUD_MAP_SIZE, false);
+		m_map[i].resize(CLOUD_MAP_SIZE);
+		std::fill(m_map[i].begin(), m_map[i].end(), false);
 	}
+
+	m_dataMap.resize(CLOUD_DATA_MAP_SIZE);
 	for (int i = 0; i < CLOUD_DATA_MAP_SIZE; ++i) {
-		std::fill(m_dataMap[i], m_dataMap[i] + CLOUD_DATA_MAP_SIZE, false);
+		m_dataMap[i].resize(CLOUD_DATA_MAP_SIZE);
+		std::fill(m_dataMap[i].begin(), m_dataMap[i].end(), false);
 	}
 };
 
@@ -26,7 +31,7 @@ bool Cloud::Initialize(Vector3 cameraPosition)
 				(float)j / CLOUD_DATA_MAP_SIZE, CLOUD_DATA_MAP_SIZE * 0.125f, 3);
 			float noise2 = Utils::PerlinFbm((float)i / CLOUD_DATA_MAP_SIZE,
 				(float)j / CLOUD_DATA_MAP_SIZE, CLOUD_DATA_MAP_SIZE * 0.5f, 1);
-			m_dataMap[i][j] = noise1 > 0.2f || noise2 > 0.5f;
+			m_dataMap[i][j] = noise1 > 0.2f || noise2 > 0.45f;
 		}
 	}
 

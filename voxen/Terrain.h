@@ -210,7 +210,7 @@ namespace Terrain {
 
 		uint8_t type = 0;
 
-		if (y == h) { // Áö¸é
+		if (y == h) { // ÃÃ¶Â¸Ã©
 			if (y > 140) {
 				if (t > 0.6f)
 					type = 6;

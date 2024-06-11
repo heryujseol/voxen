@@ -147,7 +147,6 @@ namespace Utils {
 		return (int)((noise + 1.0f) * 24.0f); // [0, 48]
 	}
 
-
 	static void ReadImage(
 		const std::string filename, std::vector<uint8_t>& image, int& width, int& height)
 	{

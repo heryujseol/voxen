@@ -25,7 +25,7 @@ public:
 	static const int MAX_HEIGHT_CHUNK_COUNT = MAX_HEIGHT / Chunk::CHUNK_SIZE;
 	static const int CHUNK_COUNT_P = CHUNK_COUNT + 2;
 	static const int MAX_HEIGHT_CHUNK_COUNT_P = MAX_HEIGHT_CHUNK_COUNT + 2;
-	static const int MAX_ASYNC_LOAD_COUNT = 4;
+	static const int MAX_ASYNC_LOAD_COUNT = 1;
 
 private:
 	void UpdateChunkList(Vector3 cameraChunkPos);
