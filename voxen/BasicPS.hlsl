@@ -1,5 +1,7 @@
-SamplerState pointWrapSS : register(s0);
 Texture2DArray atlasTextureArray : register(t0);
+Texture2D grassColorMap : register(t1);
+
+SamplerState pointWrapSS : register(s0);
 
 cbuffer CameraConstantBuffer : register(b0)
 {
@@ -8,6 +10,20 @@ cbuffer CameraConstantBuffer : register(b0)
     float3 eyePos;
     float dummy;
 }
+
+cbuffer SkyboxConstantBuffer : register(b1)
+{
+    float3 sunDir;
+    float skyScale;
+    float3 normalHorizonColor;
+    uint dateTime;
+    float3 normalZenithColor;
+    float sunStrength;
+    float3 sunHorizonColor;
+    float moonStrength;
+    float3 sunZenithColor;
+    float dummy3;
+};
 
 struct vsOutput
 {
@@ -50,35 +66,71 @@ float2 getVoxelTexcoord(float3 pos, uint face)
     return texcoord;
 }
 
-float3 getFaceColor(uint face)
+float3 getNormal(uint face)
 {
-    if (face == 0 || face == 1)
+    if (face == 0)
     {
-        return float3(0.86, 0.86, 0.86);
+        return float3(-1.0, 0.0, 0.0);
     }
-    else if (face == 4 || face == 5)
+    else if (face == 1)
     {
-        return float3(0.80, 0.80, 0.80);
+        return float3(1.0, 0.0, 0.0);
+    }
+    else if (face == 2)
+    {
+        return float3(0.0, -1.0, 0.0);
     }
     else if (face == 3)
     {
-        return float3(1.0, 1.0, 1.0);
+        return float3(0.0, 1.0, 0.0);
+    }
+    else if (face == 4)
+    {
+        return float3(0.0, 0.0, -1.0);
     }
     else
     {
-        return float3(0.75, 0.75, 0.75);
+        return float3(0.0, 0.0, 1.0);
     }
 }
 
 float4 main(vsOutput input) : SV_TARGET
 {
-    float2 texcoord = getVoxelTexcoord(input.posModel, input.face);
+
+    //float temperature = 0.5;
+    //float downfall = 1.0;
+    //float4 biome = grassColorMap.SampleLevel(pointClampSS, float2(1 - temperature, 1 - temperature / downfall), 0.0);
     
+    float2 texcoord = getVoxelTexcoord(input.posModel, input.face);
+
     uint index = (input.type - 1) * 6 + input.face;
     
-    float3 color = atlasTextureArray.Sample(pointWrapSS, float3(texcoord, index)).xyz;
+    float3 color = atlasTextureArray.Sample(pointWrapSS, float3(texcoord, index)).rgb * 0.3;
     
-    color *= getFaceColor(input.face);
+    float3 normal = getNormal(input.face);
+    
+    float ndotl = max(dot(sunDir, normal), 0.0);
+    
+    float strength = sunStrength;
+    
+    if (13700 <= dateTime && dateTime <= 14700)
+    {
+        float w = (dateTime - 13700) / 1000.0;
+        color = lerp(color * (strength + 1.0) * (ndotl + 1.0), color, w);
+    }
+    else if (21300 <= dateTime && dateTime <= 22300)
+    {
+        float w = (dateTime - 21300) / 1000.0;
+        color = lerp(color, color * (strength + 1.0) * (ndotl + 1.0), w);
+    }
+    else if (14700 < dateTime && dateTime < 21300)
+    {
+        color = color * (strength + 1.0);
+    }
+    else
+    {
+        color = color * (strength + 1.0) * (ndotl + 1.0);
+    }
 
     return float4(color, 0.0);
 }

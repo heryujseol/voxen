@@ -37,7 +37,7 @@ namespace Terrain {
 	
 	static float Smootherstep(float a, float b, float w)
 	{
-		return (b - a) * ((w * (w * 6.0f - 15.0f) + 10.0f) * w * w * w) + a;
+		return (b - a) * ((w * (w * 6.0 - 15.0) + 10.0) * w * w * w) + a;
 	}
 
 	static float CubicLerp(float a, float b, float w)
@@ -210,7 +210,7 @@ namespace Terrain {
 
 		uint8_t type = 0;
 
-		if (y == h) { // Áö¸é
+		if (y == h) { // ÃÃ¶Â¸Ã©
 			if (y > 140) {
 				if (t > 0.6f)
 					type = 6;
