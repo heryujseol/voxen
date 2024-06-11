@@ -31,6 +31,8 @@ private:
 	void Update(float dt);
 	void Render();
 
+	void depthMapRender();
+
 	UINT m_width;
 	UINT m_height;
 	HWND m_hwnd;

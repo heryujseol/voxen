@@ -7,7 +7,6 @@ cbuffer CameraConstantBuffer : register(b0)
 {
     matrix view;
     matrix proj;
-    matrix dummy;
     float3 eyePos;
     float dummy1;
     float3 eyeDir;

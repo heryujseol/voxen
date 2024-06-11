@@ -144,12 +144,6 @@ void App::Render()
 	Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
 
 	const FLOAT clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-	/*Graphics::context->ClearRenderTargetView(Graphics::basicRTV.Get(), clearColor);
-	Graphics::context->ClearDepthStencilView(
-		Graphics::basicDSV.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);*/
-
-	/*Graphics::context->OMSetRenderTargets(
-		1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());*/
 
 	Graphics::context->VSSetConstantBuffers(0, 1, m_camera.m_constantBuffer.GetAddressOf());
 	std::vector<ID3D11Buffer*> pptr = { m_camera.m_constantBuffer.Get(),
@@ -157,22 +151,9 @@ void App::Render()
 	Graphics::context->PSSetConstantBuffers(0, 2, pptr.data());
 
 
-	// depthOnly
-	{
-		Graphics::context->OMSetRenderTargets(0, NULL, Graphics::depthOnlyDSV.Get());
-		Graphics::context->ClearDepthStencilView(
-			Graphics::depthOnlyDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
+	//depthMap
+	depthMapRender();
 
-		// Graphics::SetPipelineStates(Graphics::depthOnlyPSO);
-		Graphics::SetPipelineStates(Graphics::basicPSO);
-		m_chunkManager.Render(m_camera);
-
-		// Graphics::SetPipelineStates(Graphics::skyboxPSO);
-		// m_skybox.Render();
-
-		// Graphics::SetPipelineStates(Graphics::cloudPSO);
-		// m_cloud.Render();
-	}
 
 	Graphics::context->ClearRenderTargetView(Graphics::basicRTV.Get(), clearColor);
 	Graphics::context->OMSetRenderTargets(
@@ -203,18 +184,6 @@ void App::Render()
 	Graphics::SetPipelineStates(Graphics::cloudPSO);
 	m_cloud.Render();
 
-	
-	//Graphics::context->OMSetRenderTargets(
-	//	1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
-	//Graphics::context->ClearDepthStencilView(
-	//	Graphics::basicDSV.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
-
-	//// skybox
-	//Graphics::SetPipelineStates(Graphics::skyboxPSO);
-	//m_skybox.Render();
-
-
-	
 	
 	// RTV -> backBuffer
 	Graphics::context->ResolveSubresource(Graphics::backBuffer.Get(), 0,
@@ -312,4 +281,14 @@ bool App::InitScene()
 		return false;
 
 	return true;
+}
+
+void App::depthMapRender()
+{
+	Graphics::context->OMSetRenderTargets(0, NULL, Graphics::depthOnlyDSV.Get());
+	Graphics::context->ClearDepthStencilView(
+		Graphics::depthOnlyDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
+
+	Graphics::SetPipelineStates(Graphics::basicPSO);
+	m_chunkManager.Render(m_camera);
 }

@@ -23,11 +23,11 @@ struct SamplingVertex {
 struct CameraConstantData {
 	Matrix view;
 	Matrix proj;
-	Matrix invProj;
 	Vector3 eyePos;
 	float dummy1;
 	Vector3 eyeDir;
 	float dummy2;
+	Matrix invProj;
 };
 
 struct ChunkConstantData {

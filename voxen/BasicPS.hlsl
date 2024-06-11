@@ -7,9 +7,8 @@ cbuffer CameraConstantBuffer : register(b0)
 {
     matrix view;
     matrix proj;
-    matrix dummy;
     float3 eyePos;
-    float dummy2;
+    float dummy;
 }
 
 cbuffer SkyboxConstantBuffer : register(b1)
