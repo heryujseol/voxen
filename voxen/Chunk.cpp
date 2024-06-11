@@ -57,7 +57,7 @@ void Chunk::InitChunkData()
 			for (int y = 0; y < CHUNK_SIZE_P; ++y) {
 				m_blocks[x][y][z].SetType(0);
 
-				int ny = (int)m_position.y + y;
+				int ny = (int)m_position.y + y - 1;
 				if (-64 <= ny && (ny <= height || height <= 62)) {
 					uint8_t type = Terrain::GetType(nx, ny, nz, height, t);
 
@@ -67,7 +67,7 @@ void Chunk::InitChunkData()
 				/////////////////////////////
 				// for instance testing
 				if (height + 2 <= ny && ny <= height + 4 &&
-					(x % 6 != 0 && x % 6 != 5 && z % 6 != 0 && z % 6 != 5)) {
+					(nx % 6 != 0 && nx % 6 != 5 && nz % 6 != 0 && nz % 6 != 5)) {
 					m_blocks[x][y][z].SetType(10);
 				}
 				/////////////////////////////
@@ -99,13 +99,22 @@ void Chunk::InitWorldVerticesData()
 	std::unordered_map<uint8_t, bool> saTypeMap;
 
 	static uint64_t opColBit[CHUNK_SIZE_P2 * 3];
-	static uint64_t tpColBit[CHUNK_SIZE_P2 * 3];
-	static uint64_t saColBit[CHUNK_SIZE_P2 * 3];
+	static uint64_t opCullColBit[CHUNK_SIZE_P2 * 6];
+	static uint64_t tpCullColBit[CHUNK_SIZE_P2 * 6];
+	static uint64_t saCullColBit[CHUNK_SIZE_P2 * 6];
 
 	std::fill(opColBit, opColBit + CHUNK_SIZE_P2 * 3, 0);
-	std::fill(tpColBit, tpColBit + CHUNK_SIZE_P2 * 3, 0);
-	std::fill(saColBit, saColBit + CHUNK_SIZE_P2 * 3, 0);
+	std::fill(opCullColBit, opCullColBit + CHUNK_SIZE_P2 * 6, 0);
+	std::fill(tpCullColBit, tpCullColBit + CHUNK_SIZE_P2 * 6, 0);
+	std::fill(saCullColBit, saCullColBit + CHUNK_SIZE_P2 * 6, 0);
 
+	// 1. cull face column bit
+	// 0: x axis & left->right side (- => + : dir +)
+	// 1: x axis & right->left side (+ => - : dir -)
+	// 2: y axis & bottom->top side (- => + : dir +)
+	// 3: y axis & top->bottom side (+ => - : dir -)
+	// 4: z axis & front->back side (- => + : dir +)
+	// 5: z axis & back->front side (+ => - : dir -)
 	for (int x = 0; x < CHUNK_SIZE_P; ++x) {
 		for (int y = 0; y < CHUNK_SIZE_P; ++y) {
 			for (int z = 0; z < CHUNK_SIZE_P; ++z) {
@@ -114,22 +123,58 @@ void Chunk::InitWorldVerticesData()
 					continue;
 
 				if (Block::IsTransparency(type)) {
-					// x dir column
-					tpColBit[Utils::GetIndexFrom3D(0, y, z, CHUNK_SIZE_P)] |= (1ULL << x);
-					// y dir column
-					tpColBit[Utils::GetIndexFrom3D(1, z, x, CHUNK_SIZE_P)] |= (1ULL << y);
-					// z dir column
-					tpColBit[Utils::GetIndexFrom3D(2, y, x, CHUNK_SIZE_P)] |= (1ULL << z);
+					// 타입이 같거나 불투명 블록이면 메쉬를 생성하지 않음
+					if (x - 1 >= 0 && type != m_blocks[x - 1][y][z].GetType() &&
+						!Block::IsOpaqua(m_blocks[x - 1][y][z].GetType())) {
+						tpCullColBit[Utils::GetIndexFrom3D(0, y, z, CHUNK_SIZE_P)] |= (1ULL << x);
+					}
+					if (x + 1 < CHUNK_SIZE_P && type != m_blocks[x + 1][y][z].GetType() &&
+						!Block::IsOpaqua(m_blocks[x + 1][y][z].GetType())) {
+						tpCullColBit[Utils::GetIndexFrom3D(1, y, z, CHUNK_SIZE_P)] |= (1ULL << x);
+					}
+
+					if (y - 1 >= 0 && type != m_blocks[x][y - 1][z].GetType() &&
+						!Block::IsOpaqua(m_blocks[x][y - 1][z].GetType())) {
+						tpCullColBit[Utils::GetIndexFrom3D(2, z, x, CHUNK_SIZE_P)] |= (1ULL << y);
+					}
+					if (y + 1 < CHUNK_SIZE_P && type != m_blocks[x][y + 1][z].GetType() &&
+						!Block::IsOpaqua(m_blocks[x][y + 1][z].GetType())) {
+						tpCullColBit[Utils::GetIndexFrom3D(3, z, x, CHUNK_SIZE_P)] |= (1ULL << y);
+					}
+
+					if (z - 1 >= 0 && type != m_blocks[x][y][z - 1].GetType() &&
+						!Block::IsOpaqua(m_blocks[x][y][z - 1].GetType())) {
+						tpCullColBit[Utils::GetIndexFrom3D(4, y, x, CHUNK_SIZE_P)] |= (1ULL << z);
+					}
+					if (z + 1 < CHUNK_SIZE_P && type != m_blocks[x][y][z + 1].GetType() &&
+						!Block::IsOpaqua(m_blocks[x][y][z + 1].GetType())) {
+						tpCullColBit[Utils::GetIndexFrom3D(5, y, x, CHUNK_SIZE_P)] |= (1ULL << z);
+					}
 
 					tpTypeMap[type] = true;
 				}
-				else if (Block::IsSemiAlpha(type) && IsOuter(x, y, z)) {
-					// x dir column
-					saColBit[Utils::GetIndexFrom3D(0, y, z, CHUNK_SIZE_P)] |= (1ULL << x);
-					// y dir column
-					saColBit[Utils::GetIndexFrom3D(1, z, x, CHUNK_SIZE_P)] |= (1ULL << y);
-					// z dir column
-					saColBit[Utils::GetIndexFrom3D(2, y, x, CHUNK_SIZE_P)] |= (1ULL << z);
+				else if (Block::IsSemiAlpha(type)) {
+					// - -> + : 불투명이 아니면 페이스 존재 -> 같은 타입을 고려하지 않음
+					if (x + 1 < CHUNK_SIZE_P && !Block::IsOpaqua(m_blocks[x + 1][y][z].GetType())) {
+						saCullColBit[Utils::GetIndexFrom3D(1, y, z, CHUNK_SIZE_P)] |= (1ULL << x);
+					}
+					if (y + 1 < CHUNK_SIZE_P && !Block::IsOpaqua(m_blocks[x][y + 1][z].GetType())) {
+						saCullColBit[Utils::GetIndexFrom3D(3, z, x, CHUNK_SIZE_P)] |= (1ULL << y);
+					}
+					if (z + 1 < CHUNK_SIZE_P && !Block::IsOpaqua(m_blocks[x][y][z + 1].GetType())) {
+						saCullColBit[Utils::GetIndexFrom3D(5, y, x, CHUNK_SIZE_P)] |= (1ULL << z);
+					}
+					
+					// + -> - : 투명일 때만 페이스 존재 -> 같은 타입을 고려하지 않음
+					if (x - 1 >= 0 && Block::IsTransparency(m_blocks[x - 1][y][z].GetType())) {
+						saCullColBit[Utils::GetIndexFrom3D(0, y, z, CHUNK_SIZE_P)] |= (1ULL << x);
+					}
+					if (y - 1 >= 0 && Block::IsTransparency(m_blocks[x][y - 1][z].GetType())) {
+						saCullColBit[Utils::GetIndexFrom3D(2, z, x, CHUNK_SIZE_P)] |= (1ULL << y);
+					}
+					if (z - 1 >= 0 && Block::IsTransparency(m_blocks[x][y][z - 1].GetType())) {
+						saCullColBit[Utils::GetIndexFrom3D(4, y, x, CHUNK_SIZE_P)] |= (1ULL << z);
+					}
 
 					saTypeMap[type] = true;
 				}
@@ -146,49 +191,21 @@ void Chunk::InitWorldVerticesData()
 			}
 		}
 	}
-
-	// 2. cull face column bit
-	// 0: x axis & left->right side (- => + : dir +)
-	// 1: x axis & right->left side (+ => - : dir -)
-	// 2: y axis & bottom->top side (- => + : dir +)
-	// 3: y axis & top->bottom side (+ => - : dir -)
-	// 4: z axis & front->back side (- => + : dir +)
-	// 5: z axis & back->front side (+ => - : dir -)
-	static uint64_t opCullColBit[CHUNK_SIZE_P2 * 6];
-	static uint64_t tpCullColBit[CHUNK_SIZE_P2 * 6];
-	static uint64_t saCullColBit[CHUNK_SIZE_P2 * 6];
-
-	std::fill(opCullColBit, opCullColBit + CHUNK_SIZE_P2 * 6, 0);
-	std::fill(tpCullColBit, tpCullColBit + CHUNK_SIZE_P2 * 6, 0);
-	std::fill(saCullColBit, saCullColBit + CHUNK_SIZE_P2 * 6, 0);
-
+	// opaque face culling
 	for (int axis = 0; axis < 3; ++axis) {
 		for (int h = 1; h < CHUNK_SIZE_P - 1; ++h) {
 			for (int w = 1; w < CHUNK_SIZE_P - 1; ++w) {
 				uint64_t opBit = opColBit[Utils::GetIndexFrom3D(axis, h, w, CHUNK_SIZE_P)];
-				uint64_t tpBit = tpColBit[Utils::GetIndexFrom3D(axis, h, w, CHUNK_SIZE_P)];
-				uint64_t saBit = saColBit[Utils::GetIndexFrom3D(axis, h, w, CHUNK_SIZE_P)];
-
 				opCullColBit[Utils::GetIndexFrom3D(axis * 2 + 0, h, w, CHUNK_SIZE_P)] =
 					opBit & ~(opBit << 1);
 				opCullColBit[Utils::GetIndexFrom3D(axis * 2 + 1, h, w, CHUNK_SIZE_P)] =
 					opBit & ~(opBit >> 1);
-
-				tpCullColBit[Utils::GetIndexFrom3D(axis * 2 + 0, h, w, CHUNK_SIZE_P)] =
-					tpBit & ~(tpBit << 1);
-				tpCullColBit[Utils::GetIndexFrom3D(axis * 2 + 1, h, w, CHUNK_SIZE_P)] =
-					tpBit & ~(tpBit >> 1);
-
-				saCullColBit[Utils::GetIndexFrom3D(axis * 2 + 0, h, w, CHUNK_SIZE_P)] =
-					saBit & ~(saBit << 1);
-				saCullColBit[Utils::GetIndexFrom3D(axis * 2 + 1, h, w, CHUNK_SIZE_P)] =
-					saBit & ~(saBit >> 1);
 			}
 		}
 	}
 
 
-	// 3. build face culled bit slices column
+	// 2. build face culled bit slices column
 	static uint64_t opSliceColBit[Block::BLOCK_TYPE_COUNT][CHUNK_SIZE2 * 6];
 	static uint64_t tpSliceColBit[Block::BLOCK_TYPE_COUNT][CHUNK_SIZE2 * 6];
 	static uint64_t saSliceColBit[Block::BLOCK_TYPE_COUNT][CHUNK_SIZE2 * 6];
@@ -205,7 +222,7 @@ void Chunk::InitWorldVerticesData()
 	MakeFaceSliceColumnBit(saCullColBit, saSliceColBit);
 
 
-	// 4. make vertices by bit slices column
+	// 3. make vertices by bit slices column
 	for (const auto& p : opTypeMap)
 		GreedyMeshing(opSliceColBit[p.first], m_opaqueVertices, m_opaqueIndices, p.first);
 	for (const auto& p : tpTypeMap)
@@ -315,26 +332,4 @@ void Chunk::GreedyMeshing(uint64_t faceColBit[CHUNK_SIZE2 * 6], std::vector<Voxe
 			}
 		}
 	}
-}
-
-bool Chunk::IsOuter(int x, int y, int z)
-{
-	if (x == 0 || x == CHUNK_SIZE_P - 1 || y == 0 || y == CHUNK_SIZE_P - 1 || z == 0 ||
-		z == CHUNK_SIZE_P - 1)
-		return true;
-
-	if (Block::IsTransparency(m_blocks[x - 1][y][z].GetType())) // AIR or WATER
-		return true;
-	if (Block::IsTransparency(m_blocks[x + 1][y][z].GetType()))
-		return true;
-	if (Block::IsTransparency(m_blocks[x][y - 1][z].GetType()))
-		return true;
-	if (Block::IsTransparency(m_blocks[x][y + 1][z].GetType()))
-		return true;
-	if (Block::IsTransparency(m_blocks[x][y][z - 1].GetType()))
-		return true;
-	if (Block::IsTransparency(m_blocks[x][y][z + 1].GetType()))
-		return true;
-
-	return false;
 }

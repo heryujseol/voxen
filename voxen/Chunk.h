@@ -47,7 +47,7 @@ public:
 	{
 		return m_transparencyVertices;
 	}
-	inline const std::vector<uint32_t>& GetTransparantIndices() const
+	inline const std::vector<uint32_t>& GetTransparencyIndices() const
 	{
 		return m_transparencyIndices;
 	}
@@ -75,8 +75,6 @@ private:
 		uint64_t sliceColBit[Block::BLOCK_TYPE_COUNT][CHUNK_SIZE2 * 6]);
 	void GreedyMeshing(uint64_t faceColBit[CHUNK_SIZE2 * 6], std::vector<VoxelVertex>& vertices,
 		std::vector<uint32_t>& indices, uint8_t type);
-
-	bool IsOuter(int x, int y, int z);
 
 	Block m_blocks[CHUNK_SIZE_P][CHUNK_SIZE_P][CHUNK_SIZE_P];
 

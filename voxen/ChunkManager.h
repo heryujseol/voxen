@@ -29,10 +29,12 @@ public:
 
 	bool Initialize(Vector3 cameraChunkPos);
 	void Update(Camera& camera);
+
 	void RenderOpaque();
-	void RenderInstance();
 	void RenderSemiAlpha();
 	void RenderTransparency();
+
+	void RenderInstance();
 
 private:
 	void UpdateChunkList(Vector3 cameraChunkPos);

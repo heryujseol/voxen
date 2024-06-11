@@ -166,9 +166,15 @@ void App::Render()
 	// basic
 	Graphics::SetPipelineStates(m_keyToggle[9] ? Graphics::basicWirePSO : Graphics::basicPSO);
 	m_chunkManager.RenderOpaque();
-	if (!m_keyToggle['L'])
+	if (!m_keyToggle['L']) {
+		Graphics::SetPipelineStates(Graphics::semiAlphaPSO);
 		m_chunkManager.RenderSemiAlpha();
-
+	}
+	if (!m_keyToggle['K']) {
+		//Graphics::SetPipelineStates(Graphics::)
+		//m_chunkManager.RenderTransparency();
+	}
+		
 
 	// instance
 	Graphics::SetPipelineStates(Graphics::instancePSO);
@@ -299,6 +305,9 @@ void App::DepthMapRender()
 
 	Graphics::SetPipelineStates(Graphics::basicPSO);
 	m_chunkManager.RenderOpaque();
-	if (!m_keyToggle['L'])
+
+	if (!m_keyToggle['L']) {
+		Graphics::SetPipelineStates(Graphics::semiAlphaPSO);
 		m_chunkManager.RenderSemiAlpha();
+	}
 }

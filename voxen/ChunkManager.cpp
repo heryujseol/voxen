@@ -121,7 +121,29 @@ void ChunkManager::RenderSemiAlpha()
 	}
 }
 
-void ChunkManager::RenderTransparency() {}
+void ChunkManager::RenderTransparency() 
+{
+	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::atlasMapSRV.Get(),
+		Graphics::grassColorMapSRV.Get() };
+	Graphics::context->PSSetShaderResources(0, 2, pptr.data());
+
+	for (auto& c : m_renderChunkList) {
+		if (c->IsEmptyTransparency())
+			continue;
+
+		UINT id = c->GetID();
+		UINT stride = sizeof(VoxelVertex);
+		UINT offset = 0;
+
+		Graphics::context->IASetIndexBuffer(
+			m_transparencyIndexBuffers[id].Get(), DXGI_FORMAT_R32_UINT, 0);
+		Graphics::context->IASetVertexBuffers(
+			0, 1, m_transparencyVertexBuffers[id].GetAddressOf(), &stride, &offset);
+		Graphics::context->VSSetConstantBuffers(1, 1, m_constantBuffers[id].GetAddressOf());
+
+		Graphics::context->DrawIndexed((UINT)c->GetTransparencyIndices().size(), 0, 0);
+	}
+}
 
 void ChunkManager::UpdateChunkList(Vector3 cameraChunkPos)
 {
@@ -369,7 +391,7 @@ bool ChunkManager::MakeBuffer(Chunk* chunk)
 				return false;
 			}
 			if (!DXUtils::CreateIndexBuffer(
-					m_transparencyIndexBuffers[id], chunk->GetTransparantIndices())) {
+					m_transparencyIndexBuffers[id], chunk->GetTransparencyIndices())) {
 				std::cout << "failed create index buffer in chunk manager" << std::endl;
 				return false;
 			}

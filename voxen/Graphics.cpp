@@ -14,7 +14,6 @@ namespace Graphics {
 	ComPtr<ID3D11InputLayout> cloudIL;
 	ComPtr<ID3D11InputLayout> samplingIL;
 	ComPtr<ID3D11InputLayout> instanceIL;
-
 	ComPtr<ID3D11InputLayout> depthOnlyIL;
 
 
@@ -24,7 +23,6 @@ namespace Graphics {
 	ComPtr<ID3D11VertexShader> cloudVS;
 	ComPtr<ID3D11VertexShader> samplingVS;
 	ComPtr<ID3D11VertexShader> instanceVS;
-
 	ComPtr<ID3D11VertexShader> depthOnlyVS;
 
 
@@ -34,16 +32,15 @@ namespace Graphics {
 	ComPtr<ID3D11PixelShader> cloudPS;
 	ComPtr<ID3D11PixelShader> samplingPS;
 	ComPtr<ID3D11PixelShader> instancePS;
-
 	ComPtr<ID3D11PixelShader> depthOnlyPS;
 	ComPtr<ID3D11PixelShader> postEffectPS;
+	ComPtr<ID3D11PixelShader> alphaClipPS;
 
 
 	// Rasterizer State
 	ComPtr<ID3D11RasterizerState> solidRS;
 	ComPtr<ID3D11RasterizerState> wireRS;
-	ComPtr<ID3D11RasterizerState> instanceRS;
-
+	ComPtr<ID3D11RasterizerState> noneCullRS;
 	ComPtr<ID3D11RasterizerState> postEffectRS;
 
 
@@ -55,8 +52,8 @@ namespace Graphics {
 
 	// Depth Stencil State
 	ComPtr<ID3D11DepthStencilState> basicDSS;
-
 	ComPtr<ID3D11DepthStencilState> postEffectDSS;
+
 
 	// Blend State
 	ComPtr<ID3D11BlendState> alphaBS;
@@ -117,10 +114,10 @@ namespace Graphics {
 	GraphicsPSO skyboxPSO;
 	GraphicsPSO cloudPSO;
 	GraphicsPSO cloudBlendPSO;
-
 	GraphicsPSO depthOnlyPSO;
 	GraphicsPSO postEffectPSO;
 	GraphicsPSO instancePSO;
+	GraphicsPSO semiAlphaPSO;
 }
 
 
@@ -511,6 +508,12 @@ bool Graphics::InitPixelShaders()
 		return false;
 	}
 
+	// AlphaClipPS
+	if (!DXUtils::CreatePixelShader(L"AlphaClipPS.hlsl", alphaClipPS)) {
+		std::cout << "failed create alpha clip ps" << std::endl;
+		return false;
+	}
+
 	return true;
 }
 
@@ -549,12 +552,12 @@ bool Graphics::InitRasterizerStates()
 		return false;
 	}
 
-	// instanceRS
+	// noneCullRS
 	rastDesc.FillMode = D3D11_FILL_MODE::D3D11_FILL_SOLID;
 	rastDesc.CullMode = D3D11_CULL_MODE::D3D11_CULL_NONE;
-	ret = Graphics::device->CreateRasterizerState(&rastDesc, instanceRS.GetAddressOf());
+	ret = Graphics::device->CreateRasterizerState(&rastDesc, noneCullRS.GetAddressOf());
 	if (FAILED(ret)) {
-		std::cout << "failed create instance RS" << std::endl;
+		std::cout << "failed create noneCull RS" << std::endl;
 		return false;
 	}
 
@@ -703,12 +706,17 @@ void Graphics::InitGraphicsPSO()
 	postEffectPSO.samplerStates.push_back(linearClampSS.Get());
 	postEffectPSO.rasterizerState = postEffectRS;
 
-	// InstancePSO
+	// instancePSO
 	instancePSO = basicPSO;
 	instancePSO.inputLayout = instanceIL;
 	instancePSO.vertexShader = instanceVS;
-	instancePSO.rasterizerState = instanceRS;
+	instancePSO.rasterizerState = noneCullRS;
 	instancePSO.pixelShader = instancePS;
+
+	// semiAlphaPSO
+	semiAlphaPSO = basicPSO;
+	semiAlphaPSO.rasterizerState = noneCullRS;
+	semiAlphaPSO.pixelShader = alphaClipPS;
 }
 
 void Graphics::SetPipelineStates(GraphicsPSO& pso)
