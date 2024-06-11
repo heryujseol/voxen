@@ -18,7 +18,7 @@ void Chunk::Initialize()
 	// 1. intialize instance vertcie data
 	InitInstanceInfoData();
 
-	// 2. initialize world(opaque & water & semiAlpha) vertice data by greedy meshing
+	// 2. initialize world(basic & water) vertice data by greedy meshing
 	InitWorldVerticesData();
 
 	// 3. initialize constant data
@@ -32,14 +32,11 @@ void Chunk::Update(float dt)
 
 void Chunk::Clear()
 {
-	m_opaqueVertices.clear();
-	m_opaqueIndices.clear();
+	m_basicVertices.clear();
+	m_basicIndices.clear();
 
-	m_transparencyVertices.clear();
-	m_transparencyIndices.clear();
-
-	m_semiAlphaVertices.clear();
-	m_semiAlphaIndices.clear();
+	m_waterVertices.clear();
+	m_waterIndices.clear();
 
 	m_instanceMap.clear();
 }
@@ -66,10 +63,10 @@ void Chunk::InitChunkData()
 
 				/////////////////////////////
 				// for instance testing
-				if (height + 2 <= ny && ny <= height + 4 &&
-					(x % 6 != 0 && x % 6 != 5 && z % 6 != 0 && z % 6 != 5)) {
-					m_blocks[x][y][z].SetType(10);
+				if (ny == height + 1 && nx % 2 == 0 && nz % 2 == 0) {
+					m_blocks[x][y][z].SetType(128+16+16+16);
 				}
+				
 				/////////////////////////////
 			}
 		}
@@ -83,7 +80,8 @@ void Chunk::InitInstanceInfoData()
 			for (int z = 0; z < CHUNK_SIZE; ++z) {
 				uint8_t type = m_blocks[x + 1][y + 1][z + 1].GetType();
 
-				if (Block::IsInstance(type)) {
+				if (Block::IsInstance(type)) 
+				{
 					m_instanceMap[type].push_back(Vector3((float)x, (float)y, (float)z));
 				}
 			}
@@ -94,17 +92,12 @@ void Chunk::InitInstanceInfoData()
 void Chunk::InitWorldVerticesData()
 {
 	// 1. make axis column bit data
-	std::unordered_map<uint8_t, bool> opTypeMap;
-	std::unordered_map<uint8_t, bool> tpTypeMap;
-	std::unordered_map<uint8_t, bool> saTypeMap;
+	static uint64_t basicAxisColBit[CHUNK_SIZE_P2 * 3];
+	static uint64_t waterAxisColBit[CHUNK_SIZE_P2 * 3];
 
-	static uint64_t opColBit[CHUNK_SIZE_P2 * 3];
-	static uint64_t tpColBit[CHUNK_SIZE_P2 * 3];
-	static uint64_t saColBit[CHUNK_SIZE_P2 * 3];
-
-	std::fill(opColBit, opColBit + CHUNK_SIZE_P2 * 3, 0);
-	std::fill(tpColBit, tpColBit + CHUNK_SIZE_P2 * 3, 0);
-	std::fill(saColBit, saColBit + CHUNK_SIZE_P2 * 3, 0);
+	std::fill(basicAxisColBit, basicAxisColBit + CHUNK_SIZE_P2 * 3, 0);
+	std::fill(waterAxisColBit, waterAxisColBit + CHUNK_SIZE_P2 * 3, 0);
+	std::unordered_map<uint8_t, bool> typeMap;
 
 	for (int x = 0; x < CHUNK_SIZE_P; ++x) {
 		for (int y = 0; y < CHUNK_SIZE_P; ++y) {
@@ -113,35 +106,22 @@ void Chunk::InitWorldVerticesData()
 				if (type == BLOCK_TYPE::AIR || Block::IsInstance(type))
 					continue;
 
-				if (Block::IsTransparency(type)) {
+				typeMap[type] = true;
+				if (type == BLOCK_TYPE::WATER) {
 					// x dir column
-					tpColBit[Utils::GetIndexFrom3D(0, y, z, CHUNK_SIZE_P)] |= (1ULL << x);
+					waterAxisColBit[Utils::GetIndexFrom3D(0, y, z, CHUNK_SIZE_P)] |= (1ULL << x);
 					// y dir column
-					tpColBit[Utils::GetIndexFrom3D(1, z, x, CHUNK_SIZE_P)] |= (1ULL << y);
+					waterAxisColBit[Utils::GetIndexFrom3D(1, z, x, CHUNK_SIZE_P)] |= (1ULL << y);
 					// z dir column
-					tpColBit[Utils::GetIndexFrom3D(2, y, x, CHUNK_SIZE_P)] |= (1ULL << z);
-
-					tpTypeMap[type] = true;
-				}
-				else if (Block::IsSemiAlpha(type) && IsOuterLeaf(x, y, z)) {
-					// x dir column
-					saColBit[Utils::GetIndexFrom3D(0, y, z, CHUNK_SIZE_P)] |= (1ULL << x);
-					// y dir column
-					saColBit[Utils::GetIndexFrom3D(1, z, x, CHUNK_SIZE_P)] |= (1ULL << y);
-					// z dir column
-					saColBit[Utils::GetIndexFrom3D(2, y, x, CHUNK_SIZE_P)] |= (1ULL << z);
-
-					saTypeMap[type] = true;
+					waterAxisColBit[Utils::GetIndexFrom3D(2, y, x, CHUNK_SIZE_P)] |= (1ULL << z);
 				}
 				else {
 					// x dir column
-					opColBit[Utils::GetIndexFrom3D(0, y, z, CHUNK_SIZE_P)] |= (1ULL << x);
+					basicAxisColBit[Utils::GetIndexFrom3D(0, y, z, CHUNK_SIZE_P)] |= (1ULL << x);
 					// y dir column
-					opColBit[Utils::GetIndexFrom3D(1, z, x, CHUNK_SIZE_P)] |= (1ULL << y);
+					basicAxisColBit[Utils::GetIndexFrom3D(1, z, x, CHUNK_SIZE_P)] |= (1ULL << y);
 					// z dir column
-					opColBit[Utils::GetIndexFrom3D(2, y, x, CHUNK_SIZE_P)] |= (1ULL << z);
-
-					opTypeMap[type] = true;
+					basicAxisColBit[Utils::GetIndexFrom3D(2, y, x, CHUNK_SIZE_P)] |= (1ULL << z);
 				}
 			}
 		}
@@ -154,70 +134,27 @@ void Chunk::InitWorldVerticesData()
 	// 3: y axis & top->bottom side (+ => - : dir -)
 	// 4: z axis & front->back side (- => + : dir +)
 	// 5: z axis & back->front side (+ => - : dir -)
-	static uint64_t opCullColBit[CHUNK_SIZE_P2 * 6];
-	static uint64_t tpCullColBit[CHUNK_SIZE_P2 * 6];
-	static uint64_t saCullColBit[CHUNK_SIZE_P2 * 6];
-
-	std::fill(opCullColBit, opCullColBit + CHUNK_SIZE_P2 * 6, 0);
-	std::fill(tpCullColBit, tpCullColBit + CHUNK_SIZE_P2 * 6, 0);
-	std::fill(saCullColBit, saCullColBit + CHUNK_SIZE_P2 * 6, 0);
+	static uint64_t cullColBit[CHUNK_SIZE_P2 * 6];
+	std::fill(cullColBit, cullColBit + CHUNK_SIZE_P2 * 6, 0);
 
 	for (int axis = 0; axis < 3; ++axis) {
 		for (int h = 1; h < CHUNK_SIZE_P - 1; ++h) {
 			for (int w = 1; w < CHUNK_SIZE_P - 1; ++w) {
-				uint64_t opBit = opColBit[Utils::GetIndexFrom3D(axis, h, w, CHUNK_SIZE_P)];
-				uint64_t tpBit = tpColBit[Utils::GetIndexFrom3D(axis, h, w, CHUNK_SIZE_P)];
-				uint64_t saBit = saColBit[Utils::GetIndexFrom3D(axis, h, w, CHUNK_SIZE_P)];
+				uint64_t waterColBit =
+					waterAxisColBit[Utils::GetIndexFrom3D(axis, h, w, CHUNK_SIZE_P)];
+				uint64_t basicColBit =
+					basicAxisColBit[Utils::GetIndexFrom3D(axis, h, w, CHUNK_SIZE_P)];
 
-				opCullColBit[Utils::GetIndexFrom3D(axis * 2 + 0, h, w, CHUNK_SIZE_P)] =
-					opBit & ~(opBit << 1);
-				opCullColBit[Utils::GetIndexFrom3D(axis * 2 + 1, h, w, CHUNK_SIZE_P)] =
-					opBit & ~(opBit >> 1);
-
-				tpCullColBit[Utils::GetIndexFrom3D(axis * 2 + 0, h, w, CHUNK_SIZE_P)] =
-					tpBit & ~(tpBit << 1);
-				tpCullColBit[Utils::GetIndexFrom3D(axis * 2 + 1, h, w, CHUNK_SIZE_P)] =
-					tpBit & ~(tpBit >> 1);
-
-				saCullColBit[Utils::GetIndexFrom3D(axis * 2 + 0, h, w, CHUNK_SIZE_P)] =
-					saBit & ~(saBit << 1);
-				saCullColBit[Utils::GetIndexFrom3D(axis * 2 + 1, h, w, CHUNK_SIZE_P)] =
-					saBit & ~(saBit >> 1);
+				cullColBit[Utils::GetIndexFrom3D(axis * 2 + 0, h, w, CHUNK_SIZE_P)] =
+					waterColBit & ~(waterColBit << 1) | basicColBit & ~(basicColBit << 1);
+				cullColBit[Utils::GetIndexFrom3D(axis * 2 + 1, h, w, CHUNK_SIZE_P)] =
+					waterColBit & ~(waterColBit >> 1) | basicColBit & ~(basicColBit >> 1);
 			}
 		}
 	}
 
 
 	// 3. build face culled bit slices column
-	static uint64_t opSliceColBit[Block::BLOCK_TYPE_COUNT][CHUNK_SIZE2 * 6];
-	static uint64_t tpSliceColBit[Block::BLOCK_TYPE_COUNT][CHUNK_SIZE2 * 6];
-	static uint64_t saSliceColBit[Block::BLOCK_TYPE_COUNT][CHUNK_SIZE2 * 6];
-
-	for (const auto& p : opTypeMap)
-		std::fill(opSliceColBit[p.first], opSliceColBit[p.first] + CHUNK_SIZE2 * 6, 0);
-	for (const auto& p : tpTypeMap)
-		std::fill(tpSliceColBit[p.first], tpSliceColBit[p.first] + CHUNK_SIZE2 * 6, 0);
-	for (const auto& p : saTypeMap)
-		std::fill(saSliceColBit[p.first], saSliceColBit[p.first] + CHUNK_SIZE2 * 6, 0);
-
-	MakeFaceSliceColumnBit(opCullColBit, opSliceColBit);
-	MakeFaceSliceColumnBit(tpCullColBit, tpSliceColBit);
-	MakeFaceSliceColumnBit(saCullColBit, saSliceColBit);
-
-
-	// 4. make vertices by bit slices column
-	for (const auto& p : opTypeMap)
-		GreedyMeshing(opSliceColBit[p.first], m_opaqueVertices, m_opaqueIndices, p.first);
-	for (const auto& p : tpTypeMap)
-		GreedyMeshing(
-			tpSliceColBit[p.first], m_transparencyVertices, m_transparencyIndices, p.first);
-	for (const auto& p : saTypeMap)
-		GreedyMeshing(saSliceColBit[p.first], m_semiAlphaVertices, m_semiAlphaIndices, p.first);
-}
-
-void Chunk::MakeFaceSliceColumnBit(uint64_t cullColBit[CHUNK_SIZE_P2 * 6],
-	uint64_t sliceColBit[Block::BLOCK_TYPE_COUNT][CHUNK_SIZE2 * 6])
-{
 	/*
 	 *     ---------------
 	 *    / x    y    z /| <= 5:face, h:1, w:2 bits
@@ -229,18 +166,20 @@ void Chunk::MakeFaceSliceColumnBit(uint64_t cullColBit[CHUNK_SIZE_P2 * 6],
 	 *  | 1    2    3 |/
 	 *  ---------------
 	 */
+	static uint64_t faceColBit[Block::BLOCK_TYPE_COUNT][CHUNK_SIZE2 * 6];
+	for (const auto& p : typeMap)
+		std::fill(faceColBit[p.first], faceColBit[p.first] + CHUNK_SIZE2 * 6, 0);
 
 	for (int face = 0; face < 6; ++face) {
 		for (int h = 0; h < CHUNK_SIZE; ++h) {
 			for (int w = 0; w < CHUNK_SIZE; ++w) {
-				uint64_t colbit = // 34bit: P,CHUNK_SIZE,P
+				uint64_t culledBit = // 34bit: P,CHUNK_SIZE,P
 					cullColBit[Utils::GetIndexFrom3D(face, h + 1, w + 1, CHUNK_SIZE_P)];
-				colbit = colbit >> 1;					 // 33bit: P,CHUNK_SIZE
-				colbit = colbit & ~(1ULL << CHUNK_SIZE); // 32bit: CHUNK_SIZE
-
-				while (colbit) {
-					int bitPos = Utils::TrailingZeros(colbit); // 1110001000 -> trailing zero : 3
-					colbit = colbit & (colbit - 1ULL);		   // 1110000000
+				culledBit = culledBit >> 1;					   // 33bit: P,CHUNK_SIZE
+				culledBit = culledBit & ~(1ULL << CHUNK_SIZE); // 32bit: CHUNK_SIZE
+				while (culledBit) {
+					int bitPos = Utils::TrailingZeros(culledBit); // 1110001000 -> trailing zero : 3
+					culledBit = culledBit & (culledBit - 1ULL);	  // 1110000000
 
 					uint8_t type = 0;
 					if (face < 2) {
@@ -253,88 +192,76 @@ void Chunk::MakeFaceSliceColumnBit(uint64_t cullColBit[CHUNK_SIZE_P2 * 6],
 						type = m_blocks[w + 1][h + 1][bitPos + 1].GetType();
 					}
 
-					sliceColBit[type][Utils::GetIndexFrom3D(face, bitPos, w, CHUNK_SIZE)] |=
+					faceColBit[type][Utils::GetIndexFrom3D(face, bitPos, w, CHUNK_SIZE)] |=
 						(1ULL << h);
 				}
 			}
 		}
 	}
-}
 
-void Chunk::GreedyMeshing(uint64_t faceColBit[CHUNK_SIZE2 * 6], std::vector<VoxelVertex>& vertices,
-	std::vector<uint32_t>& indices, uint8_t type)
-{
+
+	// 4. make vertices by bit slices column
 	// face 0, 1 : left-right
 	// face 2, 3 : top-bottom
 	// face 4, 5 : front-back
-	for (int face = 0; face < 6; ++face) {
-		for (int s = 0; s < CHUNK_SIZE; ++s) {
-			for (int i = 0; i < CHUNK_SIZE; ++i) {
-				uint64_t faceBit = faceColBit[Utils::GetIndexFrom3D(face, s, i, CHUNK_SIZE)];
-				int step = 0;
-				while (step < CHUNK_SIZE) {						   // 111100011100
-					step += Utils::TrailingZeros(faceBit >> step); // 1111000111|00| -> 2
-					if (step >= CHUNK_SIZE)
-						break;
+	for (const auto& p : typeMap) {
+		uint8_t type = p.first;
 
-					int ones = Utils::TrailingOnes((faceBit >> step));	// 1111000|111|00 -> 3
-					uint64_t submask = ((1ULL << ones) - 1ULL) << step; // 111 << 2 -> 11100
-
-					int w = 1;
-					while (i + w < CHUNK_SIZE) {
-						uint64_t cb =
-							faceColBit[Utils::GetIndexFrom3D(face, s, i + w, CHUNK_SIZE)] & submask;
-						if (cb != submask)
+		for (int face = 0; face < 6; ++face) {
+			for (int s = 0; s < CHUNK_SIZE; ++s) {
+				for (int i = 0; i < CHUNK_SIZE; ++i) {
+					uint64_t faceBit =
+						faceColBit[type][Utils::GetIndexFrom3D(face, s, i, CHUNK_SIZE)];
+					int step = 0;
+					while (step < CHUNK_SIZE) {						   // 111100011100
+						step += Utils::TrailingZeros(faceBit >> step); // 1111000111|00| -> 2
+						if (step >= CHUNK_SIZE)
 							break;
 
-						faceColBit[Utils::GetIndexFrom3D(face, s, i + w, CHUNK_SIZE)] &= (~submask);
-						w++;
+						int ones = Utils::TrailingOnes((faceBit >> step));	// 1111000|111|00 -> 3
+						uint64_t submask = ((1ULL << ones) - 1ULL) << step; // 111 << 2 -> 11100
+
+						int w = 1;
+						while (i + w < CHUNK_SIZE) {
+							uint64_t cb = faceColBit[type][Utils::GetIndexFrom3D(
+											  face, s, i + w, CHUNK_SIZE)] &
+										  submask;
+							if (cb != submask)
+								break;
+
+							faceColBit[type][Utils::GetIndexFrom3D(face, s, i + w, CHUNK_SIZE)] &=
+								(~submask);
+							w++;
+						}
+
+						std::vector<VoxelVertex>& vertices =
+							(type == BLOCK_TYPE::WATER) ? m_waterVertices : m_basicVertices;
+						std::vector<uint32_t>& indices =
+							(type == BLOCK_TYPE::WATER) ? m_waterIndices : m_basicIndices;
+
+						if (face == 0)
+							MeshGenerator::CreateQuadMesh(
+								vertices, indices, s, step, i, w, ones, face, type);
+						else if (face == 1)
+							MeshGenerator::CreateQuadMesh(
+								vertices, indices, s + 1, step, i, w, ones, face, type);
+						else if (face == 2)
+							MeshGenerator::CreateQuadMesh(
+								vertices, indices, i, s, step, w, ones, face, type);
+						else if (face == 3)
+							MeshGenerator::CreateQuadMesh(
+								vertices, indices, i, s + 1, step, w, ones, face, type);
+						else if (face == 4)
+							MeshGenerator::CreateQuadMesh(
+								vertices, indices, i, step, s, w, ones, face, type);
+						else // face == 5
+							MeshGenerator::CreateQuadMesh(
+								vertices, indices, i, step, s + 1, w, ones, face, type);
+
+						step += ones;
 					}
-
-					if (face == 0)
-						MeshGenerator::CreateQuadMesh(
-							vertices, indices, s, step, i, w, ones, face, type);
-					else if (face == 1)
-						MeshGenerator::CreateQuadMesh(
-							vertices, indices, s + 1, step, i, w, ones, face, type);
-					else if (face == 2)
-						MeshGenerator::CreateQuadMesh(
-							vertices, indices, i, s, step, w, ones, face, type);
-					else if (face == 3)
-						MeshGenerator::CreateQuadMesh(
-							vertices, indices, i, s + 1, step, w, ones, face, type);
-					else if (face == 4)
-						MeshGenerator::CreateQuadMesh(
-							vertices, indices, i, step, s, w, ones, face, type);
-					else // face == 5
-						MeshGenerator::CreateQuadMesh(
-							vertices, indices, i, step, s + 1, w, ones, face, type);
-
-					step += ones;
 				}
 			}
 		}
 	}
-}
-
-bool Chunk::IsOuterLeaf(int x, int y, int z)
-{
-	if (x == 0 || x == CHUNK_SIZE_P - 1 || y == 0 || y == CHUNK_SIZE_P - 1 || z == 0 ||
-		z == CHUNK_SIZE_P - 1)
-		return true;
-
-	if (Block::IsTransparency(m_blocks[x - 1][y][z].GetType())) // AIR or WATER
-		return true;
-	if (Block::IsTransparency(m_blocks[x + 1][y][z].GetType()))
-		return true;
-	if (Block::IsTransparency(m_blocks[x][y - 1][z].GetType()))
-		return true;
-	if (Block::IsTransparency(m_blocks[x][y + 1][z].GetType()))
-		return true;
-	if (Block::IsTransparency(m_blocks[x][y][z - 1].GetType()))
-		return true;
-	if (Block::IsTransparency(m_blocks[x][y][z + 1].GetType()))
-		return true;
-
-	return false;
 }

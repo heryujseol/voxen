@@ -17,14 +17,11 @@ bool ChunkManager::Initialize(Vector3 cameraChunkPos)
 		m_chunkPool.push_back(new Chunk(i));
 	}
 
-	m_opaqueVertexBuffers.resize(poolSize);
-	m_opaqueIndexBuffers.resize(poolSize);
+	m_basicVertexBuffers.resize(poolSize);
+	m_basicIndexBuffers.resize(poolSize);
 
-	m_transparencyVertexBuffers.resize(poolSize);
-	m_transparencyIndexBuffers.resize(poolSize);
-
-	m_semiAlphaVertexBuffers.resize(poolSize);
-	m_semiAlphaIndexBuffers.resize(poolSize);
+	m_waterVertexBuffers.resize(poolSize);
+	m_waterIndexBuffers.resize(poolSize);
 
 	m_constantBuffers.resize(poolSize);
 
@@ -55,27 +52,26 @@ void ChunkManager::Update(Camera& camera)
 	UpdateInstanceInfoList(camera);
 }
 
-void ChunkManager::RenderOpaque()
+void ChunkManager::RenderBasic()
 {
 	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::atlasMapSRV.Get(),
 		Graphics::grassColorMapSRV.Get() };
 	Graphics::context->PSSetShaderResources(0, 2, pptr.data());
 
 	for (auto& c : m_renderChunkList) {
-		if (c->IsEmptyOpaque())
+		if (c->IsEmptyBasic())
 			continue;
 
 		UINT id = c->GetID();
 		UINT stride = sizeof(VoxelVertex);
 		UINT offset = 0;
 
-		Graphics::context->IASetIndexBuffer(
-			m_opaqueIndexBuffers[id].Get(), DXGI_FORMAT_R32_UINT, 0);
+		Graphics::context->IASetIndexBuffer(m_basicIndexBuffers[id].Get(), DXGI_FORMAT_R32_UINT, 0);
 		Graphics::context->IASetVertexBuffers(
-			0, 1, m_opaqueVertexBuffers[id].GetAddressOf(), &stride, &offset);
+			0, 1, m_basicVertexBuffers[id].GetAddressOf(), &stride, &offset);
 		Graphics::context->VSSetConstantBuffers(1, 1, m_constantBuffers[id].GetAddressOf());
 
-		Graphics::context->DrawIndexed((UINT)c->GetOpaqueIndices().size(), 0, 0);
+		Graphics::context->DrawIndexed((UINT)c->GetBasicIndices().size(), 0, 0);
 	}
 }
 
@@ -96,31 +92,7 @@ void ChunkManager::RenderInstance()
 	}
 }
 
-void ChunkManager::RenderSemiAlpha()
-{
-	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::atlasMapSRV.Get(),
-		Graphics::grassColorMapSRV.Get() };
-	Graphics::context->PSSetShaderResources(0, 2, pptr.data());
-
-	for (auto& c : m_renderChunkList) {
-		if (c->IsEmptySemiAlpha())
-			continue;
-
-		UINT id = c->GetID();
-		UINT stride = sizeof(VoxelVertex);
-		UINT offset = 0;
-
-		Graphics::context->IASetIndexBuffer(
-			m_semiAlphaIndexBuffers[id].Get(), DXGI_FORMAT_R32_UINT, 0);
-		Graphics::context->IASetVertexBuffers(
-			0, 1, m_semiAlphaVertexBuffers[id].GetAddressOf(), &stride, &offset);
-		Graphics::context->VSSetConstantBuffers(1, 1, m_constantBuffers[id].GetAddressOf());
-
-		Graphics::context->DrawIndexed((UINT)c->GetSemiAlphaIndices().size(), 0, 0);
-	}
-}
-
-void ChunkManager::RenderTransparency() {}
+void ChunkManager::RenderWater() {}
 
 void ChunkManager::UpdateChunkList(Vector3 cameraChunkPos)
 {
@@ -347,42 +319,25 @@ bool ChunkManager::MakeBuffer(Chunk* chunk)
 			return false;
 		}
 
-		// opaque
-		if (!chunk->IsEmptyOpaque()) {
-			if (!DXUtils::CreateVertexBuffer(
-					m_opaqueVertexBuffers[id], chunk->GetOpaqueVertices())) {
+		// basic
+		if (!chunk->IsEmptyBasic()) {
+			if (!DXUtils::CreateVertexBuffer(m_basicVertexBuffers[id], chunk->GetBasicVertices())) {
 				std::cout << "failed create vertex buffer in chunk manager" << std::endl;
 				return false;
 			}
-			if (!DXUtils::CreateIndexBuffer(m_opaqueIndexBuffers[id], chunk->GetOpaqueIndices())) {
+			if (!DXUtils::CreateIndexBuffer(m_basicIndexBuffers[id], chunk->GetBasicIndices())) {
 				std::cout << "failed create index buffer in chunk manager" << std::endl;
 				return false;
 			}
 		}
 
-		// transparency
-		if (!chunk->IsEmptyTransparency()) {
-			if (!DXUtils::CreateVertexBuffer(
-					m_transparencyVertexBuffers[id], chunk->GetTransparencyVertices())) {
+		// water
+		if (!chunk->IsEmptyWater()) {
+			if (!DXUtils::CreateVertexBuffer(m_waterVertexBuffers[id], chunk->GetWaterVertices())) {
 				std::cout << "failed create vertex buffer in chunk manager" << std::endl;
 				return false;
 			}
-			if (!DXUtils::CreateIndexBuffer(
-					m_transparencyIndexBuffers[id], chunk->GetTransparantIndices())) {
-				std::cout << "failed create index buffer in chunk manager" << std::endl;
-				return false;
-			}
-		}
-
-		// semiAlpha
-		if (!chunk->IsEmptySemiAlpha()) {
-			if (!DXUtils::CreateVertexBuffer(
-					m_semiAlphaVertexBuffers[id], chunk->GetSemiAlphaVertices())) {
-				std::cout << "failed create vertex buffer in chunk manager" << std::endl;
-				return false;
-			}
-			if (!DXUtils::CreateIndexBuffer(
-					m_semiAlphaIndexBuffers[id], chunk->GetSemiAlphaIndices())) {
+			if (!DXUtils::CreateIndexBuffer(m_waterIndexBuffers[id], chunk->GetWaterIndices())) {
 				std::cout << "failed create index buffer in chunk manager" << std::endl;
 				return false;
 			}
@@ -396,20 +351,16 @@ void ChunkManager::ClearChunkBuffer(Chunk* chunk)
 {
 	UINT id = chunk->GetID();
 
-	m_opaqueVertexBuffers[id].Reset();
-	m_opaqueIndexBuffers[id].Reset();
-	m_transparencyVertexBuffers[id].Reset();
-	m_transparencyIndexBuffers[id].Reset();
-	m_semiAlphaVertexBuffers[id].Reset();
-	m_semiAlphaIndexBuffers[id].Reset();
+	m_basicVertexBuffers[id].Reset();
+	m_basicIndexBuffers[id].Reset();
+	m_waterVertexBuffers[id].Reset();
+	m_waterIndexBuffers[id].Reset();
 	m_constantBuffers[id].Reset();
 
-	m_opaqueVertexBuffers[id] = nullptr;
-	m_opaqueIndexBuffers[id] = nullptr;
-	m_transparencyVertexBuffers[id] = nullptr;
-	m_transparencyIndexBuffers[id] = nullptr;
-	m_semiAlphaVertexBuffers[id] = nullptr;
-	m_semiAlphaIndexBuffers[id] = nullptr;
+	m_basicVertexBuffers[id] = nullptr;
+	m_basicIndexBuffers[id] = nullptr;
+	m_waterVertexBuffers[id] = nullptr;
+	m_waterIndexBuffers[id] = nullptr;
 	m_constantBuffers[id] = nullptr;
 }
 

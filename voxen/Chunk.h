@@ -31,32 +31,19 @@ public:
 
 	inline void SetLoad(bool isLoaded) { m_isLoaded = isLoaded; }
 	inline bool IsLoaded() { return m_isLoaded; }
-	inline bool IsEmpty() { return IsEmptyOpaque() && IsEmptyTransparency() && IsEmptySemiAlpha(); }
-
+	inline bool IsEmpty() { return IsEmptyBasic() && IsEmptyWater(); }
+	
 	inline Vector3 GetPosition() { return m_position; }
 	inline void SetPosition(Vector3 position) { m_position = position; }
 
-	inline bool IsEmptyOpaque() { return m_opaqueVertices.empty(); }
-	inline bool IsEmptyTransparency() { return m_transparencyVertices.empty(); }
-	inline bool IsEmptySemiAlpha() { return m_semiAlphaVertices.empty(); }
+	inline bool IsEmptyBasic() { return m_basicVertices.empty(); }
+	inline bool IsEmptyWater() { return m_waterVertices.empty(); }
 
-	inline const std::vector<VoxelVertex>& GetOpaqueVertices() const { return m_opaqueVertices; }
-	inline const std::vector<uint32_t>& GetOpaqueIndices() const { return m_opaqueIndices; }
+	inline const std::vector<VoxelVertex>& GetBasicVertices() const { return m_basicVertices; }
+	inline const std::vector<uint32_t>& GetBasicIndices() const { return m_basicIndices; }
 
-	inline const std::vector<VoxelVertex>& GetTransparencyVertices() const
-	{
-		return m_transparencyVertices;
-	}
-	inline const std::vector<uint32_t>& GetTransparantIndices() const
-	{
-		return m_transparencyIndices;
-	}
-
-	inline const std::vector<VoxelVertex>& GetSemiAlphaVertices() const
-	{
-		return m_semiAlphaVertices;
-	}
-	inline const std::vector<uint32_t>& GetSemiAlphaIndices() const { return m_semiAlphaIndices; }
+	inline const std::vector<VoxelVertex>& GetWaterVertices() const { return m_waterVertices; }
+	inline const std::vector<uint32_t>& GetWaterIndices() const { return m_waterIndices; }
 
 	inline const std::unordered_map<uint8_t, std::vector<Vector3>>& GetInstanceMap() const
 	{
@@ -64,19 +51,12 @@ public:
 	}
 
 	inline const ChunkConstantData& GetConstantData() const { return m_constantData; }
-
+	
 
 private:
 	void InitChunkData();
 	void InitInstanceInfoData();
 	void InitWorldVerticesData();
-
-	void MakeFaceSliceColumnBit(uint64_t cullColBit[CHUNK_SIZE_P2 * 6],
-		uint64_t sliceColBit[Block::BLOCK_TYPE_COUNT][CHUNK_SIZE2 * 6]);
-	void GreedyMeshing(uint64_t faceColBit[CHUNK_SIZE2 * 6], std::vector<VoxelVertex>& vertices,
-		std::vector<uint32_t>& indices, uint8_t type);
-	
-	bool IsOuterLeaf(int x, int y, int z);
 
 	Block m_blocks[CHUNK_SIZE_P][CHUNK_SIZE_P][CHUNK_SIZE_P];
 
@@ -84,14 +64,11 @@ private:
 	bool m_isLoaded;
 	Vector3 m_position;
 
-	std::vector<VoxelVertex> m_opaqueVertices;
-	std::vector<uint32_t> m_opaqueIndices;
+	std::vector<VoxelVertex> m_basicVertices;
+	std::vector<uint32_t> m_basicIndices;
 
-	std::vector<VoxelVertex> m_transparencyVertices;
-	std::vector<uint32_t> m_transparencyIndices;
-
-	std::vector<VoxelVertex> m_semiAlphaVertices;
-	std::vector<uint32_t> m_semiAlphaIndices;
+	std::vector<VoxelVertex> m_waterVertices;
+	std::vector<uint32_t> m_waterIndices;
 
 	ChunkConstantData m_constantData;
 
