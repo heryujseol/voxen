@@ -3,6 +3,7 @@
 #include "Utils.h"
 #include "DXUtils.h"
 #include "MeshGenerator.h"
+#include "Block.h"
 
 #include <iostream>
 

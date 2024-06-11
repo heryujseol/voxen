@@ -156,7 +156,6 @@ void App::Render()
 	//depthMap
 	DepthMapRender();
 
-
 	Graphics::context->ClearRenderTargetView(Graphics::basicRTV.Get(), clearColor);
 	Graphics::context->OMSetRenderTargets(
 		1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
