@@ -259,7 +259,7 @@ bool Graphics::InitDepthStencilBuffers(UINT width, UINT height)
 		std::cout << "failed create depth stencil buffer" << std::endl;
 		return false;
 	}
-	D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc;
+	
 	ZeroMemory(&dsvDesc, sizeof(dsvDesc));
 	dsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
 	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
@@ -445,7 +445,7 @@ bool Graphics::InitVertexShaderAndInputLayouts()
 	}
 
 	// Instance
-	std::vector<D3D11_INPUT_ELEMENT_DESC> elementDesc5 = {
+	std::vector<D3D11_INPUT_ELEMENT_DESC> elementDesc6 = {
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0 },
@@ -457,7 +457,7 @@ bool Graphics::InitVertexShaderAndInputLayouts()
 		{ "TYPE", 0, DXGI_FORMAT_R32_UINT, 1, 64, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
 	};
 	if (!DXUtils::CreateVertexShaderAndInputLayout(
-		L"InstanceVS.hlsl", instanceVS, instanceIL, elementDesc5)) {
+		L"InstanceVS.hlsl", instanceVS, instanceIL, elementDesc6)) {
 		std::cout << "failed create instance vs" << std::endl;
 		return false;
 	}

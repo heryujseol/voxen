@@ -154,7 +154,7 @@ void App::Render()
 
 
 	//depthMap
-	depthMapRender();
+	DepthMapRender();
 
 
 	Graphics::context->ClearRenderTargetView(Graphics::basicRTV.Get(), clearColor);
@@ -292,12 +292,14 @@ bool App::InitScene()
 	return true;
 }
 
-void App::depthMapRender()
+void App::DepthMapRender()
 {
 	Graphics::context->OMSetRenderTargets(0, NULL, Graphics::depthOnlyDSV.Get());
 	Graphics::context->ClearDepthStencilView(
 		Graphics::depthOnlyDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
 
 	Graphics::SetPipelineStates(Graphics::basicPSO);
-	m_chunkManager.Render(m_camera);
+	m_chunkManager.RenderOpaque();
+	if (!m_keyToggle['L'])
+		m_chunkManager.RenderSemiAlpha();
 }

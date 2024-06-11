@@ -123,7 +123,7 @@ void Chunk::InitWorldVerticesData()
 
 					tpTypeMap[type] = true;
 				}
-				else if (Block::IsSemiAlpha(type) && IsOuterLeaf(x, y, z)) {
+				else if (Block::IsSemiAlpha(type) && IsOuter(x, y, z)) {
 					// x dir column
 					saColBit[Utils::GetIndexFrom3D(0, y, z, CHUNK_SIZE_P)] |= (1ULL << x);
 					// y dir column
@@ -317,7 +317,7 @@ void Chunk::GreedyMeshing(uint64_t faceColBit[CHUNK_SIZE2 * 6], std::vector<Voxe
 	}
 }
 
-bool Chunk::IsOuterLeaf(int x, int y, int z)
+bool Chunk::IsOuter(int x, int y, int z)
 {
 	if (x == 0 || x == CHUNK_SIZE_P - 1 || y == 0 || y == CHUNK_SIZE_P - 1 || z == 0 ||
 		z == CHUNK_SIZE_P - 1)
