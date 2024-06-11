@@ -15,8 +15,6 @@ namespace Graphics {
 	ComPtr<ID3D11InputLayout> samplingIL;
 	ComPtr<ID3D11InputLayout> instanceIL;
 
-	ComPtr<ID3D11InputLayout> depthOnlyIL;
-
 
 	// Vertex Shader
 	ComPtr<ID3D11VertexShader> basicVS;
@@ -25,8 +23,6 @@ namespace Graphics {
 	ComPtr<ID3D11VertexShader> samplingVS;
 	ComPtr<ID3D11VertexShader> instanceVS;
 
-	ComPtr<ID3D11VertexShader> depthOnlyVS;
-
 
 	// Pixel Shader
 	ComPtr<ID3D11PixelShader> basicPS;
@@ -34,8 +30,6 @@ namespace Graphics {
 	ComPtr<ID3D11PixelShader> cloudPS;
 	ComPtr<ID3D11PixelShader> samplingPS;
 	ComPtr<ID3D11PixelShader> instancePS;
-
-	ComPtr<ID3D11PixelShader> depthOnlyPS;
 	ComPtr<ID3D11PixelShader> postEffectPS;
 
 
@@ -43,7 +37,6 @@ namespace Graphics {
 	ComPtr<ID3D11RasterizerState> solidRS;
 	ComPtr<ID3D11RasterizerState> wireRS;
 	ComPtr<ID3D11RasterizerState> instanceRS;
-
 	ComPtr<ID3D11RasterizerState> postEffectRS;
 
 
@@ -55,7 +48,6 @@ namespace Graphics {
 
 	// Depth Stencil State
 	ComPtr<ID3D11DepthStencilState> basicDSS;
-
 	ComPtr<ID3D11DepthStencilState> postEffectDSS;
 
 	// Blend State
@@ -117,8 +109,6 @@ namespace Graphics {
 	GraphicsPSO skyboxPSO;
 	GraphicsPSO cloudPSO;
 	GraphicsPSO cloudBlendPSO;
-
-	GraphicsPSO depthOnlyPSO;
 	GraphicsPSO postEffectPSO;
 	GraphicsPSO instancePSO;
 }
@@ -435,14 +425,6 @@ bool Graphics::InitVertexShaderAndInputLayouts()
 		return false;
 	}
 
-	// DepthOnly
-	std::vector<D3D11_INPUT_ELEMENT_DESC> elementDesc5 = {
-		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 } };
-	if (!DXUtils::CreateVertexShaderAndInputLayout(
-			L"DepthOnlyVS.hlsl", depthOnlyVS, depthOnlyIL, elementDesc5)) {
-		std::cout << "failed create depthOnly vs" << std::endl;
-		return false;
-	}
 
 	// Instance
 	std::vector<D3D11_INPUT_ELEMENT_DESC> elementDesc6 = {
@@ -490,12 +472,6 @@ bool Graphics::InitPixelShaders()
 	// SamplingPS
 	if (!DXUtils::CreatePixelShader(L"SamplingPS.hlsl", samplingPS)) {
 		std::cout << "failed create sampling ps" << std::endl;
-		return false;
-	}
-
-	// DepthOnly
-	if (!DXUtils::CreatePixelShader(L"DepthOnlyPS.hlsl", depthOnlyPS)) {
-		std::cout << "failed create DepthOnly ps" << std::endl;
 		return false;
 	}
 
@@ -688,12 +664,6 @@ void Graphics::InitGraphicsPSO()
 	cloudBlendPSO.vertexShader = samplingVS;
 	cloudBlendPSO.pixelShader = samplingPS;
 	cloudBlendPSO.blendState = alphaBS;
-
-	// depthOnlyPSO
-	depthOnlyPSO = basicPSO;
-	depthOnlyPSO.inputLayout = depthOnlyIL;
-	depthOnlyPSO.vertexShader = depthOnlyVS;
-	depthOnlyPSO.pixelShader = depthOnlyPS;
 
 	// postEffectPSO
 	postEffectPSO = basicPSO;

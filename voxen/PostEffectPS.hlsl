@@ -80,7 +80,7 @@ float4 main(SamplingPixelShaderInput input) : SV_TARGET
         
     float3 color = renderTex.Sample(linearClampSS, input.texcoord).rgb;
     
-    if (11000 <= dateTime && dateTime <= 14000)
+    if ((0 <= dateTime && dateTime <= 1000) || (11000 <= dateTime && dateTime <= 13700)|| (22300 <= dateTime && dateTime <= 23999))
     {
         float sunDirWeight = HenyeyGreensteinPhase(sunDir, eyeDir, 0.625);
         fogColor = lerp(normalHorizonColor, sunHorizonColor, sunDirWeight);

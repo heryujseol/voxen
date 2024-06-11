@@ -17,14 +17,11 @@ public:
 	bool Initialize();
 	void Render();
 
-	//ComPtr<ID3D11Buffer> m_constantBuffer;
-
 private:
 	void CreateMesh();
 
 	std::vector<SamplingVertex> m_vertices;
 	std::vector<uint32_t> m_indices;
-	//SkyboxConstantData m_constantData;
 
 	UINT m_stride;
 	UINT m_offset;

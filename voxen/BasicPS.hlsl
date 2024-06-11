@@ -34,6 +34,8 @@ struct vsOutput
     uint type : TYPE;
 };
 
+static const float PI = 3.14159265;
+
 float2 getVoxelTexcoord(float3 pos, uint face)
 {
     float2 texcoord = float2(0.0, 0.0);
@@ -94,6 +96,27 @@ float3 getNormal(uint face)
     }
 }
 
+float3 getFaceColor(uint face, float3 color)
+{
+    //if (face == 0 || face == 1)
+    //{
+    //    return color * 0.75;
+    //}
+    //else
+    if (face == 2)
+    {
+        return color * 0.25;
+    }
+    else if (face == 4 || face == 5)
+    {
+        return color * 0.5;
+    }
+    else
+    {
+        return color;
+    }
+}
+
 float4 main(vsOutput input) : SV_TARGET
 {
 
@@ -102,34 +125,43 @@ float4 main(vsOutput input) : SV_TARGET
     //float4 biome = grassColorMap.SampleLevel(pointClampSS, float2(1 - temperature, 1 - temperature / downfall), 0.0);
     
     float2 texcoord = getVoxelTexcoord(input.posModel, input.face);
-
     uint index = (input.type - 1) * 6 + input.face;
     
-    float3 color = atlasTextureArray.Sample(pointWrapSS, float3(texcoord, index)).rgb * 0.3;
+    float3 color = atlasTextureArray.Sample(pointWrapSS, float3(texcoord, index)).rgb;
+    color = getFaceColor(input.face, color);
     
     float3 normal = getNormal(input.face);
+    float ndotl = max(dot(sunDir, normal), 0.3);
     
-    float ndotl = max(dot(sunDir, normal), 0.0);
+    float strength = clamp(sunStrength, 0.25, 1.0);
     
-    float strength = sunStrength;
+    float sunAltitude = sin(sunDir.y);
+    float showSectionAltitude = -PI * 0.5 * (1.7 / 6.0);
     
-    if (13700 <= dateTime && dateTime <= 14700)
+    if (input.face == 0 || input.face == 1 || input.face == 3)
     {
-        float w = (dateTime - 13700) / 1000.0;
-        color = lerp(color * (strength + 1.0) * (ndotl + 1.0), color, w);
-    }
-    else if (21300 <= dateTime && dateTime <= 22300)
-    {
-        float w = (dateTime - 21300) / 1000.0;
-        color = lerp(color, color * (strength + 1.0) * (ndotl + 1.0), w);
-    }
-    else if (14700 < dateTime && dateTime < 21300)
-    {
-        color = color * (strength + 1.0);
+        if (12700 <= dateTime && dateTime <= 13700)
+        {
+            float w = (dateTime - 12700) / 1000.0;
+            color = lerp(color * (strength) * (ndotl), color * (strength) * 0.3, w);
+        }
+        else if (22300 <= dateTime && dateTime <= 23300)
+        {
+            float w = (dateTime - 22300) / 1000.0;
+            color = lerp(color * (strength) * 0.3, color * (strength) * (ndotl), w);
+        }
+        else if (13700 < dateTime && dateTime < 22300)
+        {
+            color = color * (strength) * 0.3;
+        }
+        else
+        {
+            color = color * (strength) * (ndotl);
+        }
     }
     else
     {
-        color = color * (strength + 1.0) * (ndotl + 1.0);
+        color = color * strength;
     }
 
     return float4(color, 0.0);
