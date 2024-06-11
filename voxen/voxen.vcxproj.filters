@@ -45,6 +45,9 @@
     <ClCompile Include="Cloud.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="PostEffect.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App.h">
@@ -86,6 +89,12 @@
     <ClInclude Include="Cloud.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+    <ClInclude Include="Terrain.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="PostEffect.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
     <ClInclude Include="MeshGenerator.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
@@ -117,6 +126,15 @@
       <Filter>쉐이더 파일</Filter>
     </FxCompile>
     <FxCompile Include="SamplingPS.hlsl">
+      <Filter>쉐이더 파일</Filter>
+    </FxCompile>
+    <FxCompile Include="DepthOnlyVS.hlsl">
+      <Filter>쉐이더 파일</Filter>
+    </FxCompile>
+    <FxCompile Include="DepthOnlyPS.hlsl">
+      <Filter>쉐이더 파일</Filter>
+    </FxCompile>
+    <FxCompile Include="PostEffectPS.hlsl">
       <Filter>쉐이더 파일</Filter>
     </FxCompile>
     <FxCompile Include="InstanceVS.hlsl">

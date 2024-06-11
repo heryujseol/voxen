@@ -20,12 +20,14 @@ bool Camera::Initialize(Vector3 pos)
 
 	m_constantData.view = GetViewMatrix();
 	m_constantData.proj = GetProjectionMatrix();
+	m_constantData.invProj = m_constantData.proj.Invert();
 	m_constantData.eyePos = m_eyePos;
 	m_constantData.eyeDir = m_forward;
 
 	CameraConstantData tempConstantData = m_constantData;
 	tempConstantData.view = tempConstantData.view.Transpose();
 	tempConstantData.proj = tempConstantData.proj.Transpose();
+	tempConstantData.invProj = tempConstantData.invProj.Transpose();
 	if (!DXUtils::CreateConstantBuffer(m_constantBuffer, tempConstantData)) {
 		std::cout << "failed create constant buffer" << std::endl;
 		return false;
@@ -42,12 +44,14 @@ void Camera::Update(float dt, bool keyPressed[256], float mouseX, float mouseY)
 	if (m_isOnConstantDirtyFlag) {
 		m_constantData.view = GetViewMatrix();
 		m_constantData.proj = GetProjectionMatrix();
+		m_constantData.invProj = m_constantData.proj.Invert();
 		m_constantData.eyePos = m_eyePos;
 		m_constantData.eyeDir = m_forward;
 
 		CameraConstantData tempConstantData = m_constantData;
 		tempConstantData.view = tempConstantData.view.Transpose();
 		tempConstantData.proj = tempConstantData.proj.Transpose();
+		tempConstantData.invProj = tempConstantData.invProj.Transpose();
 		DXUtils::UpdateConstantBuffer(m_constantBuffer, tempConstantData);
 
 		m_isOnConstantDirtyFlag = false;

@@ -38,6 +38,7 @@ struct CameraConstantData {
 	float dummy1;
 	Vector3 eyeDir;
 	float dummy2;
+	Matrix invProj;
 };
 
 struct ChunkConstantData {

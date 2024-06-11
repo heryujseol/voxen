@@ -6,6 +6,7 @@
 #include "Camera.h"
 #include "Skybox.h"
 #include "Cloud.h"
+#include "PostEffect.h"
 
 using namespace Microsoft::WRL;
 using namespace DirectX;
@@ -30,6 +31,8 @@ private:
 	void Update(float dt);
 	void Render();
 
+	void depthMapRender();
+
 	UINT m_width;
 	UINT m_height;
 	HWND m_hwnd;
@@ -38,6 +41,7 @@ private:
 	Camera m_camera;
 	Skybox m_skybox;
 	Cloud m_cloud;
+	PostEffect m_postEffect;
 
 	bool m_keyPressed[256];
 	bool m_keyToggle[256];

@@ -20,6 +20,8 @@ public:
 	void Render();
 
 	ComPtr<ID3D11Buffer> m_constantBuffer;
+	Vector3 GetSun() { return m_constantData.sunDir; };
+	uint32_t GetTime() { return m_constantData.dateTime; };
 
 private:
 	uint32_t m_dateTime;

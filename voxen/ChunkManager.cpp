@@ -339,7 +339,7 @@ bool ChunkManager::MakeBuffer(Chunk* chunk)
 {
 	if (!chunk->IsEmpty()) {
 		UINT id = chunk->GetID();
-
+		
 		ChunkConstantData tempConstantData = chunk->GetConstantData();
 		tempConstantData.world = tempConstantData.world.Transpose();
 		if (!DXUtils::CreateConstantBuffer(m_constantBuffers[id], tempConstantData)) {
