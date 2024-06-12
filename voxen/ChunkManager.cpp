@@ -3,6 +3,7 @@
 #include "Utils.h"
 #include "DXUtils.h"
 #include "MeshGenerator.h"
+#include "Block.h"
 
 #include <iostream>
 
@@ -81,7 +82,7 @@ void ChunkManager::RenderOpaque()
 
 void ChunkManager::RenderInstance()
 {
-	UINT indexCountPerInstance[4] = { 36, 12, 24, 6 };
+	UINT indexCountPerInstance[4] = { 12, 24, 6 };
 	for (int i = 0; i < Block::INSTANCE_TYPE_COUNT; ++i) {
 		Graphics::context->IASetIndexBuffer(
 			m_instanceIndexBuffers[i].Get(), DXGI_FORMAT_R32_UINT, 0);
@@ -120,7 +121,29 @@ void ChunkManager::RenderSemiAlpha()
 	}
 }
 
-void ChunkManager::RenderTransparency() {}
+void ChunkManager::RenderTransparency() 
+{
+	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::atlasMapSRV.Get(),
+		Graphics::grassColorMapSRV.Get() };
+	Graphics::context->PSSetShaderResources(0, 2, pptr.data());
+
+	for (auto& c : m_renderChunkList) {
+		if (c->IsEmptyTransparency())
+			continue;
+
+		UINT id = c->GetID();
+		UINT stride = sizeof(VoxelVertex);
+		UINT offset = 0;
+
+		Graphics::context->IASetIndexBuffer(
+			m_transparencyIndexBuffers[id].Get(), DXGI_FORMAT_R32_UINT, 0);
+		Graphics::context->IASetVertexBuffers(
+			0, 1, m_transparencyVertexBuffers[id].GetAddressOf(), &stride, &offset);
+		Graphics::context->VSSetConstantBuffers(1, 1, m_constantBuffers[id].GetAddressOf());
+
+		Graphics::context->DrawIndexed((UINT)c->GetTransparencyIndices().size(), 0, 0);
+	}
+}
 
 void ChunkManager::UpdateChunkList(Vector3 cameraChunkPos)
 {
@@ -263,10 +286,7 @@ void ChunkManager::UpdateInstanceInfoList(Camera& camera)
 				info.instanceWorld =
 					Matrix::CreateTranslation(chunkOffset + pos + Vector3(0.5f)).Transpose();
 				
-				// Block 형태 instance
-				// Cross 형태 instance
-				// Fence 형태 instance
-				// Square 형태 instance
+				// Cross 형태 instance, Fence 형태 instance, Square 형태 instance
 				m_instanceInfoList[Block::GetInstanceType(type)].push_back(info);
 			}
 		}
@@ -368,7 +388,7 @@ bool ChunkManager::MakeBuffer(Chunk* chunk)
 				return false;
 			}
 			if (!DXUtils::CreateIndexBuffer(
-					m_transparencyIndexBuffers[id], chunk->GetTransparantIndices())) {
+					m_transparencyIndexBuffers[id], chunk->GetTransparencyIndices())) {
 				std::cout << "failed create index buffer in chunk manager" << std::endl;
 				return false;
 			}
@@ -430,22 +450,7 @@ bool ChunkManager::MakeInstanceVertexBuffer()
 	std::vector<InstanceVertex> instanceVertices;
 	std::vector<uint32_t> instanceIndices;
 
-	// Instance Type 0 : BOX
-	MeshGenerator::CreateBoxInstanceMesh(instanceVertices, instanceIndices);
-	if (!DXUtils::CreateVertexBuffer(
-			m_instanceVertexBuffers[INSTANCE_TYPE::BOX], instanceVertices)) {
-		std::cout << "failed create box instance vertex buffer in chunk manager" << std::endl;
-		return false;
-	}
-	if (!DXUtils::CreateIndexBuffer(m_instanceIndexBuffers[INSTANCE_TYPE::BOX], instanceIndices)) {
-		std::cout << "failed create box instance index buffer in chunk manager" << std::endl;
-		return false;
-	}
-	instanceVertices.clear();
-	instanceIndices.clear();
-
-
-	// Instance Type 1 : CROSS
+	// Instance Type 0 : CROSS
 	MeshGenerator::CreateCrossInstanceMesh(instanceVertices, instanceIndices);
 	if (!DXUtils::CreateVertexBuffer(
 			m_instanceVertexBuffers[INSTANCE_TYPE::CROSS], instanceVertices)) {
@@ -461,7 +466,7 @@ bool ChunkManager::MakeInstanceVertexBuffer()
 	instanceIndices.clear();
 
 
-	// Instance Type 2 : FENCE
+	// Instance Type 1 : FENCE
 	MeshGenerator::CreateFenceInstanceMesh(instanceVertices, instanceIndices);
 	if (!DXUtils::CreateVertexBuffer(
 			m_instanceVertexBuffers[INSTANCE_TYPE::FENCE], instanceVertices)) {
@@ -477,7 +482,7 @@ bool ChunkManager::MakeInstanceVertexBuffer()
 	instanceIndices.clear();
 
 
-	// Instance Type 3 : SQUARE
+	// Instance Type 2 : SQUARE
 	MeshGenerator::CreateSquareInstanceMesh(instanceVertices, instanceIndices);
 	if (!DXUtils::CreateVertexBuffer(
 			m_instanceVertexBuffers[INSTANCE_TYPE::SQUARE], instanceVertices)) {

@@ -156,7 +156,6 @@ void App::Render()
 	//depthMap
 	DepthMapRender();
 
-
 	Graphics::context->ClearRenderTargetView(Graphics::basicRTV.Get(), clearColor);
 	Graphics::context->OMSetRenderTargets(
 		1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
@@ -167,9 +166,9 @@ void App::Render()
 	// basic
 	Graphics::SetPipelineStates(m_keyToggle[9] ? Graphics::basicWirePSO : Graphics::basicPSO);
 	m_chunkManager.RenderOpaque();
-	if (!m_keyToggle['L'])
-		m_chunkManager.RenderSemiAlpha();
-
+	Graphics::SetPipelineStates(Graphics::semiAlphaPSO);
+	m_chunkManager.RenderSemiAlpha();
+		
 
 	// instance
 	Graphics::SetPipelineStates(Graphics::instancePSO);
@@ -300,6 +299,6 @@ void App::DepthMapRender()
 
 	Graphics::SetPipelineStates(Graphics::basicPSO);
 	m_chunkManager.RenderOpaque();
-	if (!m_keyToggle['L'])
-		m_chunkManager.RenderSemiAlpha();
+	Graphics::SetPipelineStates(Graphics::semiAlphaPSO);
+	m_chunkManager.RenderSemiAlpha();
 }

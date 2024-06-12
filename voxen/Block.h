@@ -10,18 +10,17 @@ enum BLOCK_TYPE : uint8_t {
 };
 
 enum INSTANCE_TYPE : uint8_t {
-	BOX = 0,
-	CROSS = 1,
-	FENCE = 2,
-	SQUARE = 3,
-	NONE = 4,
+	CROSS = 0,
+	FENCE = 1,
+	SQUARE = 2,
+	NONE = 3,
 };
 
 class Block {
 public:
 	
 	static const int BLOCK_TYPE_COUNT = 256;
-	static const int INSTANCE_TYPE_COUNT = 4;
+	static const int INSTANCE_TYPE_COUNT = 3;
 
 	static inline bool IsOpaqua(uint8_t type) { return (1 < type && type < 10);  } // 임시 데이터
 	static inline bool IsSemiAlpha(uint8_t type) { return (10 <= type && type < 20); } // 임시 데이터
@@ -31,12 +30,10 @@ public:
 	static inline INSTANCE_TYPE GetInstanceType(uint8_t type)
 	{
 		if (128 <= type && type < 128 + 16)
-			return INSTANCE_TYPE::BOX;
-		else if (128 + 16 <= type && type < 128 + 16 * 2)
 			return INSTANCE_TYPE::CROSS;
-		else if (128 + 16 * 2 <= type && type < 128 + 16 * 3)
+		else if (128 + 16 <= type && type < 128 + 16 * 2)
 			return INSTANCE_TYPE::FENCE;
-		else if (128 + 16 * 3 <= type && type < 128 + 16 * 4)
+		else if (128 + 16 * 2 <= type && type < 128 + 16 * 3)
 			return INSTANCE_TYPE::SQUARE;
 		else
 			return INSTANCE_TYPE::NONE;

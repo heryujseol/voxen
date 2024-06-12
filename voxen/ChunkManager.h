@@ -14,7 +14,7 @@ using namespace DirectX::SimpleMath;
 class ChunkManager {
 
 public:
-	static const int CHUNK_COUNT = 21;
+	static const int CHUNK_COUNT = 7;
 	static const int MAX_HEIGHT = 256;
 	static const int MAX_HEIGHT_CHUNK_COUNT = 8;
 	static const int CHUNK_COUNT_P = CHUNK_COUNT + 2;
@@ -29,10 +29,12 @@ public:
 
 	bool Initialize(Vector3 cameraChunkPos);
 	void Update(Camera& camera);
+
 	void RenderOpaque();
-	void RenderInstance();
 	void RenderSemiAlpha();
 	void RenderTransparency();
+
+	void RenderInstance();
 
 private:
 	void UpdateChunkList(Vector3 cameraChunkPos);

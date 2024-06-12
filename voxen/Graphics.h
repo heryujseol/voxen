@@ -20,7 +20,6 @@ namespace Graphics {
 	extern ComPtr<ID3D11InputLayout> cloudIL;
 	extern ComPtr<ID3D11InputLayout> samplingIL;
 	extern ComPtr<ID3D11InputLayout> instanceIL;
-
 	extern ComPtr<ID3D11InputLayout> depthOnlyIL;
 
 
@@ -29,10 +28,8 @@ namespace Graphics {
 	extern ComPtr<ID3D11VertexShader> skyboxVS;
 	extern ComPtr<ID3D11VertexShader> cloudVS;
 	extern ComPtr<ID3D11VertexShader> samplingVS;
-	
 	extern ComPtr<ID3D11VertexShader> depthOnlyVS;
 	extern ComPtr<ID3D11VertexShader> instanceVS;
-
 
 
 	// Pixel Shader
@@ -41,24 +38,24 @@ namespace Graphics {
 	extern ComPtr<ID3D11PixelShader> cloudPS;
 	extern ComPtr<ID3D11PixelShader> samplingPS;
 	extern ComPtr<ID3D11PixelShader> instancePS;
-
 	extern ComPtr<ID3D11PixelShader> depthOnlyPS;
+	extern ComPtr<ID3D11PixelShader> alphaClipPS;
 
 
 	// Rasterizer State
 	extern ComPtr<ID3D11RasterizerState> solidRS;
 	extern ComPtr<ID3D11RasterizerState> wireRS;
-	extern ComPtr<ID3D11RasterizerState> instanceRS;
-
+	extern ComPtr<ID3D11RasterizerState> noneCullRS;
+	extern ComPtr<ID3D11RasterizerState> postEffectRS;
 
 	// Sampler State
 	extern ComPtr<ID3D11SamplerState> pointClampSS;
 	extern ComPtr<ID3D11SamplerState> linearWrapSS;
 	extern ComPtr<ID3D11SamplerState> linearClampSS;
 
+
 	// Depth Stencil State
 	extern ComPtr<ID3D11DepthStencilState> basicDSS;
-
 	extern ComPtr<ID3D11DepthStencilState> postEffectDSS;
 
 	
@@ -108,6 +105,7 @@ namespace Graphics {
 	extern ComPtr<ID3D11Texture2D> postEffectResolvedBuffer;
 	extern ComPtr<ID3D11ShaderResourceView> postEffectSRV;
 
+
 	// Viewport
 	extern D3D11_VIEWPORT basicViewport;
 
@@ -142,8 +140,9 @@ namespace Graphics {
 	extern GraphicsPSO skyboxPSO;
 	extern GraphicsPSO cloudPSO;
 	extern GraphicsPSO cloudBlendPSO;
-
 	extern GraphicsPSO depthOnlyPSO;
 	extern GraphicsPSO postEffectPSO;
 	extern GraphicsPSO instancePSO;
+	extern GraphicsPSO semiAlphaPSO;
+	extern GraphicsPSO transparencyPSO;
 }
