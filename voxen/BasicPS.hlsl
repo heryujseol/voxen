@@ -9,6 +9,7 @@ cbuffer CameraConstantBuffer : register(b0)
     matrix proj;
     float3 eyePos;
     float dummy;
+    float3 eyeDir;
 }
 
 cbuffer SkyboxConstantBuffer : register(b1)
@@ -128,7 +129,7 @@ float4 main(vsOutput input) : SV_TARGET
     uint index = (input.type - 1) * 6 + input.face;
     
     float3 color = atlasTextureArray.Sample(pointWrapSS, float3(texcoord, index)).rgb;
-    color = getFaceColor(input.face, color);
+    //color = getFaceColor(input.face, color);
     
     float3 normal = getNormal(input.face);
     float ndotl = max(dot(sunDir, normal), 0.3);
@@ -138,31 +139,36 @@ float4 main(vsOutput input) : SV_TARGET
     float sunAltitude = sin(sunDir.y);
     float showSectionAltitude = -PI * 0.5 * (1.7 / 6.0);
     
-    if (input.face == 0 || input.face == 1 || input.face == 3)
-    {
+    float3 EyeDir = float3(eyePos - input.posWorld);
+    float3 H = normalize(-EyeDir + -sunDir);
+    float hdotn = dot(H, normal);
+    float3 spec = pow(max(hdotn, 0.0), 4.0);
+    
+    //if (input.face == 0 || input.face == 1 || input.face == 3)
+    //{
         if (12700 <= dateTime && dateTime <= 13700)
         {
             float w = (dateTime - 12700) / 1000.0;
-            color = lerp(color * (strength) * (ndotl), color * (strength) * 0.3, w);
+            color = lerp(color * ((strength * ndotl) + spec), color * (strength * 0.3), w);
         }
         else if (22300 <= dateTime && dateTime <= 23300)
         {
             float w = (dateTime - 22300) / 1000.0;
-            color = lerp(color * (strength) * 0.3, color * (strength) * (ndotl), w);
+            color = lerp(color * (strength * 0.3), color * (strength * ndotl + spec), w);
         }
         else if (13700 < dateTime && dateTime < 22300)
         {
-            color = color * (strength) * 0.3;
+            color = color * strength * 0.3;
         }
         else
         {
-            color = color * (strength) * (ndotl);
+            color = color * ((strength * ndotl) + spec);
         }
-    }
-    else
-    {
-        color = color * strength;
-    }
+    //}
+    //else
+    //{
+    //    color = color * strength;
+    //}
 
     return float4(color, 0.0);
 }
