@@ -144,4 +144,5 @@ namespace Graphics {
 	extern GraphicsPSO postEffectPSO;
 	extern GraphicsPSO instancePSO;
 	extern GraphicsPSO semiAlphaPSO;
+	extern GraphicsPSO transparencyPSO;
 }

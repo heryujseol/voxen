@@ -66,8 +66,15 @@ void Chunk::InitChunkData()
 
 				/////////////////////////////
 				// for instance testing
-				if (height + 2 <= ny && ny <= height + 4 &&
-					(nx % 6 != 0 && nx % 6 != 5 && nz % 6 != 0 && nz % 6 != 5)) {
+				int choose[4] = { 128, 129, 130, 144 };
+				static int loop = 0;
+				if (height + 1 == ny && x % 3 == 0 && z % 3 == 0) {
+					m_blocks[x][y][z].SetType(choose[loop % 4]);
+					loop++;
+				}
+				// for tree leaf testing
+				if (height + 3 <= ny && ny <= height + 6 && 14 <= x && x <= 20 && 14 <= z &&
+					z <= 20) {
 					m_blocks[x][y][z].SetType(10);
 				}
 				/////////////////////////////
@@ -164,7 +171,7 @@ void Chunk::InitWorldVerticesData()
 					if (z + 1 < CHUNK_SIZE_P && !Block::IsOpaqua(m_blocks[x][y][z + 1].GetType())) {
 						saCullColBit[Utils::GetIndexFrom3D(5, y, x, CHUNK_SIZE_P)] |= (1ULL << z);
 					}
-					
+
 					// + -> - : 투명일 때만 페이스 존재 -> 같은 타입을 고려하지 않음
 					if (x - 1 >= 0 && Block::IsTransparency(m_blocks[x - 1][y][z].GetType())) {
 						saCullColBit[Utils::GetIndexFrom3D(0, y, z, CHUNK_SIZE_P)] |= (1ULL << x);

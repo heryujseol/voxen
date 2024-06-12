@@ -118,6 +118,7 @@ namespace Graphics {
 	GraphicsPSO postEffectPSO;
 	GraphicsPSO instancePSO;
 	GraphicsPSO semiAlphaPSO;
+	GraphicsPSO transparencyPSO;
 }
 
 
@@ -717,6 +718,10 @@ void Graphics::InitGraphicsPSO()
 	semiAlphaPSO = basicPSO;
 	semiAlphaPSO.rasterizerState = noneCullRS;
 	semiAlphaPSO.pixelShader = alphaClipPS;
+	
+	// transparencyPSO
+	transparencyPSO = basicPSO;
+	transparencyPSO.blendState = alphaBS;
 }
 
 void Graphics::SetPipelineStates(GraphicsPSO& pso)
