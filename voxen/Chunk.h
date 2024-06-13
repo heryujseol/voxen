@@ -31,14 +31,18 @@ public:
 
 	inline void SetLoad(bool isLoaded) { m_isLoaded = isLoaded; }
 	inline bool IsLoaded() { return m_isLoaded; }
-	inline bool IsEmpty() { return IsEmptyOpaque() && IsEmptyTransparency() && IsEmptySemiAlpha(); }
+	inline bool IsEmpty() { return IsEmptyLowLod(); }
 
 	inline Vector3 GetPosition() { return m_position; }
 	inline void SetPosition(Vector3 position) { m_position = position; }
 
+	inline bool IsEmptyLowLod() { return m_lowLodVertices.empty(); }
 	inline bool IsEmptyOpaque() { return m_opaqueVertices.empty(); }
 	inline bool IsEmptyTransparency() { return m_transparencyVertices.empty(); }
 	inline bool IsEmptySemiAlpha() { return m_semiAlphaVertices.empty(); }
+
+	inline const std::vector<VoxelVertex>& GetLowLodVertices() const { return m_lowLodVertices; }
+	inline const std::vector<uint32_t>& GetLowLodIndices() const { return m_lowLodIndices; }
 
 	inline const std::vector<VoxelVertex>& GetOpaqueVertices() const { return m_opaqueVertices; }
 	inline const std::vector<uint32_t>& GetOpaqueIndices() const { return m_opaqueIndices; }
@@ -81,6 +85,9 @@ private:
 	UINT m_id;
 	bool m_isLoaded;
 	Vector3 m_position;
+
+	std::vector<VoxelVertex> m_lowLodVertices;
+	std::vector<uint32_t> m_lowLodIndices;
 
 	std::vector<VoxelVertex> m_opaqueVertices;
 	std::vector<uint32_t> m_opaqueIndices;

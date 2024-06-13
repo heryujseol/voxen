@@ -18,6 +18,9 @@ bool ChunkManager::Initialize(Vector3 cameraChunkPos)
 		m_chunkPool.push_back(new Chunk(i));
 	}
 
+	m_lowLodVertexBuffers.resize(poolSize);
+	m_lowLodIndexBuffers.resize(poolSize);
+
 	m_opaqueVertexBuffers.resize(poolSize);
 	m_opaqueIndexBuffers.resize(poolSize);
 
@@ -80,23 +83,6 @@ void ChunkManager::RenderOpaque()
 	}
 }
 
-void ChunkManager::RenderInstance()
-{
-	UINT indexCountPerInstance[4] = { 12, 24, 6 };
-	for (int i = 0; i < Block::INSTANCE_TYPE_COUNT; ++i) {
-		Graphics::context->IASetIndexBuffer(
-			m_instanceIndexBuffers[i].Get(), DXGI_FORMAT_R32_UINT, 0);
-
-		std::vector<UINT> strides = { sizeof(InstanceVertex), sizeof(InstanceInfo) };
-		std::vector<UINT> offsets = { 0, 0 };
-		std::vector<ID3D11Buffer*> buffers = { m_instanceVertexBuffers[i].Get(),
-			m_instanceInfoBuffers[i].Get() };
-		Graphics::context->IASetVertexBuffers(0, 2, buffers.data(), strides.data(), offsets.data());
-		Graphics::context->DrawIndexedInstanced(
-			indexCountPerInstance[i], (UINT)m_instanceInfoList[i].size(), 0, 0, 0);
-	}
-}
-
 void ChunkManager::RenderSemiAlpha()
 {
 	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::atlasMapSRV.Get(),
@@ -121,12 +107,12 @@ void ChunkManager::RenderSemiAlpha()
 	}
 }
 
-void ChunkManager::RenderTransparency() 
+void ChunkManager::RenderTransparency()
 {
 	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::atlasMapSRV.Get(),
-		Graphics::grassColorMapSRV.Get() };
-	Graphics::context->PSSetShaderResources(0, 2, pptr.data());
-
+		Graphics::grassColorMapSRV.Get(), Graphics::envMapSRV.Get() };
+	Graphics::context->PSSetShaderResources(0, 3, pptr.data());
+	
 	for (auto& c : m_renderChunkList) {
 		if (c->IsEmptyTransparency())
 			continue;
@@ -142,6 +128,47 @@ void ChunkManager::RenderTransparency()
 		Graphics::context->VSSetConstantBuffers(1, 1, m_constantBuffers[id].GetAddressOf());
 
 		Graphics::context->DrawIndexed((UINT)c->GetTransparencyIndices().size(), 0, 0);
+	}
+}
+
+void ChunkManager::RenderEnvMap() 
+{
+	for (auto& p : m_chunkMap) {
+		if (!p.second->IsLoaded())
+			continue;
+
+		if (p.second->IsEmptyLowLod())
+			continue;
+
+		UINT id = p.second->GetID();
+		UINT stride = sizeof(VoxelVertex);
+		UINT offset = 0;
+
+		Graphics::context->IASetIndexBuffer(
+			m_lowLodIndexBuffers[id].Get(), DXGI_FORMAT_R32_UINT, 0);
+		Graphics::context->IASetVertexBuffers(
+			0, 1, m_lowLodVertexBuffers[id].GetAddressOf(), &stride, &offset);
+
+		Graphics::context->GSSetConstantBuffers(1, 1, m_constantBuffers[id].GetAddressOf());
+		
+		Graphics::context->DrawIndexed((UINT)p.second->GetLowLodIndices().size(), 0, 0);
+	}
+}
+
+void ChunkManager::RenderInstance()
+{
+	UINT indexCountPerInstance[4] = { 12, 24, 6 };
+	for (int i = 0; i < Block::INSTANCE_TYPE_COUNT; ++i) {
+		Graphics::context->IASetIndexBuffer(
+			m_instanceIndexBuffers[i].Get(), DXGI_FORMAT_R32_UINT, 0);
+
+		std::vector<UINT> strides = { sizeof(InstanceVertex), sizeof(InstanceInfo) };
+		std::vector<UINT> offsets = { 0, 0 };
+		std::vector<ID3D11Buffer*> buffers = { m_instanceVertexBuffers[i].Get(),
+			m_instanceInfoBuffers[i].Get() };
+		Graphics::context->IASetVertexBuffers(0, 2, buffers.data(), strides.data(), offsets.data());
+		Graphics::context->DrawIndexedInstanced(
+			indexCountPerInstance[i], (UINT)m_instanceInfoList[i].size(), 0, 0, 0);
 	}
 }
 
@@ -285,7 +312,7 @@ void ChunkManager::UpdateInstanceInfoList(Camera& camera)
 				// rotate?
 				info.instanceWorld =
 					Matrix::CreateTranslation(chunkOffset + pos + Vector3(0.5f)).Transpose();
-				
+
 				// Cross 형태 instance, Fence 형태 instance, Square 형태 instance
 				m_instanceInfoList[Block::GetInstanceType(type)].push_back(info);
 			}
@@ -359,12 +386,25 @@ bool ChunkManager::MakeBuffer(Chunk* chunk)
 {
 	if (!chunk->IsEmpty()) {
 		UINT id = chunk->GetID();
-		
+
 		ChunkConstantData tempConstantData = chunk->GetConstantData();
 		tempConstantData.world = tempConstantData.world.Transpose();
 		if (!DXUtils::CreateConstantBuffer(m_constantBuffers[id], tempConstantData)) {
 			std::cout << "failed create constant buffer in chunk manager" << std::endl;
 			return false;
+		}
+
+		// lowLod
+		if (!chunk->IsEmptyLowLod()) {
+			if (!DXUtils::CreateVertexBuffer(
+					m_lowLodVertexBuffers[id], chunk->GetLowLodVertices())) {
+				std::cout << "failed create vertex buffer in chunk manager" << std::endl;
+				return false;
+			}
+			if (!DXUtils::CreateIndexBuffer(m_lowLodIndexBuffers[id], chunk->GetLowLodIndices())) {
+				std::cout << "failed create index buffer in chunk manager" << std::endl;
+				return false;
+			}
 		}
 
 		// opaque
@@ -416,6 +456,8 @@ void ChunkManager::ClearChunkBuffer(Chunk* chunk)
 {
 	UINT id = chunk->GetID();
 
+	m_lowLodVertexBuffers[id].Reset();
+	m_lowLodIndexBuffers[id].Reset();
 	m_opaqueVertexBuffers[id].Reset();
 	m_opaqueIndexBuffers[id].Reset();
 	m_transparencyVertexBuffers[id].Reset();
@@ -424,6 +466,8 @@ void ChunkManager::ClearChunkBuffer(Chunk* chunk)
 	m_semiAlphaIndexBuffers[id].Reset();
 	m_constantBuffers[id].Reset();
 
+	m_lowLodVertexBuffers[id] = nullptr;
+	m_lowLodIndexBuffers[id] = nullptr;
 	m_opaqueVertexBuffers[id] = nullptr;
 	m_opaqueIndexBuffers[id] = nullptr;
 	m_transparencyVertexBuffers[id] = nullptr;

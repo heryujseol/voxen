@@ -142,46 +142,52 @@ void App::Update(float dt)
 void App::Render()
 {
 	// 공통 로직
-	DXUtils::UpdateViewport(Graphics::basicViewport, 0, 0, m_width, m_height);
-	Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
-
-	const FLOAT clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-
 	Graphics::context->VSSetConstantBuffers(0, 1, m_camera.m_constantBuffer.GetAddressOf());
 	std::vector<ID3D11Buffer*> pptr = { m_camera.m_constantBuffer.Get(),
 		m_skybox.m_constantBuffer.Get() };
 	Graphics::context->PSSetConstantBuffers(0, 2, pptr.data());
 
+	// making env map
+	RenderEnvMap();
 
-	//depthMap
-	DepthMapRender();
+	DXUtils::UpdateViewport(Graphics::basicViewport, 0, 0, m_width, m_height);
+	Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
 
+	// DepthOnly
+	//RenderDepthOnly();
+
+	
+	const FLOAT clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	Graphics::context->ClearRenderTargetView(Graphics::basicRTV.Get(), clearColor);
-	Graphics::context->OMSetRenderTargets(
-		1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
 	Graphics::context->ClearDepthStencilView(
 		Graphics::basicDSV.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
-
-
-	// basic
-	Graphics::SetPipelineStates(m_keyToggle[9] ? Graphics::basicWirePSO : Graphics::basicPSO);
-	m_chunkManager.RenderOpaque();
-	Graphics::SetPipelineStates(Graphics::basicNoneCullPSO);
-	m_chunkManager.RenderSemiAlpha();
-		
-
-	// instance
-	Graphics::SetPipelineStates(Graphics::instancePSO);
-	m_chunkManager.RenderInstance();
-	
-
-	// postEffect
-	Graphics::SetPipelineStates(Graphics::postEffectPSO);
-	m_postEffect.Render();
-
-
 	Graphics::context->OMSetRenderTargets(
 		1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
+	
+
+
+	// opaque
+	Graphics::SetPipelineStates(m_keyToggle[9] ? Graphics::basicWirePSO : Graphics::basicPSO);
+	m_chunkManager.RenderOpaque();
+
+
+	// semiAlpha
+	//Graphics::SetPipelineStates(Graphics::basicNoneCullPSO);
+	//m_chunkManager.RenderSemiAlpha();
+
+
+	// instance
+	//Graphics::SetPipelineStates(Graphics::instancePSO);
+	//m_chunkManager.RenderInstance();
+
+
+	// postEffect
+	//Graphics::SetPipelineStates(Graphics::postEffectPSO);
+	//m_postEffect.Render();
+
+	//Graphics::context->OMSetRenderTargets(
+//		1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
+
 
 	// skybox
 	Graphics::SetPipelineStates(Graphics::skyboxPSO);
@@ -192,7 +198,14 @@ void App::Render()
 	Graphics::SetPipelineStates(Graphics::cloudPSO);
 	m_cloud.Render();
 
-	
+
+	// transparency
+	Graphics::SetPipelineStates(Graphics::transparencyPSO);
+	Graphics::context->OMSetRenderTargets(
+		1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
+	m_chunkManager.RenderTransparency();
+
+
 	// RTV -> backBuffer
 	Graphics::context->ResolveSubresource(Graphics::backBuffer.Get(), 0,
 		Graphics::basicRenderBuffer.Get(), 0, DXGI_FORMAT_R8G8B8A8_UNORM);
@@ -291,7 +304,7 @@ bool App::InitScene()
 	return true;
 }
 
-void App::DepthMapRender()
+void App::RenderDepthOnly()
 {
 	Graphics::context->OMSetRenderTargets(0, NULL, Graphics::depthOnlyDSV.Get());
 	Graphics::context->ClearDepthStencilView(
@@ -299,6 +312,25 @@ void App::DepthMapRender()
 
 	Graphics::SetPipelineStates(Graphics::basicPSO);
 	m_chunkManager.RenderOpaque();
+
 	Graphics::SetPipelineStates(Graphics::basicNoneCullPSO);
 	m_chunkManager.RenderSemiAlpha();
+
+	Graphics::SetPipelineStates(Graphics::instancePSO);
+	m_chunkManager.RenderInstance();
+}
+
+void App::RenderEnvMap()
+{
+	Graphics::context->ClearDepthStencilView(Graphics::envMapDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
+	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+	Graphics::context->ClearRenderTargetView(Graphics::envMapRTV.Get(), clearColor);
+
+	DXUtils::UpdateViewport(Graphics::envMapViewPort, 0, 0, m_width / 4, m_width / 4);
+	Graphics::context->RSSetViewports(1, &Graphics::envMapViewPort);
+	Graphics::context->OMSetRenderTargets(1, Graphics::envMapRTV.GetAddressOf(), Graphics::envMapDSV.Get());
+	Graphics::context->GSSetConstantBuffers(0, 1, m_camera.m_envMapConstantBuffer.GetAddressOf());
+
+	Graphics::SetPipelineStates(Graphics::envMapPSO);
+	m_chunkManager.RenderEnvMap();
 }

@@ -1,7 +1,7 @@
 Texture2D renderTex : register(t0); // Rendering results
 Texture2D depthOnlyTex : register(t1); // DepthOnly
 
-SamplerState linearClampSS : register(s0);
+SamplerState linearClampSS : register(s2);
 
 cbuffer CameraConstantBuffer : register(b0)
 {
@@ -88,5 +88,5 @@ float4 main(SamplingPixelShaderInput input) : SV_TARGET
         
     color = lerp(fogColor, color, fogFactor);
     
-    return float4(color, 1.0);
+    return float4(color, 0.0);
 }

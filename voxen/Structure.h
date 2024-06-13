@@ -63,3 +63,8 @@ struct CloudConstantData {
 	Vector3 volumeColor;
 	float cloudScale;
 };
+
+struct EnvMapConstantData {
+	Matrix view[6];
+	Matrix proj;
+};

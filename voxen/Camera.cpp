@@ -9,6 +9,10 @@ Camera::Camera()
 {
 	m_constantData.view = Matrix();
 	m_constantData.proj = Matrix();
+
+	for (int i = 0; i < 6; ++i)
+		m_envMapConstantData.view[i] = Matrix();
+	m_envMapConstantData.proj = Matrix();
 }
 
 Camera::~Camera() {}
@@ -29,7 +33,21 @@ bool Camera::Initialize(Vector3 pos)
 	tempConstantData.proj = tempConstantData.proj.Transpose();
 	tempConstantData.invProj = tempConstantData.invProj.Transpose();
 	if (!DXUtils::CreateConstantBuffer(m_constantBuffer, tempConstantData)) {
-		std::cout << "failed create constant buffer" << std::endl;
+		std::cout << "failed create camera constant buffer" << std::endl;
+		return false;
+	}
+
+	for (int i = 0; i < 6; ++i) {
+		m_envMapConstantData.view[i] = XMMatrixLookToLH(m_eyePos, lookTo[i], up[i]);
+		m_envMapConstantData.view[i] = m_envMapConstantData.view[i].Transpose();
+	}
+	m_envMapConstantData.proj =
+		XMMatrixPerspectiveFovLH(XMConvertToRadians(90.0f), 1.0, m_nearZ, m_farZ);
+	m_envMapConstantData.proj = m_envMapConstantData.proj.Transpose();
+
+	if (!DXUtils::CreateConstantBuffer(m_envMapConstantBuffer, m_envMapConstantData))
+	{
+		std::cout << "failed create env map constant buffer" << std::endl;
 		return false;
 	}
 
@@ -53,6 +71,15 @@ void Camera::Update(float dt, bool keyPressed[256], float mouseX, float mouseY)
 		tempConstantData.proj = tempConstantData.proj.Transpose();
 		tempConstantData.invProj = tempConstantData.invProj.Transpose();
 		DXUtils::UpdateConstantBuffer(m_constantBuffer, tempConstantData);
+
+		for (int i = 0; i < 6; ++i) {
+			m_envMapConstantData.view[i] = XMMatrixLookToLH(m_eyePos, lookTo[i], up[i]);
+			m_envMapConstantData.view[i] = m_envMapConstantData.view[i].Transpose();
+		}
+		m_envMapConstantData.proj =
+			XMMatrixPerspectiveFovLH(XMConvertToRadians(90.0f), 1.0, m_nearZ, m_farZ);
+		m_envMapConstantData.proj = m_envMapConstantData.proj.Transpose();
+		DXUtils::UpdateConstantBuffer(m_envMapConstantBuffer, m_envMapConstantData);
 
 		m_isOnConstantDirtyFlag = false;
 	}

@@ -19,6 +19,7 @@ public:
 	void Update(float dt, bool keyPressed[256], float mouseX, float mouseY);
 
 	ComPtr<ID3D11Buffer> m_constantBuffer;
+	ComPtr<ID3D11Buffer> m_envMapConstantBuffer;
 
 	Vector3 GetPosition();
 	Vector3 GetChunkPosition();
@@ -52,6 +53,23 @@ private:
 
 	float m_speed;
 
-
 	CameraConstantData m_constantData;
+	EnvMapConstantData m_envMapConstantData;
+
+	Vector3 lookTo[6] = {
+		Vector3(1.0f, 0.0f, 0.0f),
+		Vector3(-1.0f, 0.0f, 0.0f),
+		Vector3(0.0f, 1.0f, 0.0f),
+		Vector3(0.0f, -1.0f, 0.0f),
+		Vector3(0.0f, 0.0f, 1.0f),
+		Vector3(0.0f, 0.0f, -1.0f),
+	};
+	Vector3 up[6] = {
+		Vector3(0.0f, 1.0f, 0.0f),
+		Vector3(0.0f, 1.0f, 0.0f),
+		Vector3(0.0f, 0.0f, -1.0f),
+		Vector3(0.0f, 0.0f, 1.0f),
+		Vector3(0.0f, 1.0f, 0.0f),
+		Vector3(0.0f, 1.0f, 0.0f),
+	};
 };

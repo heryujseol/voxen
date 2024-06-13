@@ -87,8 +87,7 @@ namespace DXUtils {
 		return true;
 	}
 
-	static bool CreateInstanceBuffer(
-		ComPtr<ID3D11Buffer>& instanceBuffer, UINT maxCount)
+	static bool CreateInstanceBuffer(ComPtr<ID3D11Buffer>& instanceBuffer, UINT maxCount)
 	{
 		D3D11_BUFFER_DESC desc;
 		ZeroMemory(&desc, sizeof(desc));
@@ -243,14 +242,16 @@ namespace DXUtils {
 	}
 
 	static bool CreateTextureBuffer(ComPtr<ID3D11Texture2D>& buffer, UINT width, UINT height,
-		bool isMSAA, DXGI_FORMAT format, UINT bindFlags)
+		bool isMSAA, DXGI_FORMAT format, UINT bindFlags, UINT mipLevels = 1, UINT arraySize = 1,
+		UINT miscFlags = 0)
 	{
 		D3D11_TEXTURE2D_DESC desc;
 		ZeroMemory(&desc, sizeof(desc));
 
 		desc.Width = width;
 		desc.Height = height;
-		desc.MipLevels = desc.ArraySize = 1;
+		desc.MipLevels = mipLevels;
+		desc.ArraySize = arraySize;
 		desc.Format = format;
 		if (isMSAA) {
 			UINT qualityLevel = 0;
@@ -270,8 +271,8 @@ namespace DXUtils {
 
 		desc.Usage = D3D11_USAGE_DEFAULT;
 		desc.BindFlags = bindFlags;
-		if (bindFlags == 72)
-			desc.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
+		desc.MiscFlags = miscFlags;
+
 		HRESULT ret = Graphics::device->CreateTexture2D(&desc, nullptr, buffer.GetAddressOf());
 		if (FAILED(ret))
 			return false;

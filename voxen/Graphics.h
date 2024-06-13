@@ -30,6 +30,11 @@ namespace Graphics {
 	extern ComPtr<ID3D11VertexShader> samplingVS;
 	extern ComPtr<ID3D11VertexShader> depthOnlyVS;
 	extern ComPtr<ID3D11VertexShader> instanceVS;
+	extern ComPtr<ID3D11VertexShader> envMapVS;
+
+
+	// Geometry Shader
+	extern ComPtr<ID3D11GeometryShader> envMapGS;
 
 
 	// Pixel Shader
@@ -39,6 +44,8 @@ namespace Graphics {
 	extern ComPtr<ID3D11PixelShader> samplingPS;
 	extern ComPtr<ID3D11PixelShader> instancePS;
 	extern ComPtr<ID3D11PixelShader> depthOnlyPS;
+	extern ComPtr<ID3D11PixelShader> envMapPS;
+	extern ComPtr<ID3D11PixelShader> transparencyPS;
 
 
 	// Rasterizer State
@@ -74,6 +81,9 @@ namespace Graphics {
 
 	extern ComPtr<ID3D11Texture2D> postEffectBuffer;
 	extern ComPtr<ID3D11RenderTargetView> postEffectRTV;
+
+	extern ComPtr<ID3D11Texture2D> envMapRenderBuffer;
+	extern ComPtr<ID3D11RenderTargetView> envMapRTV;
 	
 
 	// DSV & Buffer
@@ -82,6 +92,9 @@ namespace Graphics {
 
 	extern ComPtr<ID3D11Texture2D> depthOnlyBuffer;
 	extern ComPtr<ID3D11DepthStencilView> depthOnlyDSV;
+
+	extern ComPtr<ID3D11Texture2D> envMapDepthBuffer;
+	extern ComPtr<ID3D11DepthStencilView> envMapDSV;
 
 
 	// SRV & Buffer
@@ -104,9 +117,12 @@ namespace Graphics {
 	extern ComPtr<ID3D11Texture2D> postEffectResolvedBuffer;
 	extern ComPtr<ID3D11ShaderResourceView> postEffectSRV;
 
+	extern ComPtr<ID3D11ShaderResourceView> envMapSRV;
+
 
 	// Viewport
 	extern D3D11_VIEWPORT basicViewport;
+	extern D3D11_VIEWPORT envMapViewPort;
 
 
 	// device, context, swapChain
@@ -143,4 +159,6 @@ namespace Graphics {
 	extern GraphicsPSO depthOnlyPSO;
 	extern GraphicsPSO postEffectPSO;
 	extern GraphicsPSO instancePSO;
+	extern GraphicsPSO envMapPSO;
+	extern GraphicsPSO transparencyPSO;
 }

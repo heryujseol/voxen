@@ -14,7 +14,7 @@ using namespace DirectX::SimpleMath;
 class ChunkManager {
 
 public:
-	static const int CHUNK_COUNT = 7;
+	static const int CHUNK_COUNT = 17;
 	static const int MAX_HEIGHT = 256;
 	static const int MAX_HEIGHT_CHUNK_COUNT = 8;
 	static const int CHUNK_COUNT_P = CHUNK_COUNT + 2;
@@ -33,7 +33,7 @@ public:
 	void RenderOpaque();
 	void RenderSemiAlpha();
 	void RenderTransparency();
-
+	void RenderEnvMap();
 	void RenderInstance();
 
 private:
@@ -59,6 +59,9 @@ private:
 	std::vector<Chunk*> m_loadChunkList;
 	std::vector<Chunk*> m_unloadChunkList;
 	std::vector<Chunk*> m_renderChunkList;
+
+	std::vector<ComPtr<ID3D11Buffer>> m_lowLodVertexBuffers;
+	std::vector<ComPtr<ID3D11Buffer>> m_lowLodIndexBuffers;
 
 	std::vector<ComPtr<ID3D11Buffer>> m_opaqueVertexBuffers;
 	std::vector<ComPtr<ID3D11Buffer>> m_opaqueIndexBuffers;

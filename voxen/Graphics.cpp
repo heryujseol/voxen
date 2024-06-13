@@ -24,6 +24,11 @@ namespace Graphics {
 	ComPtr<ID3D11VertexShader> samplingVS;
 	ComPtr<ID3D11VertexShader> instanceVS;
 	ComPtr<ID3D11VertexShader> depthOnlyVS;
+	ComPtr<ID3D11VertexShader> envMapVS;
+
+
+	// Geometry Shader
+	ComPtr<ID3D11GeometryShader> envMapGS;
 
 
 	// Pixel Shader
@@ -34,6 +39,8 @@ namespace Graphics {
 	ComPtr<ID3D11PixelShader> instancePS;
 	ComPtr<ID3D11PixelShader> depthOnlyPS;
 	ComPtr<ID3D11PixelShader> postEffectPS;
+	ComPtr<ID3D11PixelShader> envMapPS;
+	ComPtr<ID3D11PixelShader> transparencyPS;
 
 
 	// Rasterizer State
@@ -71,6 +78,9 @@ namespace Graphics {
 	ComPtr<ID3D11Texture2D> postEffectBuffer;
 	ComPtr<ID3D11RenderTargetView> postEffectRTV;
 
+	ComPtr<ID3D11Texture2D> envMapRenderBuffer;
+	ComPtr<ID3D11RenderTargetView> envMapRTV;
+
 
 	// DSV & Buffer
 	ComPtr<ID3D11Texture2D> basicDepthBuffer;
@@ -78,6 +88,9 @@ namespace Graphics {
 
 	ComPtr<ID3D11Texture2D> depthOnlyBuffer;
 	ComPtr<ID3D11DepthStencilView> depthOnlyDSV;
+
+	ComPtr<ID3D11Texture2D> envMapDepthBuffer;
+	ComPtr<ID3D11DepthStencilView> envMapDSV;
 
 
 	// SRV & Buffer
@@ -100,9 +113,12 @@ namespace Graphics {
 	ComPtr<ID3D11Texture2D> postEffectResolvedBuffer;
 	ComPtr<ID3D11ShaderResourceView> postEffectSRV;
 
+	ComPtr<ID3D11ShaderResourceView> envMapSRV;
+
 
 	// Viewport
 	D3D11_VIEWPORT basicViewport;
+	D3D11_VIEWPORT envMapViewPort;
 
 
 	// PSO
@@ -117,6 +133,8 @@ namespace Graphics {
 	GraphicsPSO depthOnlyPSO;
 	GraphicsPSO postEffectPSO;
 	GraphicsPSO instancePSO;
+	GraphicsPSO envMapPSO;
+	GraphicsPSO transparencyPSO;
 }
 
 
@@ -151,7 +169,7 @@ bool Graphics::InitGraphicsCore(DXGI_FORMAT pixelFormat, HWND& hwnd, UINT width,
 	desc.BufferDesc.RefreshRate.Numerator = 60;
 	desc.BufferDesc.RefreshRate.Denominator = 1;
 	desc.BufferDesc.Format = pixelFormat;
-	desc.SampleDesc.Count = 1; // backbuffer´Â ¸ÖÆ¼ »ùÇÃ¸µ ÇÏÁö ¾ÊÀ½
+	desc.SampleDesc.Count = 1; // backbuffer
 	desc.SampleDesc.Quality = 0;
 	desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 	desc.BufferCount = 2;
@@ -225,6 +243,29 @@ bool Graphics::InitRenderTargetBuffers(UINT width, UINT height)
 		return false;
 	}
 
+
+	// EnvMap RTV
+	bindFlag = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+	UINT miscFlag = D3D11_RESOURCE_MISC_TEXTURECUBE;
+	if (!DXUtils::CreateTextureBuffer(
+			envMapRenderBuffer, width / 4, width / 4, false, format, bindFlag, 1, 6, miscFlag)) {
+		std::cout << "failed create env map buffer" << std::endl;
+		return false;
+	}
+
+	D3D11_RENDER_TARGET_VIEW_DESC rtvDesc;
+	ZeroMemory(&rtvDesc, sizeof(rtvDesc));
+	rtvDesc.Format = format;
+	rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
+	rtvDesc.Texture2DArray.MipSlice = 0;
+	rtvDesc.Texture2DArray.ArraySize = 6;
+	rtvDesc.Texture2DArray.FirstArraySlice = 0;
+	ret = device->CreateRenderTargetView(
+		envMapRenderBuffer.Get(), &rtvDesc, envMapRTV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create env target view:" << std::endl;
+	}
+
 	return true;
 }
 
@@ -232,7 +273,7 @@ bool Graphics::InitDepthStencilBuffers(UINT width, UINT height)
 {
 	// basic DSV
 	DXGI_FORMAT format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-	D3D11_BIND_FLAG bindFlag = D3D11_BIND_DEPTH_STENCIL;
+	UINT bindFlag = D3D11_BIND_DEPTH_STENCIL;
 	if (!DXUtils::CreateTextureBuffer(basicDepthBuffer, width, height, true, format, bindFlag)) {
 		std::cout << "failed create depth stencil buffer" << std::endl;
 		return false;
@@ -249,13 +290,15 @@ bool Graphics::InitDepthStencilBuffers(UINT width, UINT height)
 		return false;
 	}
 
+	
 	// depthOnly
 	format = DXGI_FORMAT_R32_TYPELESS;
-	if (!DXUtils::CreateTextureBuffer(depthOnlyBuffer, width, height, false, format, (UINT)72)) {
+	bindFlag = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
+	if (!DXUtils::CreateTextureBuffer(depthOnlyBuffer, width, height, false, format, bindFlag)) {
 		std::cout << "failed create depth stencil buffer" << std::endl;
 		return false;
 	}
-	
+
 	ZeroMemory(&dsvDesc, sizeof(dsvDesc));
 	dsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
 	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
@@ -263,7 +306,29 @@ bool Graphics::InitDepthStencilBuffers(UINT width, UINT height)
 		depthOnlyBuffer.Get(), &dsvDesc, depthOnlyDSV.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create depth stencil view" << std::endl;
-		std::cout << ret << std::endl;
+		return false;
+	}
+
+	// envMap DSV
+	format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	bindFlag = D3D11_BIND_DEPTH_STENCIL;
+	UINT miscFlag = D3D11_RESOURCE_MISC_TEXTURECUBE;
+	if (!DXUtils::CreateTextureBuffer(
+			envMapDepthBuffer, width / 4, width / 4, false, format, bindFlag, 1, 6, miscFlag)) {
+		std::cout << "failed create env map depth stencil buffer" << std::endl;
+		return false;
+	}
+
+	ZeroMemory(&dsvDesc, sizeof(dsvDesc));
+	dsvDesc.Format = format;
+	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
+	dsvDesc.Texture2DArray.MipSlice = 0;
+	dsvDesc.Texture2DArray.ArraySize = 6;
+	dsvDesc.Texture2DArray.FirstArraySlice = 0;
+	ret = Graphics::device->CreateDepthStencilView(
+		envMapDepthBuffer.Get(), &dsvDesc, envMapDSV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create env map depth stencil view" << std::endl;
 		return false;
 	}
 
@@ -273,29 +338,12 @@ bool Graphics::InitDepthStencilBuffers(UINT width, UINT height)
 bool Graphics::InitShaderResourceBuffers(UINT width, UINT height)
 {
 	// Asset Files
-
-	/*
-
-	if (!DXUtils::CreateTexture2DFromFile(
+	if (!DXUtils::CreateTextureArrayFromAtlasFile(
 			atlasMapBuffer, atlasMapSRV, "../assets/blockatlas1.png")) {
 		std::cout << "failed create texture from atlas file" << std::endl;
 		return false;
 	}
 
-	if (!DXUtils::CreateTextureArrayFromAtlasFile(
-			atlasMapBuffer, atlasMapSRV, "../assets/blender_uv_grid_2k.png")) {
-		std::cout << "failed create texture from atlas file" << std::endl;
-		return false;
-	}
-
-	*/
-
-	if (!DXUtils::CreateTextureArrayFromAtlasFile(
-			atlasMapBuffer, atlasMapSRV, "../assets/blockatlas1.png")) {
-		std::cout << "failed create texture from atlas file" << std::endl;
-		return false;
-	} 
-	
 	/*if (!DXUtils::CreateTextureFromFile(
 			grassColorMapBuffer, grassColorMapSRV, "../assets/grass_color_map.png")) {
 		std::cout << "failed create texture from grass color map file" << std::endl;
@@ -320,7 +368,7 @@ bool Graphics::InitShaderResourceBuffers(UINT width, UINT height)
 			cloudResolvedBuffer, width, height, false, format, bindFlag)) {
 		std::cout << "failed create shader resource buffer" << std::endl;
 		return false;
-	} 
+	}
 	HRESULT ret = Graphics::device->CreateShaderResourceView(
 		cloudResolvedBuffer.Get(), 0, cloudSRV.GetAddressOf());
 	if (FAILED(ret)) {
@@ -355,6 +403,20 @@ bool Graphics::InitShaderResourceBuffers(UINT width, UINT height)
 		postEffectResolvedBuffer.Get(), 0, postEffectSRV.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create shader resource view from cloud srv" << std::endl;
+		return false;
+	}
+
+
+	// envMapSRV
+	ZeroMemory(&srvDesc, sizeof(srvDesc));
+	srvDesc.Format = format;
+	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
+	srvDesc.TextureCube.MipLevels = 1;
+	srvDesc.TextureCube.MostDetailedMip = 0;
+	ret = device->CreateShaderResourceView(
+		envMapRenderBuffer.Get(), &srvDesc, envMapSRV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create shader resource view from env map srv" << std::endl;
 		return false;
 	}
 
@@ -432,8 +494,8 @@ bool Graphics::InitVertexShaderAndInputLayouts()
 	}
 
 	// DepthOnly
-	std::vector<D3D11_INPUT_ELEMENT_DESC> elementDesc5 = {
-		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 } };
+	std::vector<D3D11_INPUT_ELEMENT_DESC> elementDesc5 = { { "POSITION", 0,
+		DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 } };
 	if (!DXUtils::CreateVertexShaderAndInputLayout(
 			L"DepthOnlyVS.hlsl", depthOnlyVS, depthOnlyIL, elementDesc5)) {
 		std::cout << "failed create depthOnly vs" << std::endl;
@@ -453,15 +515,30 @@ bool Graphics::InitVertexShaderAndInputLayouts()
 		{ "TYPE", 0, DXGI_FORMAT_R32_UINT, 1, 64, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
 	};
 	if (!DXUtils::CreateVertexShaderAndInputLayout(
-		L"InstanceVS.hlsl", instanceVS, instanceIL, elementDesc6)) {
+			L"InstanceVS.hlsl", instanceVS, instanceIL, elementDesc6)) {
 		std::cout << "failed create instance vs" << std::endl;
+		return false;
+	}
+
+	// envMap
+	if (!DXUtils::CreateVertexShaderAndInputLayout(
+		L"EnvMapVS.hlsl", envMapVS, basicIL, elementDesc)) {
+		std::cout << "failed create env map vs" << std::endl;
 		return false;
 	}
 
 	return true;
 }
 
-bool Graphics::InitGeometryShaders() { return true; }
+bool Graphics::InitGeometryShaders() { 
+	// envMap
+	if (!DXUtils::CreateGeometryShader(L"EnvMapGS.hlsl", envMapGS)) {
+		std::cout << "failed create env map gs" << std::endl;
+		return false;
+	}
+
+	return true;
+}
 
 bool Graphics::InitPixelShaders()
 {
@@ -507,6 +584,18 @@ bool Graphics::InitPixelShaders()
 		return false;
 	}
 
+	// EnvMapPS
+	if (!DXUtils::CreatePixelShader(L"EnvMapPS.hlsl", envMapPS)) {
+		std::cout << "failed create env map ps" << std::endl;
+		return false;
+	}
+
+	// TransparencyPS
+	if (!DXUtils::CreatePixelShader(L"TransparencyPS.hlsl", transparencyPS)) {
+		std::cout << "failed create transparency ps" << std::endl;
+		return false;
+	}
+
 	return true;
 }
 
@@ -537,7 +626,7 @@ bool Graphics::InitRasterizerStates()
 
 	// postEffectRS
 	rastDesc.FillMode = D3D11_FILL_MODE::D3D11_FILL_SOLID;
-	
+
 	rastDesc.DepthClipEnable = false;
 	ret = Graphics::device->CreateRasterizerState(&rastDesc, postEffectRS.GetAddressOf());
 	if (FAILED(ret)) {
@@ -659,6 +748,7 @@ void Graphics::InitGraphicsPSO()
 	basicPSO.pixelShader = basicPS;
 	basicPSO.samplerStates.push_back(pointClampSS.Get());
 	basicPSO.samplerStates.push_back(linearWrapSS.Get());
+	basicPSO.samplerStates.push_back(linearClampSS.Get());
 	basicPSO.depthStencilState = basicDSS;
 	basicPSO.blendState = nullptr;
 
@@ -700,7 +790,6 @@ void Graphics::InitGraphicsPSO()
 	postEffectPSO.vertexShader = samplingVS;
 	postEffectPSO.pixelShader = postEffectPS;
 	postEffectPSO.inputLayout = samplingIL;
-	postEffectPSO.samplerStates.push_back(linearClampSS.Get());
 	postEffectPSO.rasterizerState = postEffectRS;
 
 	// instancePSO
@@ -709,6 +798,16 @@ void Graphics::InitGraphicsPSO()
 	instancePSO.vertexShader = instanceVS;
 	instancePSO.rasterizerState = noneCullRS;
 	instancePSO.pixelShader = instancePS;
+
+	// envMapPSO
+	envMapPSO = basicPSO;
+	envMapPSO.vertexShader = envMapVS;
+	envMapPSO.geometryShader = envMapGS;
+	envMapPSO.pixelShader = envMapPS;
+
+	// transparencyPSO
+	transparencyPSO = basicPSO;
+	transparencyPSO.pixelShader = transparencyPS;
 }
 
 void Graphics::SetPipelineStates(GraphicsPSO& pso)
