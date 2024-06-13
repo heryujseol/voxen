@@ -143,8 +143,5 @@
     <FxCompile Include="InstancePS.hlsl">
       <Filter>쉐이더 파일</Filter>
     </FxCompile>
-    <FxCompile Include="AlphaClipPS.hlsl">
-      <Filter>쉐이더 파일</Filter>
-    </FxCompile>
   </ItemGroup>
 </Project>

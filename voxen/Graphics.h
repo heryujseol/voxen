@@ -39,7 +39,6 @@ namespace Graphics {
 	extern ComPtr<ID3D11PixelShader> samplingPS;
 	extern ComPtr<ID3D11PixelShader> instancePS;
 	extern ComPtr<ID3D11PixelShader> depthOnlyPS;
-	extern ComPtr<ID3D11PixelShader> alphaClipPS;
 
 
 	// Rasterizer State
@@ -137,12 +136,11 @@ namespace Graphics {
 	extern void SetPipelineStates(GraphicsPSO& pso);
 	extern GraphicsPSO basicPSO;
 	extern GraphicsPSO basicWirePSO;
+	extern GraphicsPSO basicNoneCullPSO;
 	extern GraphicsPSO skyboxPSO;
 	extern GraphicsPSO cloudPSO;
 	extern GraphicsPSO cloudBlendPSO;
 	extern GraphicsPSO depthOnlyPSO;
 	extern GraphicsPSO postEffectPSO;
 	extern GraphicsPSO instancePSO;
-	extern GraphicsPSO semiAlphaPSO;
-	extern GraphicsPSO transparencyPSO;
 }

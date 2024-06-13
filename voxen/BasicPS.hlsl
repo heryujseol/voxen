@@ -96,7 +96,6 @@ float3 getNormal(uint face)
 
 float4 main(vsOutput input) : SV_TARGET
 {
-
     //float temperature = 0.5;
     //float downfall = 1.0;
     //float4 biome = grassColorMap.SampleLevel(pointClampSS, float2(1 - temperature, 1 - temperature / downfall), 0.0);
@@ -104,6 +103,9 @@ float4 main(vsOutput input) : SV_TARGET
     float2 texcoord = getVoxelTexcoord(input.posModel, input.face);
 
     uint index = (input.type - 1) * 6 + input.face;
+    
+    if (atlasTextureArray.SampleLevel(pointWrapSS, float3(texcoord, index), 0.0).a != 1.0)
+        discard;
     
     float3 color = atlasTextureArray.Sample(pointWrapSS, float3(texcoord, index)).rgb * 0.3;
     

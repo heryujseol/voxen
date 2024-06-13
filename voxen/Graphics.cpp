@@ -34,7 +34,6 @@ namespace Graphics {
 	ComPtr<ID3D11PixelShader> instancePS;
 	ComPtr<ID3D11PixelShader> depthOnlyPS;
 	ComPtr<ID3D11PixelShader> postEffectPS;
-	ComPtr<ID3D11PixelShader> alphaClipPS;
 
 
 	// Rasterizer State
@@ -111,14 +110,13 @@ namespace Graphics {
 	void SetPipelineStates(GraphicsPSO& pso);
 	GraphicsPSO basicPSO;
 	GraphicsPSO basicWirePSO;
+	GraphicsPSO basicNoneCullPSO;
 	GraphicsPSO skyboxPSO;
 	GraphicsPSO cloudPSO;
 	GraphicsPSO cloudBlendPSO;
 	GraphicsPSO depthOnlyPSO;
 	GraphicsPSO postEffectPSO;
 	GraphicsPSO instancePSO;
-	GraphicsPSO semiAlphaPSO;
-	GraphicsPSO transparencyPSO;
 }
 
 
@@ -509,12 +507,6 @@ bool Graphics::InitPixelShaders()
 		return false;
 	}
 
-	// AlphaClipPS
-	if (!DXUtils::CreatePixelShader(L"AlphaClipPS.hlsl", alphaClipPS)) {
-		std::cout << "failed create alpha clip ps" << std::endl;
-		return false;
-	}
-
 	return true;
 }
 
@@ -674,6 +666,10 @@ void Graphics::InitGraphicsPSO()
 	basicWirePSO = basicPSO;
 	basicWirePSO.rasterizerState = wireRS;
 
+	// basic none cull PSO
+	basicNoneCullPSO = basicPSO;
+	basicNoneCullPSO.rasterizerState = noneCullRS;
+
 	// skyboxPSO
 	skyboxPSO = basicPSO;
 	skyboxPSO.inputLayout = skyboxIL;
@@ -713,15 +709,6 @@ void Graphics::InitGraphicsPSO()
 	instancePSO.vertexShader = instanceVS;
 	instancePSO.rasterizerState = noneCullRS;
 	instancePSO.pixelShader = instancePS;
-
-	// semiAlphaPSO
-	semiAlphaPSO = basicPSO;
-	semiAlphaPSO.rasterizerState = noneCullRS;
-	semiAlphaPSO.pixelShader = alphaClipPS;
-	
-	// transparencyPSO
-	transparencyPSO = basicPSO;
-	transparencyPSO.blendState = alphaBS;
 }
 
 void Graphics::SetPipelineStates(GraphicsPSO& pso)
