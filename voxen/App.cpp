@@ -326,11 +326,13 @@ void App::RenderEnvMap()
 	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	Graphics::context->ClearRenderTargetView(Graphics::envMapRTV.Get(), clearColor);
 
-	DXUtils::UpdateViewport(Graphics::envMapViewPort, 0, 0, m_width / 4, m_width / 4);
+	DXUtils::UpdateViewport(Graphics::envMapViewPort, 0, 0, m_width / 8, m_width / 8);
 	Graphics::context->RSSetViewports(1, &Graphics::envMapViewPort);
+
 	Graphics::context->OMSetRenderTargets(1, Graphics::envMapRTV.GetAddressOf(), Graphics::envMapDSV.Get());
+
 	Graphics::context->GSSetConstantBuffers(0, 1, m_camera.m_envMapConstantBuffer.GetAddressOf());
 
-	Graphics::SetPipelineStates(Graphics::envMapPSO);
-	m_chunkManager.RenderEnvMap();
+	Graphics::SetPipelineStates(Graphics::skyboxEnvMapPSO);
+	m_skybox.Render();
 }

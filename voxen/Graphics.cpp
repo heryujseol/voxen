@@ -20,26 +20,26 @@ namespace Graphics {
 	// Vertex Shader
 	ComPtr<ID3D11VertexShader> basicVS;
 	ComPtr<ID3D11VertexShader> skyboxVS;
+	ComPtr<ID3D11VertexShader> skyboxEnvMapVS;
 	ComPtr<ID3D11VertexShader> cloudVS;
 	ComPtr<ID3D11VertexShader> samplingVS;
 	ComPtr<ID3D11VertexShader> instanceVS;
 	ComPtr<ID3D11VertexShader> depthOnlyVS;
-	ComPtr<ID3D11VertexShader> envMapVS;
 
 
 	// Geometry Shader
-	ComPtr<ID3D11GeometryShader> envMapGS;
+	ComPtr<ID3D11GeometryShader> skyboxEnvMapGS;
 
 
 	// Pixel Shader
 	ComPtr<ID3D11PixelShader> basicPS;
 	ComPtr<ID3D11PixelShader> skyboxPS;
+	ComPtr<ID3D11PixelShader> skyboxEnvMapPS;
 	ComPtr<ID3D11PixelShader> cloudPS;
 	ComPtr<ID3D11PixelShader> samplingPS;
 	ComPtr<ID3D11PixelShader> instancePS;
 	ComPtr<ID3D11PixelShader> depthOnlyPS;
 	ComPtr<ID3D11PixelShader> postEffectPS;
-	ComPtr<ID3D11PixelShader> envMapPS;
 	ComPtr<ID3D11PixelShader> transparencyPS;
 
 
@@ -51,7 +51,7 @@ namespace Graphics {
 
 
 	// Sampler State
-	ComPtr<ID3D11SamplerState> pointClampSS;
+	ComPtr<ID3D11SamplerState> pointWrapSS;
 	ComPtr<ID3D11SamplerState> linearWrapSS;
 	ComPtr<ID3D11SamplerState> linearClampSS;
 
@@ -128,12 +128,12 @@ namespace Graphics {
 	GraphicsPSO basicWirePSO;
 	GraphicsPSO basicNoneCullPSO;
 	GraphicsPSO skyboxPSO;
+	GraphicsPSO skyboxEnvMapPSO;
 	GraphicsPSO cloudPSO;
 	GraphicsPSO cloudBlendPSO;
 	GraphicsPSO depthOnlyPSO;
 	GraphicsPSO postEffectPSO;
 	GraphicsPSO instancePSO;
-	GraphicsPSO envMapPSO;
 	GraphicsPSO transparencyPSO;
 }
 
@@ -248,7 +248,7 @@ bool Graphics::InitRenderTargetBuffers(UINT width, UINT height)
 	bindFlag = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 	UINT miscFlag = D3D11_RESOURCE_MISC_TEXTURECUBE;
 	if (!DXUtils::CreateTextureBuffer(
-			envMapRenderBuffer, width / 4, width / 4, false, format, bindFlag, 1, 6, miscFlag)) {
+			envMapRenderBuffer, width / 8, width / 8, false, format, bindFlag, 1, 6, miscFlag)) {
 		std::cout << "failed create env map buffer" << std::endl;
 		return false;
 	}
@@ -290,7 +290,7 @@ bool Graphics::InitDepthStencilBuffers(UINT width, UINT height)
 		return false;
 	}
 
-	
+
 	// depthOnly
 	format = DXGI_FORMAT_R32_TYPELESS;
 	bindFlag = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
@@ -314,7 +314,7 @@ bool Graphics::InitDepthStencilBuffers(UINT width, UINT height)
 	bindFlag = D3D11_BIND_DEPTH_STENCIL;
 	UINT miscFlag = D3D11_RESOURCE_MISC_TEXTURECUBE;
 	if (!DXUtils::CreateTextureBuffer(
-			envMapDepthBuffer, width / 4, width / 4, false, format, bindFlag, 1, 6, miscFlag)) {
+			envMapDepthBuffer, width / 8, width / 8, false, format, bindFlag, 1, 6, miscFlag)) {
 		std::cout << "failed create env map depth stencil buffer" << std::endl;
 		return false;
 	}
@@ -471,6 +471,14 @@ bool Graphics::InitVertexShaderAndInputLayouts()
 		return false;
 	}
 
+	// Skybox EnvMap
+	std::vector<D3D_SHADER_MACRO> macros = { { "USE_INPUT_SKYBOX", "1" }, { NULL, NULL } };
+	if (!DXUtils::CreateVertexShaderAndInputLayout(
+			L"EnvMapVS.hlsl", skyboxEnvMapVS, skyboxIL, elementDesc2, macros.data())) {
+		std::cout << "failed create skybox env map vs" << std::endl;
+		return false;
+	}
+
 	// Cloud
 	std::vector<D3D11_INPUT_ELEMENT_DESC> elementDesc3 = {
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
@@ -520,23 +528,17 @@ bool Graphics::InitVertexShaderAndInputLayouts()
 		return false;
 	}
 
-	// envMap
-	if (!DXUtils::CreateVertexShaderAndInputLayout(
-		L"EnvMapVS.hlsl", envMapVS, basicIL, elementDesc)) {
-		std::cout << "failed create env map vs" << std::endl;
-		return false;
-	}
-
 	return true;
 }
 
-bool Graphics::InitGeometryShaders() { 
-	// envMap
-	if (!DXUtils::CreateGeometryShader(L"EnvMapGS.hlsl", envMapGS)) {
-		std::cout << "failed create env map gs" << std::endl;
+bool Graphics::InitGeometryShaders()
+{
+	// Skybox EnvMap
+	std::vector<D3D_SHADER_MACRO> macros = { { "USE_INPUT_SKYBOX", "1" }, { NULL, NULL } };
+	if (!DXUtils::CreateGeometryShader(L"EnvMapGS.hlsl", skyboxEnvMapGS, macros.data())) {
+		std::cout << "failed create skybox env map gs" << std::endl;
 		return false;
 	}
-
 	return true;
 }
 
@@ -551,6 +553,13 @@ bool Graphics::InitPixelShaders()
 	// SkyboxPS
 	if (!DXUtils::CreatePixelShader(L"SkyboxPS.hlsl", skyboxPS)) {
 		std::cout << "failed create skybox ps" << std::endl;
+		return false;
+	}
+
+	// Skybox EnvMap
+	std::vector<D3D_SHADER_MACRO> macros = { { "USE_RENDER_TARGET_ARRAY_INDEX", "1" }, { NULL, NULL } };
+	if (!DXUtils::CreatePixelShader(L"SkyboxPS.hlsl", skyboxEnvMapPS, macros.data())) {
+		std::cout << "failed create skybox env map ps" << std::endl;
 		return false;
 	}
 
@@ -581,12 +590,6 @@ bool Graphics::InitPixelShaders()
 	// InstancePS
 	if (!DXUtils::CreatePixelShader(L"InstancePS.hlsl", instancePS)) {
 		std::cout << "failed create instance ps" << std::endl;
-		return false;
-	}
-
-	// EnvMapPS
-	if (!DXUtils::CreatePixelShader(L"EnvMapPS.hlsl", envMapPS)) {
-		std::cout << "failed create env map ps" << std::endl;
 		return false;
 	}
 
@@ -659,7 +662,7 @@ bool Graphics::InitSamplerStates()
 	desc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
 	desc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
 	desc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-	HRESULT ret = Graphics::device->CreateSamplerState(&desc, pointClampSS.GetAddressOf());
+	HRESULT ret = Graphics::device->CreateSamplerState(&desc, pointWrapSS.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create point clamp SS" << std::endl;
 		return false;
@@ -746,7 +749,7 @@ void Graphics::InitGraphicsPSO()
 	basicPSO.geometryShader = nullptr;
 	basicPSO.rasterizerState = solidRS;
 	basicPSO.pixelShader = basicPS;
-	basicPSO.samplerStates.push_back(pointClampSS.Get());
+	basicPSO.samplerStates.push_back(pointWrapSS.Get());
 	basicPSO.samplerStates.push_back(linearWrapSS.Get());
 	basicPSO.samplerStates.push_back(linearClampSS.Get());
 	basicPSO.depthStencilState = basicDSS;
@@ -765,6 +768,12 @@ void Graphics::InitGraphicsPSO()
 	skyboxPSO.inputLayout = skyboxIL;
 	skyboxPSO.vertexShader = skyboxVS;
 	skyboxPSO.pixelShader = skyboxPS;
+
+	// skyboxEnvMapPSO
+	skyboxEnvMapPSO = skyboxPSO;
+	skyboxEnvMapPSO.vertexShader = skyboxEnvMapVS;
+	skyboxEnvMapPSO.geometryShader = skyboxEnvMapGS;
+	skyboxEnvMapPSO.pixelShader = skyboxEnvMapPS;
 
 	// cloudPSO
 	cloudPSO = basicPSO;
@@ -798,12 +807,6 @@ void Graphics::InitGraphicsPSO()
 	instancePSO.vertexShader = instanceVS;
 	instancePSO.rasterizerState = noneCullRS;
 	instancePSO.pixelShader = instancePS;
-
-	// envMapPSO
-	envMapPSO = basicPSO;
-	envMapPSO.vertexShader = envMapVS;
-	envMapPSO.geometryShader = envMapGS;
-	envMapPSO.pixelShader = envMapPS;
 
 	// transparencyPSO
 	transparencyPSO = basicPSO;

@@ -26,25 +26,25 @@ namespace Graphics {
 	// Vertex Shader
 	extern ComPtr<ID3D11VertexShader> basicVS;
 	extern ComPtr<ID3D11VertexShader> skyboxVS;
+	extern ComPtr<ID3D11VertexShader> skyboxEnvMapVS;
 	extern ComPtr<ID3D11VertexShader> cloudVS;
 	extern ComPtr<ID3D11VertexShader> samplingVS;
 	extern ComPtr<ID3D11VertexShader> depthOnlyVS;
 	extern ComPtr<ID3D11VertexShader> instanceVS;
-	extern ComPtr<ID3D11VertexShader> envMapVS;
 
 
 	// Geometry Shader
-	extern ComPtr<ID3D11GeometryShader> envMapGS;
+	extern ComPtr<ID3D11GeometryShader> skyoxEnvMapGS;
 
 
 	// Pixel Shader
 	extern ComPtr<ID3D11PixelShader> basicPS;
 	extern ComPtr<ID3D11PixelShader> skyboxPS;
+	extern ComPtr<ID3D11PixelShader> skyboxEnvMapPS;
 	extern ComPtr<ID3D11PixelShader> cloudPS;
 	extern ComPtr<ID3D11PixelShader> samplingPS;
 	extern ComPtr<ID3D11PixelShader> instancePS;
 	extern ComPtr<ID3D11PixelShader> depthOnlyPS;
-	extern ComPtr<ID3D11PixelShader> envMapPS;
 	extern ComPtr<ID3D11PixelShader> transparencyPS;
 
 
@@ -55,7 +55,7 @@ namespace Graphics {
 	extern ComPtr<ID3D11RasterizerState> postEffectRS;
 
 	// Sampler State
-	extern ComPtr<ID3D11SamplerState> pointClampSS;
+	extern ComPtr<ID3D11SamplerState> pointWrapSS;
 	extern ComPtr<ID3D11SamplerState> linearWrapSS;
 	extern ComPtr<ID3D11SamplerState> linearClampSS;
 
@@ -154,11 +154,11 @@ namespace Graphics {
 	extern GraphicsPSO basicWirePSO;
 	extern GraphicsPSO basicNoneCullPSO;
 	extern GraphicsPSO skyboxPSO;
+	extern GraphicsPSO skyboxEnvMapPSO;
 	extern GraphicsPSO cloudPSO;
 	extern GraphicsPSO cloudBlendPSO;
 	extern GraphicsPSO depthOnlyPSO;
 	extern GraphicsPSO postEffectPSO;
 	extern GraphicsPSO instancePSO;
-	extern GraphicsPSO envMapPSO;
 	extern GraphicsPSO transparencyPSO;
 }

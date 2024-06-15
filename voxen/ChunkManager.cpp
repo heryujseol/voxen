@@ -131,30 +131,6 @@ void ChunkManager::RenderTransparency()
 	}
 }
 
-void ChunkManager::RenderEnvMap() 
-{
-	for (auto& p : m_chunkMap) {
-		if (!p.second->IsLoaded())
-			continue;
-
-		if (p.second->IsEmptyLowLod())
-			continue;
-
-		UINT id = p.second->GetID();
-		UINT stride = sizeof(VoxelVertex);
-		UINT offset = 0;
-
-		Graphics::context->IASetIndexBuffer(
-			m_lowLodIndexBuffers[id].Get(), DXGI_FORMAT_R32_UINT, 0);
-		Graphics::context->IASetVertexBuffers(
-			0, 1, m_lowLodVertexBuffers[id].GetAddressOf(), &stride, &offset);
-
-		Graphics::context->GSSetConstantBuffers(1, 1, m_constantBuffers[id].GetAddressOf());
-		
-		Graphics::context->DrawIndexed((UINT)p.second->GetLowLodIndices().size(), 0, 0);
-	}
-}
-
 void ChunkManager::RenderInstance()
 {
 	UINT indexCountPerInstance[4] = { 12, 24, 6 };

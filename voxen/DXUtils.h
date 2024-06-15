@@ -129,7 +129,7 @@ namespace DXUtils {
 
 	static bool CreateVertexShaderAndInputLayout(const std::wstring& filename,
 		ComPtr<ID3D11VertexShader>& vs, ComPtr<ID3D11InputLayout>& il,
-		const std::vector<D3D11_INPUT_ELEMENT_DESC>& elementDesc)
+		const std::vector<D3D11_INPUT_ELEMENT_DESC>& elementDesc, D3D_SHADER_MACRO* macro = nullptr)
 	{
 		UINT compileFlags = 0;
 #if defined(DEBUG) || defined(_DEBUG)
@@ -140,7 +140,7 @@ namespace DXUtils {
 		ComPtr<ID3DBlob> errorBlob = nullptr;
 
 		HRESULT ret = D3DCompileFromFile(
-			filename.c_str(), 0, 0, "main", "vs_5_0", compileFlags, 0, &shaderBlob, &errorBlob);
+			filename.c_str(), macro, 0, "main", "vs_5_0", compileFlags, 0, &shaderBlob, &errorBlob);
 		if (FAILED(ret)) {
 			if (errorBlob) {
 				OutputDebugStringA((char*)errorBlob->GetBufferPointer());
@@ -165,7 +165,8 @@ namespace DXUtils {
 	}
 
 
-	static bool CreateGeometryShader(const std::wstring& filename, ComPtr<ID3D11GeometryShader>& gs)
+	static bool CreateGeometryShader(const std::wstring& filename, ComPtr<ID3D11GeometryShader>& gs,
+		D3D_SHADER_MACRO* macro = nullptr)
 	{
 		UINT compileFlags = 0;
 #if defined(DEBUG) || defined(_DEBUG)
@@ -176,7 +177,7 @@ namespace DXUtils {
 		ComPtr<ID3DBlob> errorBlob = nullptr;
 
 		HRESULT ret = D3DCompileFromFile(
-			filename.c_str(), 0, 0, "main", "gs_5_0", compileFlags, 0, &shaderBlob, &errorBlob);
+			filename.c_str(), macro, 0, "main", "gs_5_0", compileFlags, 0, &shaderBlob, &errorBlob);
 		if (FAILED(ret)) {
 			if (errorBlob) {
 				OutputDebugStringA((char*)errorBlob->GetBufferPointer());
@@ -197,7 +198,8 @@ namespace DXUtils {
 	}
 
 
-	static bool CreatePixelShader(const std::wstring& filename, ComPtr<ID3D11PixelShader>& ps)
+	static bool CreatePixelShader(const std::wstring& filename, ComPtr<ID3D11PixelShader>& ps,
+		D3D_SHADER_MACRO* macro = nullptr)
 	{
 		UINT compileFlags = 0;
 #if defined(DEBUG) || defined(_DEBUG)
@@ -208,7 +210,7 @@ namespace DXUtils {
 		ComPtr<ID3DBlob> errorBlob = nullptr;
 
 		HRESULT ret = D3DCompileFromFile(
-			filename.c_str(), 0, 0, "main", "ps_5_0", compileFlags, 0, &shaderBlob, &errorBlob);
+			filename.c_str(), macro, 0, "main", "ps_5_0", compileFlags, 0, &shaderBlob, &errorBlob);
 		if (FAILED(ret)) {
 			if (errorBlob) {
 				OutputDebugStringA((char*)errorBlob->GetBufferPointer());
