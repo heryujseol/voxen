@@ -14,7 +14,7 @@ using namespace DirectX::SimpleMath;
 class ChunkManager {
 
 public:
-	static const int CHUNK_COUNT = 19;
+	static const int CHUNK_COUNT = 9;
 	static const int MAX_HEIGHT = 256;
 	static const int MAX_HEIGHT_CHUNK_COUNT = 8;
 	static const int CHUNK_COUNT_P = CHUNK_COUNT + 2;

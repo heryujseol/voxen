@@ -89,11 +89,6 @@ void Cloud::Update(float dt, Vector3 cameraPosition)
 
 void Cloud::Render()
 {
-	Graphics::context->CopyResource(
-		Graphics::cloudRenderBuffer.Get(), Graphics::basicRenderBuffer.Get());
-	Graphics::context->OMSetRenderTargets(
-		1, Graphics::cloudRTV.GetAddressOf(), Graphics::basicDSV.Get());
-
 	Graphics::context->IASetIndexBuffer(m_indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
 	Graphics::context->IASetVertexBuffers(
 		0, 1, m_vertexBuffer.GetAddressOf(), &m_stride, &m_offset);
@@ -102,22 +97,13 @@ void Cloud::Render()
 	Graphics::context->PSSetConstantBuffers(2, 1, m_constantBuffer.GetAddressOf());
 
 	Graphics::context->DrawIndexed((UINT)m_indices.size(), 0, 0);
-
-	Blend();
 }
 
 void Cloud::Blend()
 {
-	Graphics::context->OMSetRenderTargets(1, Graphics::basicRTV.GetAddressOf(), nullptr);
-	Graphics::SetPipelineStates(Graphics::cloudBlendPSO);
-
 	Graphics::context->IASetIndexBuffer(m_samplingIndexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
 	Graphics::context->IASetVertexBuffers(
 		0, 1, m_samplingVertexBuffer.GetAddressOf(), &m_samplingStride, &m_samplingOffset);
-
-	Graphics::context->ResolveSubresource(Graphics::cloudResolvedBuffer.Get(), 0,
-		Graphics::cloudRenderBuffer.Get(), 0, DXGI_FORMAT_R8G8B8A8_UNORM);
-	Graphics::context->PSSetShaderResources(0, 1, Graphics::cloudSRV.GetAddressOf());
 
 	Graphics::context->DrawIndexed((UINT)m_samplingIndices.size(), 0, 0);
 }

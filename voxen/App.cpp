@@ -156,31 +156,9 @@ void App::Render()
 	// DepthOnly
 	//RenderDepthOnly();
 
+	// Basic
+	RenderBasic();
 	
-	const FLOAT clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-	Graphics::context->ClearRenderTargetView(Graphics::basicRTV.Get(), clearColor);
-	Graphics::context->ClearDepthStencilView(
-		Graphics::basicDSV.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
-	Graphics::context->OMSetRenderTargets(
-		1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
-	
-
-
-	// opaque
-	Graphics::SetPipelineStates(m_keyToggle[9] ? Graphics::basicWirePSO : Graphics::basicPSO);
-	m_chunkManager.RenderOpaque();
-
-
-	// semiAlpha
-	//Graphics::SetPipelineStates(Graphics::basicNoneCullPSO);
-	//m_chunkManager.RenderSemiAlpha();
-
-
-	// instance
-	//Graphics::SetPipelineStates(Graphics::instancePSO);
-	//m_chunkManager.RenderInstance();
-
-
 	// postEffect
 	//Graphics::SetPipelineStates(Graphics::postEffectPSO);
 	//m_postEffect.Render();
@@ -195,9 +173,7 @@ void App::Render()
 
 
 	// cloud
-	Graphics::SetPipelineStates(Graphics::cloudPSO);
-	m_cloud.Render();
-
+	RenderCloud();
 
 	// transparency
 	Graphics::SetPipelineStates(Graphics::transparencyPSO);
@@ -335,4 +311,49 @@ void App::RenderEnvMap()
 
 	Graphics::SetPipelineStates(Graphics::skyboxEnvMapPSO);
 	m_skybox.Render();
+}
+
+void App::RenderBasic() 
+{
+	const FLOAT clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+	Graphics::context->ClearRenderTargetView(Graphics::basicRTV.Get(), clearColor);
+	Graphics::context->ClearDepthStencilView(
+		Graphics::basicDSV.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+
+	Graphics::context->OMSetRenderTargets(
+		1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
+
+	// opaque
+	Graphics::SetPipelineStates(m_keyToggle[9] ? Graphics::basicWirePSO : Graphics::basicPSO);
+	m_chunkManager.RenderOpaque();
+
+	// semiAlpha
+	Graphics::SetPipelineStates(Graphics::basicNoneCullPSO);
+	m_chunkManager.RenderSemiAlpha();
+
+	// instance
+	Graphics::SetPipelineStates(Graphics::instancePSO);
+	m_chunkManager.RenderInstance();
+}
+
+void App::RenderCloud() 
+{
+	// only cloud
+	Graphics::context->CopyResource(
+		Graphics::cloudRenderBuffer.Get(), Graphics::basicRenderBuffer.Get());
+	Graphics::context->OMSetRenderTargets(
+		1, Graphics::cloudRTV.GetAddressOf(), Graphics::basicDSV.Get());
+
+	Graphics::SetPipelineStates(Graphics::cloudPSO);
+	m_cloud.Render();
+
+	// blend to basicRTV
+	Graphics::context->ResolveSubresource(Graphics::cloudResolvedBuffer.Get(), 0,
+		Graphics::cloudRenderBuffer.Get(), 0, DXGI_FORMAT_R8G8B8A8_UNORM);
+	Graphics::context->PSSetShaderResources(0, 1, Graphics::cloudSRV.GetAddressOf());
+
+	Graphics::context->OMSetRenderTargets(1, Graphics::basicRTV.GetAddressOf(), nullptr);
+
+	Graphics::SetPipelineStates(Graphics::cloudBlendPSO);
+	m_cloud.Blend();
 }

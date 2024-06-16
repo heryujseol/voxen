@@ -47,7 +47,6 @@ namespace Graphics {
 	ComPtr<ID3D11RasterizerState> solidRS;
 	ComPtr<ID3D11RasterizerState> wireRS;
 	ComPtr<ID3D11RasterizerState> noneCullRS;
-	ComPtr<ID3D11RasterizerState> postEffectRS;
 
 
 	// Sampler State
@@ -81,6 +80,9 @@ namespace Graphics {
 	ComPtr<ID3D11Texture2D> envMapRenderBuffer;
 	ComPtr<ID3D11RenderTargetView> envMapRTV;
 
+	ComPtr<ID3D11Texture2D> mirrorWorldRenderBuffer;
+	ComPtr<ID3D11RenderTargetView> mirrorWorldRTV;
+
 
 	// DSV & Buffer
 	ComPtr<ID3D11Texture2D> basicDepthBuffer;
@@ -91,6 +93,12 @@ namespace Graphics {
 
 	ComPtr<ID3D11Texture2D> envMapDepthBuffer;
 	ComPtr<ID3D11DepthStencilView> envMapDSV;
+
+	ComPtr<ID3D11Texture2D> mirrorWorldDepthBuffer;
+	ComPtr<ID3D11DepthStencilView> mirrorWorldDSV;
+
+	ComPtr<ID3D11Texture2D> mirrorPlaneDepthBuffer;
+	ComPtr<ID3D11DepthStencilView> mirrorPlaneDSV;
 
 
 	// SRV & Buffer
@@ -115,10 +123,14 @@ namespace Graphics {
 
 	ComPtr<ID3D11ShaderResourceView> envMapSRV;
 
+	ComPtr<ID3D11ShaderResourceView> mirrorWorldRenderSRV;
+	ComPtr<ID3D11ShaderResourceView> mirrorPlaneDepthSRV;
+
 
 	// Viewport
 	D3D11_VIEWPORT basicViewport;
 	D3D11_VIEWPORT envMapViewPort;
+	D3D11_VIEWPORT mirrorWorldViewPort;
 
 
 	// PSO
@@ -260,10 +272,26 @@ bool Graphics::InitRenderTargetBuffers(UINT width, UINT height)
 	rtvDesc.Texture2DArray.MipSlice = 0;
 	rtvDesc.Texture2DArray.ArraySize = 6;
 	rtvDesc.Texture2DArray.FirstArraySlice = 0;
-	ret = device->CreateRenderTargetView(
+	ret = Graphics::device->CreateRenderTargetView(
 		envMapRenderBuffer.Get(), &rtvDesc, envMapRTV.GetAddressOf());
 	if (FAILED(ret)) {
-		std::cout << "failed create env target view:" << std::endl;
+		std::cout << "failed create env target view" << std::endl;
+		return false;
+	}
+
+
+	// MirrorWorld RTV
+	if (!DXUtils::CreateTextureBuffer(
+			mirrorWorldRenderBuffer, width / 4, height / 4, false, format, bindFlag)) {
+		std::cout << "failed create mirror world render buffer" << std::endl;
+		return false;
+	}
+
+	ret = Graphics::device->CreateRenderTargetView(
+		mirrorWorldRenderBuffer.Get(), nullptr, mirrorWorldRTV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create mirror world rtv" << std::endl;
+		return false;
 	}
 
 	return true;
@@ -309,7 +337,8 @@ bool Graphics::InitDepthStencilBuffers(UINT width, UINT height)
 		return false;
 	}
 
-	// envMap DSV
+
+	// envMap
 	format = DXGI_FORMAT_D24_UNORM_S8_UINT;
 	bindFlag = D3D11_BIND_DEPTH_STENCIL;
 	UINT miscFlag = D3D11_RESOURCE_MISC_TEXTURECUBE;
@@ -329,6 +358,41 @@ bool Graphics::InitDepthStencilBuffers(UINT width, UINT height)
 		envMapDepthBuffer.Get(), &dsvDesc, envMapDSV.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create env map depth stencil view" << std::endl;
+		return false;
+	}
+
+
+	// mirrorWorld
+	if (!DXUtils::CreateTextureBuffer(
+			mirrorWorldDepthBuffer, width / 4, width / 4, false, format, bindFlag)) {
+		std::cout << "failed create mirror world depth stencil buffer" << std::endl;
+		return false;
+	}
+
+	ret = Graphics::device->CreateDepthStencilView(
+		mirrorWorldDepthBuffer.Get(), nullptr, mirrorWorldDSV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create mirror world depth stencil view" << std::endl;
+		return false;
+	}
+
+
+	// mirrorPlane
+	format = DXGI_FORMAT_R24G8_TYPELESS;
+	bindFlag = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
+	if (!DXUtils::CreateTextureBuffer(
+			mirrorPlaneDepthBuffer, width / 4, width / 4, false, format, bindFlag)) {
+		std::cout << "failed create mirror plane depth stencil buffer" << std::endl;
+		return false;
+	}
+
+	ZeroMemory(&dsvDesc, sizeof(dsvDesc));
+	dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+	ret = Graphics::device->CreateDepthStencilView(
+		mirrorPlaneDepthBuffer.Get(), &dsvDesc, mirrorPlaneDSV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create mirror plane depth stencil view" << std::endl;
 		return false;
 	}
 
@@ -417,6 +481,29 @@ bool Graphics::InitShaderResourceBuffers(UINT width, UINT height)
 		envMapRenderBuffer.Get(), &srvDesc, envMapSRV.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create shader resource view from env map srv" << std::endl;
+		return false;
+	}
+
+
+	// mirror world render SRV
+	ret = Graphics::device->CreateShaderResourceView(
+		mirrorWorldRenderBuffer.Get(), 0, mirrorWorldRenderSRV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create shader resource view from mirror world render srv" << std::endl;
+		return false;
+	}
+	
+
+	// mirror plane depth SRV
+	ZeroMemory(&srvDesc, sizeof(srvDesc));
+	srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Texture2D.MostDetailedMip = 0;
+	srvDesc.Texture2D.MipLevels = 1;
+	ret = Graphics::device->CreateShaderResourceView(
+		Graphics::mirrorPlaneDepthBuffer.Get(), &srvDesc, mirrorPlaneDepthSRV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create shader resource view from mirror plane depth srv" << std::endl;
 		return false;
 	}
 
@@ -557,7 +644,8 @@ bool Graphics::InitPixelShaders()
 	}
 
 	// Skybox EnvMap
-	std::vector<D3D_SHADER_MACRO> macros = { { "USE_RENDER_TARGET_ARRAY_INDEX", "1" }, { NULL, NULL } };
+	std::vector<D3D_SHADER_MACRO> macros = { { "USE_RENDER_TARGET_ARRAY_INDEX", "1" },
+		{ NULL, NULL } };
 	if (!DXUtils::CreatePixelShader(L"SkyboxPS.hlsl", skyboxEnvMapPS, macros.data())) {
 		std::cout << "failed create skybox env map ps" << std::endl;
 		return false;
@@ -627,15 +715,6 @@ bool Graphics::InitRasterizerStates()
 		return false;
 	}
 
-	// postEffectRS
-	rastDesc.FillMode = D3D11_FILL_MODE::D3D11_FILL_SOLID;
-
-	rastDesc.DepthClipEnable = false;
-	ret = Graphics::device->CreateRasterizerState(&rastDesc, postEffectRS.GetAddressOf());
-	if (FAILED(ret)) {
-		std::cout << "failed create postEffect RS" << std::endl;
-		return false;
-	}
 
 	// noneCullRS
 	rastDesc.FillMode = D3D11_FILL_MODE::D3D11_FILL_SOLID;
@@ -706,7 +785,7 @@ bool Graphics::InitDepthStencilStates()
 		return false;
 	}
 
-	// PostEffect DDS
+	// PostEffect DSS
 	desc.DepthFunc = D3D11_COMPARISON_FUNC::D3D11_COMPARISON_ALWAYS;
 	ret = Graphics::device->CreateDepthStencilState(&desc, postEffectDSS.GetAddressOf());
 	if (FAILED(ret)) {
@@ -799,7 +878,6 @@ void Graphics::InitGraphicsPSO()
 	postEffectPSO.vertexShader = samplingVS;
 	postEffectPSO.pixelShader = postEffectPS;
 	postEffectPSO.inputLayout = samplingIL;
-	postEffectPSO.rasterizerState = postEffectRS;
 
 	// instancePSO
 	instancePSO = basicPSO;

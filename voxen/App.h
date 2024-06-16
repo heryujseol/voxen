@@ -33,6 +33,8 @@ private:
 
 	void RenderDepthOnly();
 	void RenderEnvMap();
+	void RenderBasic();
+	void RenderCloud();
 
 
 	UINT m_width;

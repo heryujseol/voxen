@@ -52,7 +52,6 @@ namespace Graphics {
 	extern ComPtr<ID3D11RasterizerState> solidRS;
 	extern ComPtr<ID3D11RasterizerState> wireRS;
 	extern ComPtr<ID3D11RasterizerState> noneCullRS;
-	extern ComPtr<ID3D11RasterizerState> postEffectRS;
 
 	// Sampler State
 	extern ComPtr<ID3D11SamplerState> pointWrapSS;
@@ -84,6 +83,9 @@ namespace Graphics {
 
 	extern ComPtr<ID3D11Texture2D> envMapRenderBuffer;
 	extern ComPtr<ID3D11RenderTargetView> envMapRTV;
+
+	extern ComPtr<ID3D11Texture2D> mirrorWorldRenderBuffer;
+	extern ComPtr<ID3D11RenderTargetView> mirrorWorldRTV;
 	
 
 	// DSV & Buffer
@@ -95,6 +97,12 @@ namespace Graphics {
 
 	extern ComPtr<ID3D11Texture2D> envMapDepthBuffer;
 	extern ComPtr<ID3D11DepthStencilView> envMapDSV;
+
+	extern ComPtr<ID3D11Texture2D> mirrorWorldDepthBuffer;
+	extern ComPtr<ID3D11DepthStencilView> mirrorWorldDSV;
+
+	extern ComPtr<ID3D11Texture2D> mirrorPlaneDepthBuffer;
+	extern ComPtr<ID3D11DepthStencilView> mirrorPlaneDSV;
 
 
 	// SRV & Buffer
@@ -119,10 +127,14 @@ namespace Graphics {
 
 	extern ComPtr<ID3D11ShaderResourceView> envMapSRV;
 
+	extern ComPtr<ID3D11ShaderResourceView> mirrorWorldRenderSRV;
+	extern ComPtr<ID3D11ShaderResourceView> mirrorPlaneDepthSRV;
+
 
 	// Viewport
 	extern D3D11_VIEWPORT basicViewport;
 	extern D3D11_VIEWPORT envMapViewPort;
+	extern D3D11_VIEWPORT mirrorWorldViewPort;
 
 
 	// device, context, swapChain

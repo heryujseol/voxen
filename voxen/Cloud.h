@@ -17,9 +17,10 @@ public:
 	bool Initialize(Vector3 cameraPosition);
 	void Update(float dt, Vector3 cameraPosition);
 	void Render();
+	void Blend();
 
 private:
-	void Blend();
+	
 	bool BuildCloud();
 	bool BuildSquare();
 	
