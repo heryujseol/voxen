@@ -363,4 +363,7 @@ void App::RenderMirror()
 
 	// 원래의 constantBuffer로 두기
 	Graphics::context->VSSetConstantBuffers(0, 1, m_camera.m_constantBuffer.GetAddressOf());
+
+	// blend transparency
+
 }

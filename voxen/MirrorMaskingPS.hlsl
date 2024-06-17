@@ -80,7 +80,7 @@ float4 main(vsOutput input) : SV_TARGET
     float3 normal = getNormal(input.face);
     float3 toEye = normalize(eyePos - input.posWorld);
     
-    if (normal.y <= 0)
+    if (normal.y <= 0 || input.posWorld.y != 62)
         discard;
     
     float3 color = envMapTexture.Sample(linearClampSS, reflect(-toEye, normal)).rgb;

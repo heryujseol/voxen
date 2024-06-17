@@ -88,7 +88,7 @@ void ChunkManager::RenderSemiAlpha()
 	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::atlasMapSRV.Get(),
 		Graphics::grassColorMapSRV.Get() };
 	Graphics::context->PSSetShaderResources(0, 2, pptr.data());
-	
+
 	for (auto& c : m_renderChunkList) {
 		if (c->IsEmptySemiAlpha())
 			continue;
@@ -112,7 +112,7 @@ void ChunkManager::RenderTransparency()
 	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::atlasMapSRV.Get(),
 		Graphics::envMapSRV.Get() };
 	Graphics::context->PSSetShaderResources(0, 2, pptr.data());
-	
+
 	for (auto& c : m_renderChunkList) {
 		if (c->IsEmptyTransparency())
 			continue;
@@ -154,8 +154,8 @@ void ChunkManager::RenderMirror()
 	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::atlasMapSRV.Get(),
 		Graphics::grassColorMapSRV.Get() };
 	Graphics::context->PSSetShaderResources(0, 2, pptr.data());
-	
-	for (auto& c : m_renderChunkList) {
+
+	for (auto& c : m_renderMirrorChunkList) {
 		if (c->IsEmptyLowLod())
 			continue;
 
@@ -278,11 +278,14 @@ void ChunkManager::UpdateRenderChunkList(Camera& camera)
 		if (p.second->IsEmpty())
 			continue;
 
-		if (FrustumCulling(p.second->GetPosition(), camera, false)) {
+		Vector3 chunkOffsetPos = p.second->GetPosition();
+		if (FrustumCulling(chunkOffsetPos, camera, false)) {
 			m_renderChunkList.push_back(p.second);
 		}
 
-		if (FrustumCulling(p.second->GetPosition(), camera, true)) {
+		Vector3 mirrorChunkOffsetPos =
+			Vector3::Transform(chunkOffsetPos, camera.GetMirrorPlaneMatrix());
+		if (FrustumCulling(mirrorChunkOffsetPos, camera, true)) {
 			m_renderMirrorChunkList.push_back(p.second);
 		}
 	}
@@ -343,16 +346,7 @@ void ChunkManager::UpdateInstanceInfoList(Camera& camera)
 
 bool ChunkManager::FrustumCulling(Vector3 position, Camera& camera, bool useMirror)
 {
-	Matrix mirrorMat = camera.GetProjectionMatrix();
-	Matrix viewMat = camera.GetViewMatrix();
-	Matrix projMat = camera.GetProjectionMatrix();
-	Matrix invMat;
-	if (useMirror) {
-		invMat = (mirrorMat * viewMat * projMat).Invert();
-	}
-	else {
-		invMat = (viewMat * projMat).Invert();
-	}
+	Matrix invMat = (camera.GetViewMatrix() * camera.GetProjectionMatrix()).Invert();
 
 	std::vector<Vector3> worldPos = { Vector3::Transform(Vector3(-1.0f, 1.0f, 0.0f), invMat),
 		Vector3::Transform(Vector3(1.0f, 1.0f, 0.0f), invMat),
@@ -371,25 +365,27 @@ bool ChunkManager::FrustumCulling(Vector3 position, Camera& camera, bool useMirr
 		DirectX::XMPlaneFromPoints(worldPos[4], worldPos[0], worldPos[3]),
 		DirectX::XMPlaneFromPoints(worldPos[1], worldPos[5], worldPos[6]) };
 
+	float x = (float)Chunk::CHUNK_SIZE;
+	float y = (float)Chunk::CHUNK_SIZE;
+	float z = (float)Chunk::CHUNK_SIZE;
+	if (useMirror)
+		y *= -1;
 	for (int i = 0; i < 6; ++i) {
 		if (XMVectorGetX(XMPlaneDotCoord(planes[i], position)) < 0.0f)
 			continue;
-		if (XMVectorGetX(XMPlaneDotCoord(planes[i], position + Vector3(32.0f, 0.0f, 0.0f))) <= 0.0f)
+		if (XMVectorGetX(XMPlaneDotCoord(planes[i], position + Vector3(x, 0.0f, 0.0f))) <= 0.0f)
 			continue;
-		if (XMVectorGetX(XMPlaneDotCoord(planes[i], position + Vector3(0.0f, 32.f, 0.0f))) <= 0.0f)
+		if (XMVectorGetX(XMPlaneDotCoord(planes[i], position + Vector3(0.0f, y, 0.0f))) <= 0.0f)
 			continue;
-		if (XMVectorGetX(XMPlaneDotCoord(planes[i], position + Vector3(32.0f, 32.0f, 0.0f))) <=
-			0.0f)
+		if (XMVectorGetX(XMPlaneDotCoord(planes[i], position + Vector3(x, y, 0.0f))) <= 0.0f)
 			continue;
-		if (XMVectorGetX(XMPlaneDotCoord(planes[i], position + Vector3(0.0f, 0.0f, 32.0f))) <= 0.0f)
+		if (XMVectorGetX(XMPlaneDotCoord(planes[i], position + Vector3(0.0f, 0.0f, z))) <= 0.0f)
 			continue;
-		if (XMVectorGetX(XMPlaneDotCoord(planes[i], position + Vector3(32.0f, 0.0f, 32.0f))) <=
-			0.0f)
+		if (XMVectorGetX(XMPlaneDotCoord(planes[i], position + Vector3(x, 0.0f, z))) <= 0.0f)
 			continue;
-		if (XMVectorGetX(XMPlaneDotCoord(planes[i], position + Vector3(0.0f, 32.f, 32.0f))) <= 0.0f)
+		if (XMVectorGetX(XMPlaneDotCoord(planes[i], position + Vector3(0.0f, y, z))) <= 0.0f)
 			continue;
-		if (XMVectorGetX(XMPlaneDotCoord(planes[i], position + Vector3(32.0f, 32.0f, 32.0f))) <=
-			0.0f)
+		if (XMVectorGetX(XMPlaneDotCoord(planes[i], position + Vector3(x, y, z))) <= 0.0f)
 			continue;
 		return false;
 	}
