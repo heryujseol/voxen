@@ -158,28 +158,29 @@ void App::Render()
 
 	// Basic
 	RenderBasic();
+
+	// Mirror
+	RenderMirror();
 	
+	DXUtils::UpdateViewport(Graphics::basicViewport, 0, 0, m_width, m_height);
+	Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
+
 	// postEffect
 	//Graphics::SetPipelineStates(Graphics::postEffectPSO);
 	//m_postEffect.Render();
 
-	//Graphics::context->OMSetRenderTargets(
-//		1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
 
+	
+	Graphics::context->OMSetRenderTargets(
+		1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
 
 	// skybox
 	Graphics::SetPipelineStates(Graphics::skyboxPSO);
 	m_skybox.Render();
 
-
 	// cloud
-	RenderCloud();
-
-	// transparency
-	Graphics::SetPipelineStates(Graphics::transparencyPSO);
-	Graphics::context->OMSetRenderTargets(
-		1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
-	m_chunkManager.RenderTransparency();
+	Graphics::SetPipelineStates(Graphics::cloudPSO);
+	m_cloud.Render();
 
 
 	// RTV -> backBuffer
@@ -338,22 +339,30 @@ void App::RenderBasic()
 
 void App::RenderCloud() 
 {
-	// only cloud
-	Graphics::context->CopyResource(
-		Graphics::cloudRenderBuffer.Get(), Graphics::basicRenderBuffer.Get());
-	Graphics::context->OMSetRenderTargets(
-		1, Graphics::cloudRTV.GetAddressOf(), Graphics::basicDSV.Get());
+	
+}
 
+void App::RenderMirror() 
+{
+	DXUtils::UpdateViewport(Graphics::mirrorWorldViewPort, 0, 0, m_width / 4, m_height / 4);
+	Graphics::context->RSSetViewports(1, &Graphics::mirrorWorldViewPort);
+
+	const FLOAT clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+	Graphics::context->ClearRenderTargetView(Graphics::mirrorWorldRTV.Get(), clearColor);
+	Graphics::context->ClearDepthStencilView(
+		Graphics::mirrorPlaneDSV.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+
+	Graphics::context->OMSetRenderTargets(
+		1, Graphics::mirrorWorldRTV.GetAddressOf(), Graphics::mirrorPlaneDSV.Get());
+
+	// plane
+	Graphics::SetPipelineStates(Graphics::mirrorMaskingPSO);
+	m_chunkManager.RenderTransparency();
+
+	// mirror cloud
 	Graphics::SetPipelineStates(Graphics::cloudPSO);
 	m_cloud.Render();
 
-	// blend to basicRTV
-	Graphics::context->ResolveSubresource(Graphics::cloudResolvedBuffer.Get(), 0,
-		Graphics::cloudRenderBuffer.Get(), 0, DXGI_FORMAT_R8G8B8A8_UNORM);
-	Graphics::context->PSSetShaderResources(0, 1, Graphics::cloudSRV.GetAddressOf());
+	// mirror lowlod world
 
-	Graphics::context->OMSetRenderTargets(1, Graphics::basicRTV.GetAddressOf(), nullptr);
-
-	Graphics::SetPipelineStates(Graphics::cloudBlendPSO);
-	m_cloud.Blend();
 }

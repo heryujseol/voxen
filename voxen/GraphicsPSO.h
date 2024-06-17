@@ -28,6 +28,8 @@ public:
 	std::vector<ID3D11SamplerState *> samplerStates;
 
 	ComPtr<ID3D11DepthStencilState> depthStencilState;
+	UINT stencilRef;
+
 
 	ComPtr<ID3D11BlendState> blendState;
 	float blendFactor[4];

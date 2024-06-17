@@ -17,12 +17,9 @@ public:
 	bool Initialize(Vector3 cameraPosition);
 	void Update(float dt, Vector3 cameraPosition);
 	void Render();
-	void Blend();
 
 private:
-	
 	bool BuildCloud();
-	bool BuildSquare();
 	
 	static const int CLOUD_DATA_MAP_SIZE = 512;
 	static const int CLOUD_SCALE_SIZE = 16;
@@ -44,14 +41,4 @@ private:
 	ComPtr<ID3D11Buffer> m_vertexBuffer;
 	ComPtr<ID3D11Buffer> m_indexBuffer;
 	ComPtr<ID3D11Buffer> m_constantBuffer;
-
-
-	// blend
-	std::vector<SamplingVertex> m_samplingVertices;
-	std::vector<uint32_t> m_samplingIndices;
-
-	UINT m_samplingStride;
-	UINT m_samplingOffset;
-	ComPtr<ID3D11Buffer> m_samplingVertexBuffer;
-	ComPtr<ID3D11Buffer> m_samplingIndexBuffer;
 };

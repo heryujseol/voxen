@@ -14,7 +14,6 @@ namespace Graphics {
 	ComPtr<ID3D11InputLayout> cloudIL;
 	ComPtr<ID3D11InputLayout> samplingIL;
 	ComPtr<ID3D11InputLayout> instanceIL;
-	ComPtr<ID3D11InputLayout> depthOnlyIL;
 
 
 	// Vertex Shader
@@ -24,7 +23,6 @@ namespace Graphics {
 	ComPtr<ID3D11VertexShader> cloudVS;
 	ComPtr<ID3D11VertexShader> samplingVS;
 	ComPtr<ID3D11VertexShader> instanceVS;
-	ComPtr<ID3D11VertexShader> depthOnlyVS;
 
 
 	// Geometry Shader
@@ -38,9 +36,8 @@ namespace Graphics {
 	ComPtr<ID3D11PixelShader> cloudPS;
 	ComPtr<ID3D11PixelShader> samplingPS;
 	ComPtr<ID3D11PixelShader> instancePS;
-	ComPtr<ID3D11PixelShader> depthOnlyPS;
 	ComPtr<ID3D11PixelShader> postEffectPS;
-	ComPtr<ID3D11PixelShader> transparencyPS;
+	ComPtr<ID3D11PixelShader> mirrorMaskingPS;
 
 
 	// Rasterizer State
@@ -58,6 +55,7 @@ namespace Graphics {
 	// Depth Stencil State
 	ComPtr<ID3D11DepthStencilState> basicDSS;
 	ComPtr<ID3D11DepthStencilState> postEffectDSS;
+	ComPtr<ID3D11DepthStencilState> mirrorMaskingDSS;
 
 
 	// Blend State
@@ -143,10 +141,9 @@ namespace Graphics {
 	GraphicsPSO skyboxEnvMapPSO;
 	GraphicsPSO cloudPSO;
 	GraphicsPSO cloudBlendPSO;
-	GraphicsPSO depthOnlyPSO;
 	GraphicsPSO postEffectPSO;
 	GraphicsPSO instancePSO;
-	GraphicsPSO transparencyPSO;
+	GraphicsPSO mirrorMaskingPSO;
 }
 
 
@@ -364,7 +361,7 @@ bool Graphics::InitDepthStencilBuffers(UINT width, UINT height)
 
 	// mirrorWorld
 	if (!DXUtils::CreateTextureBuffer(
-			mirrorWorldDepthBuffer, width / 4, width / 4, false, format, bindFlag)) {
+			mirrorWorldDepthBuffer, width / 4, height / 4, false, format, bindFlag)) {
 		std::cout << "failed create mirror world depth stencil buffer" << std::endl;
 		return false;
 	}
@@ -381,7 +378,7 @@ bool Graphics::InitDepthStencilBuffers(UINT width, UINT height)
 	format = DXGI_FORMAT_R24G8_TYPELESS;
 	bindFlag = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
 	if (!DXUtils::CreateTextureBuffer(
-			mirrorPlaneDepthBuffer, width / 4, width / 4, false, format, bindFlag)) {
+			mirrorPlaneDepthBuffer, width / 4, height / 4, false, format, bindFlag)) {
 		std::cout << "failed create mirror plane depth stencil buffer" << std::endl;
 		return false;
 	}
@@ -588,15 +585,6 @@ bool Graphics::InitVertexShaderAndInputLayouts()
 		return false;
 	}
 
-	// DepthOnly
-	std::vector<D3D11_INPUT_ELEMENT_DESC> elementDesc5 = { { "POSITION", 0,
-		DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 } };
-	if (!DXUtils::CreateVertexShaderAndInputLayout(
-			L"DepthOnlyVS.hlsl", depthOnlyVS, depthOnlyIL, elementDesc5)) {
-		std::cout << "failed create depthOnly vs" << std::endl;
-		return false;
-	}
-
 	// Instance
 	std::vector<D3D11_INPUT_ELEMENT_DESC> elementDesc6 = {
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
@@ -663,12 +651,6 @@ bool Graphics::InitPixelShaders()
 		return false;
 	}
 
-	// DepthOnly
-	if (!DXUtils::CreatePixelShader(L"DepthOnlyPS.hlsl", depthOnlyPS)) {
-		std::cout << "failed create DepthOnly ps" << std::endl;
-		return false;
-	}
-
 	// PostEffectPS
 	if (!DXUtils::CreatePixelShader(L"PostEffectPS.hlsl", postEffectPS)) {
 		std::cout << "failed create PostEffect ps" << std::endl;
@@ -681,9 +663,9 @@ bool Graphics::InitPixelShaders()
 		return false;
 	}
 
-	// TransparencyPS
-	if (!DXUtils::CreatePixelShader(L"TransparencyPS.hlsl", transparencyPS)) {
-		std::cout << "failed create transparency ps" << std::endl;
+	// MirrorMaskingPS
+	if (!DXUtils::CreatePixelShader(L"MirrorMaskingPS.hlsl", mirrorMaskingPS)) {
+		std::cout << "failed create mirrorMasking ps" << std::endl;
 		return false;
 	}
 
@@ -792,7 +774,26 @@ bool Graphics::InitDepthStencilStates()
 		std::cout << "failed create postEffect DSS" << std::endl;
 		return false;
 	}
-
+	
+	// Mirror Masking DSS
+	desc.DepthFunc = D3D11_COMPARISON_FUNC::D3D11_COMPARISON_LESS;
+	desc.StencilEnable = true;
+	desc.StencilReadMask = 0xFF;
+	desc.StencilWriteMask = 0xFF;
+	desc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP; // stencil X
+	desc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP; // stencil O depth X
+	desc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_REPLACE; // stencil O depth O
+	desc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+	desc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+	desc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
+	desc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+	desc.BackFace.StencilFunc = D3D11_COMPARISON_NEVER;
+	ret = Graphics::device->CreateDepthStencilState(&desc, mirrorMaskingDSS.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create mirror masking DSS" << std::endl;
+		return false;
+	}
+	
 	return true;
 }
 
@@ -816,6 +817,7 @@ bool Graphics::InitBlendStates()
 		std::cout << "failed create alpha BS" << std::endl;
 		return false;
 	}
+
 	return true;
 }
 
@@ -832,6 +834,7 @@ void Graphics::InitGraphicsPSO()
 	basicPSO.samplerStates.push_back(linearWrapSS.Get());
 	basicPSO.samplerStates.push_back(linearClampSS.Get());
 	basicPSO.depthStencilState = basicDSS;
+	basicPSO.stencilRef = 0;
 	basicPSO.blendState = nullptr;
 
 	// basic wire PSO
@@ -859,19 +862,7 @@ void Graphics::InitGraphicsPSO()
 	cloudPSO.inputLayout = cloudIL;
 	cloudPSO.vertexShader = cloudVS;
 	cloudPSO.pixelShader = cloudPS;
-
-	// cloudBlendPSO
-	cloudBlendPSO = basicPSO;
-	cloudBlendPSO.inputLayout = samplingIL;
-	cloudBlendPSO.vertexShader = samplingVS;
-	cloudBlendPSO.pixelShader = samplingPS;
-	cloudBlendPSO.blendState = alphaBS;
-
-	// depthOnlyPSO
-	depthOnlyPSO = basicPSO;
-	depthOnlyPSO.inputLayout = depthOnlyIL;
-	depthOnlyPSO.vertexShader = depthOnlyVS;
-	depthOnlyPSO.pixelShader = depthOnlyPS;
+	cloudPSO.blendState = alphaBS;
 
 	// postEffectPSO
 	postEffectPSO = basicPSO;
@@ -886,9 +877,11 @@ void Graphics::InitGraphicsPSO()
 	instancePSO.rasterizerState = noneCullRS;
 	instancePSO.pixelShader = instancePS;
 
-	// transparencyPSO
-	transparencyPSO = basicPSO;
-	transparencyPSO.pixelShader = transparencyPS;
+	// mirrorMaskingPSO
+	mirrorMaskingPSO = basicPSO;
+	mirrorMaskingPSO.depthStencilState = mirrorMaskingDSS;
+	mirrorMaskingPSO.stencilRef = 1;
+	mirrorMaskingPSO.pixelShader = mirrorMaskingPS;
 }
 
 void Graphics::SetPipelineStates(GraphicsPSO& pso)
@@ -909,7 +902,7 @@ void Graphics::SetPipelineStates(GraphicsPSO& pso)
 	else
 		context->PSSetSamplers(0, (UINT)pso.samplerStates.size(), pso.samplerStates.data());
 
-	context->OMSetDepthStencilState(pso.depthStencilState.Get(), 0);
+	context->OMSetDepthStencilState(pso.depthStencilState.Get(), pso.stencilRef);
 
 	context->OMSetBlendState(pso.blendState.Get(), pso.blendFactor, 0xffffffff);
 }

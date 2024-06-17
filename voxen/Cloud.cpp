@@ -6,8 +6,7 @@
 #include <algorithm>
 Cloud::Cloud()
 	: m_mapCenterPosition(0.0f, 0.0f, 0.0f), m_mapDataOffset(0.0f, 0.0f, 0.0f), m_speed(10.0f),
-	  m_height(192.0f), m_stride(sizeof(CloudVertex)), m_offset(0),
-	  m_samplingStride(sizeof(SamplingVertex)), m_samplingOffset(0)
+	  m_height(192.0f), m_stride(sizeof(CloudVertex)), m_offset(0)
 {
 	m_map.resize(CLOUD_MAP_SIZE);
 	for (int i = 0; i < CLOUD_MAP_SIZE; ++i) {
@@ -41,9 +40,6 @@ bool Cloud::Initialize(Vector3 cameraPosition)
 	m_mapDataOffset = m_mapCenterPosition;
 
 	if (!BuildCloud())
-		return false;
-
-	if (!BuildSquare())
 		return false;
 
 	return true;
@@ -97,15 +93,6 @@ void Cloud::Render()
 	Graphics::context->PSSetConstantBuffers(2, 1, m_constantBuffer.GetAddressOf());
 
 	Graphics::context->DrawIndexed((UINT)m_indices.size(), 0, 0);
-}
-
-void Cloud::Blend()
-{
-	Graphics::context->IASetIndexBuffer(m_samplingIndexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
-	Graphics::context->IASetVertexBuffers(
-		0, 1, m_samplingVertexBuffer.GetAddressOf(), &m_samplingStride, &m_samplingOffset);
-
-	Graphics::context->DrawIndexed((UINT)m_samplingIndices.size(), 0, 0);
 }
 
 bool Cloud::BuildCloud()
@@ -173,23 +160,6 @@ bool Cloud::BuildCloud()
 			std::cout << "failed create constant buffer in cloud" << std::endl;
 			return false;
 		}
-	}
-
-	return true;
-}
-
-bool Cloud::BuildSquare()
-{
-	MeshGenerator::CreateSampleSquareMesh(m_samplingVertices, m_samplingIndices);
-
-	if (!DXUtils::CreateVertexBuffer(m_samplingVertexBuffer, m_samplingVertices)) {
-		std::cout << "failed create sampling vertex buffer in cloud" << std::endl;
-		return false;
-	}
-
-	if (!DXUtils::CreateIndexBuffer(m_samplingIndexBuffer, m_samplingIndices)) {
-		std::cout << "failed create sampling index buffer in cloud" << std::endl;
-		return false;
 	}
 
 	return true;

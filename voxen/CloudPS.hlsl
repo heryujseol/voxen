@@ -108,7 +108,7 @@ float4 main(vsOutput input) : SV_TARGET
     
     // distance alpha
     float alphaWeight = smoothstep(320.0, cloudScale, clamp(distance, 320.0, cloudScale));
-    float alpha = (1.0 - alphaWeight) * 0.8; // [0, 0.8]
+    float alpha = (1.0 - alphaWeight) * 0.75; // [0, 0.8]
     
     return float4(color, alpha);
 }

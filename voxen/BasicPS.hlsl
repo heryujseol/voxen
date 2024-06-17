@@ -134,5 +134,5 @@ float4 main(vsOutput input) : SV_TARGET
         color = color * (strength + 1.0) * (ndotl + 1.0);
     }
 
-    return float4(color, 0.0);
+    return float4(color, 1.0);
 }

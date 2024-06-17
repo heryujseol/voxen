@@ -2,7 +2,8 @@
 
 GraphicsPSO::GraphicsPSO()
 	: inputLayout(nullptr), topology(D3D_PRIMITIVE_TOPOLOGY_UNDEFINED), vertexShader(nullptr),
-	  rasterizerState(nullptr), pixelShader(nullptr), samplerStates(), depthStencilState(nullptr),
+	  geometryShader(nullptr), rasterizerState(nullptr), pixelShader(nullptr), samplerStates(),
+	  depthStencilState(nullptr), stencilRef(0),
 	  blendState(nullptr), blendFactor{ 1.0f, 1.0f, 1.0f, 1.0f }
 {
 }
@@ -11,7 +12,8 @@ GraphicsPSO::GraphicsPSO(const GraphicsPSO& rhs)
 	: inputLayout(rhs.inputLayout), topology(rhs.topology), vertexShader(rhs.vertexShader),
 	  geometryShader(rhs.geometryShader), rasterizerState(rhs.rasterizerState),
 	  pixelShader(rhs.pixelShader), samplerStates(rhs.samplerStates),
-	  depthStencilState(rhs.depthStencilState)
+	  depthStencilState(rhs.depthStencilState), stencilRef(rhs.stencilRef),
+	  blendState(rhs.blendState)
 {
 	blendFactor[0] = rhs.blendFactor[0];
 	blendFactor[1] = rhs.blendFactor[1];
@@ -27,7 +29,7 @@ GraphicsPSO GraphicsPSO::operator=(const GraphicsPSO& other)
 	vertexShader = other.vertexShader;
 
 	geometryShader = other.geometryShader;
-	
+
 	rasterizerState = other.rasterizerState;
 
 	pixelShader = other.pixelShader;
@@ -35,6 +37,7 @@ GraphicsPSO GraphicsPSO::operator=(const GraphicsPSO& other)
 	samplerStates = other.samplerStates;
 
 	depthStencilState = other.depthStencilState;
+	stencilRef = other.stencilRef;
 
 	blendState = other.blendState;
 	blendFactor[0] = other.blendFactor[0];

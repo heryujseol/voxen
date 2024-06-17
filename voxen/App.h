@@ -35,6 +35,7 @@ private:
 	void RenderEnvMap();
 	void RenderBasic();
 	void RenderCloud();
+	void RenderMirror();
 
 
 	UINT m_width;

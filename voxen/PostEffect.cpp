@@ -1,6 +1,7 @@
 #include "PostEffect.h"
 #include "Graphics.h"
 #include "DXUtils.h"
+#include "MeshGenerator.h"
 
 #include <algorithm>
 
@@ -13,7 +14,7 @@ PostEffect::~PostEffect(){};
 
 bool PostEffect::Initialize()
 {
-	CreateMesh();
+	MeshGenerator::CreateSampleSquareMesh(m_vertices, m_indices);
 
 	if (!DXUtils::CreateVertexBuffer(m_vertexBuffer, m_vertices)) {
 		std::cout << "failed create fog vertex buffer in cloud" << std::endl;
@@ -42,30 +43,4 @@ void PostEffect::Render()
 	Graphics::context->PSSetShaderResources(0, 2, pptr.data());
 
 	Graphics::context->DrawIndexed((UINT)m_indices.size(), 0, 0);
-}
-
-void PostEffect::CreateMesh()
-{
-	SamplingVertex v;
-
-	v.position = Vector3(-1.0f, 1.0f, 0.0f);
-	v.texcoord = Vector2(0.0f, 0.0f);
-	m_vertices.push_back(v);
-	v.position = Vector3(1.0f, 1.0f, 0.0f);
-	v.texcoord = Vector2(1.0f, 0.0f);
-	m_vertices.push_back(v);
-	v.position = Vector3(1.0f, -1.0f, 0.0f);
-	v.texcoord = Vector2(1.0f, 1.0f);
-	m_vertices.push_back(v);
-	v.position = Vector3(-1.0f, -1.0f, 0.0f);
-	v.texcoord = Vector2(0.0f, 1.0f);
-	m_vertices.push_back(v);
-
-	m_indices.push_back(0);
-	m_indices.push_back(1);
-	m_indices.push_back(2);
-
-	m_indices.push_back(0);
-	m_indices.push_back(2);
-	m_indices.push_back(3);
 }
