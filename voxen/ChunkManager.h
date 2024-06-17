@@ -34,6 +34,7 @@ public:
 	void RenderSemiAlpha();
 	void RenderTransparency();
 	void RenderInstance();
+	void RenderMirror();
 
 private:
 	void UpdateChunkList(Vector3 cameraChunkPos);
@@ -42,7 +43,7 @@ private:
 	void UpdateRenderChunkList(Camera& camera);
 	void UpdateInstanceInfoList(Camera& camera);
 
-	bool FrustumCulling(Vector3 position, Camera& camera);
+	bool FrustumCulling(Vector3 position, Camera& camera, bool useMirror);
 
 	bool MakeBuffer(Chunk* chunk);
 	void ClearChunkBuffer(Chunk* chunk);
@@ -58,6 +59,7 @@ private:
 	std::vector<Chunk*> m_loadChunkList;
 	std::vector<Chunk*> m_unloadChunkList;
 	std::vector<Chunk*> m_renderChunkList;
+	std::vector<Chunk*> m_renderMirrorChunkList;
 
 	std::vector<ComPtr<ID3D11Buffer>> m_lowLodVertexBuffers;
 	std::vector<ComPtr<ID3D11Buffer>> m_lowLodIndexBuffers;

@@ -7,12 +7,6 @@ Camera::Camera()
 	  m_up(0.0f, 1.0f, 0.0f), m_right(1.0f, 0.0f, 0.0f), m_viewNdcX(0.0f), m_viewNdcY(0.0f),
 	  m_speed(20.0f), m_isOnConstantDirtyFlag(false), m_isOnChunkDirtyFlag(false)
 {
-	m_constantData.view = Matrix();
-	m_constantData.proj = Matrix();
-
-	for (int i = 0; i < 6; ++i)
-		m_envMapConstantData.view[i] = Matrix();
-	m_envMapConstantData.proj = Matrix();
 }
 
 Camera::~Camera() {}
@@ -28,25 +22,34 @@ bool Camera::Initialize(Vector3 pos)
 	m_constantData.eyePos = m_eyePos;
 	m_constantData.eyeDir = m_forward;
 
-	CameraConstantData tempConstantData = m_constantData;
-	tempConstantData.view = tempConstantData.view.Transpose();
-	tempConstantData.proj = tempConstantData.proj.Transpose();
-	tempConstantData.invProj = tempConstantData.invProj.Transpose();
+	CameraConstantData tempConstantData;
+	tempConstantData.view = m_constantData.view.Transpose();
+	tempConstantData.proj = m_constantData.proj.Transpose();
+	tempConstantData.invProj = m_constantData.invProj.Transpose();
+	tempConstantData.eyePos = m_constantData.eyePos;
+	tempConstantData.eyeDir = m_constantData.eyeDir;
 	if (!DXUtils::CreateConstantBuffer(m_constantBuffer, tempConstantData)) {
 		std::cout << "failed create camera constant buffer" << std::endl;
 		return false;
 	}
 
+	Plane mirrorPlane = Plane(Vector3(0.0f, 62.0f, 0.0f), Vector3(0.0f, 1.0f, 0.0f));
+	m_mirrorPlaneMatrix = Matrix::CreateReflection(mirrorPlane);
+	tempConstantData.view = m_mirrorPlaneMatrix * m_constantData.view;
+	tempConstantData.view = tempConstantData.view.Transpose();
+	if (!DXUtils::CreateConstantBuffer(m_mirrorConstantBuffer, tempConstantData)) {
+		std::cout << "failed create camera mirror constant buffer" << std::endl;
+		return false;
+	}
+
 	for (int i = 0; i < 6; ++i) {
-		m_envMapConstantData.view[i] = XMMatrixLookToLH(m_eyePos, lookTo[i], up[i]);
+		m_envMapConstantData.view[i] = XMMatrixLookToLH(Vector3(0.0f), lookTo[i], up[i]);
 		m_envMapConstantData.view[i] = m_envMapConstantData.view[i].Transpose();
 	}
 	m_envMapConstantData.proj =
 		XMMatrixPerspectiveFovLH(XMConvertToRadians(90.0f), 1.0, m_nearZ, m_farZ);
 	m_envMapConstantData.proj = m_envMapConstantData.proj.Transpose();
-
-	if (!DXUtils::CreateConstantBuffer(m_envMapConstantBuffer, m_envMapConstantData))
-	{
+	if (!DXUtils::CreateConstantBuffer(m_envMapConstantBuffer, m_envMapConstantData)) {
 		std::cout << "failed create env map constant buffer" << std::endl;
 		return false;
 	}
@@ -66,20 +69,17 @@ void Camera::Update(float dt, bool keyPressed[256], float mouseX, float mouseY)
 		m_constantData.eyePos = m_eyePos;
 		m_constantData.eyeDir = m_forward;
 
-		CameraConstantData tempConstantData = m_constantData;
-		tempConstantData.view = tempConstantData.view.Transpose();
-		tempConstantData.proj = tempConstantData.proj.Transpose();
-		tempConstantData.invProj = tempConstantData.invProj.Transpose();
+		CameraConstantData tempConstantData;
+		tempConstantData.view = m_constantData.view.Transpose();
+		tempConstantData.proj = m_constantData.proj.Transpose();
+		tempConstantData.invProj = m_constantData.invProj.Transpose();
+		tempConstantData.eyePos = m_constantData.eyePos;
+		tempConstantData.eyeDir = m_constantData.eyeDir;
 		DXUtils::UpdateConstantBuffer(m_constantBuffer, tempConstantData);
 
-		for (int i = 0; i < 6; ++i) {
-			m_envMapConstantData.view[i] = XMMatrixLookToLH(m_eyePos, lookTo[i], up[i]);
-			m_envMapConstantData.view[i] = m_envMapConstantData.view[i].Transpose();
-		}
-		m_envMapConstantData.proj =
-			XMMatrixPerspectiveFovLH(XMConvertToRadians(90.0f), 1.0, m_nearZ, m_farZ);
-		m_envMapConstantData.proj = m_envMapConstantData.proj.Transpose();
-		DXUtils::UpdateConstantBuffer(m_envMapConstantBuffer, m_envMapConstantData);
+		tempConstantData.view = m_mirrorPlaneMatrix * m_constantData.view;
+		tempConstantData.view = tempConstantData.view.Transpose();
+		DXUtils::UpdateConstantBuffer(m_mirrorConstantBuffer, tempConstantData);
 
 		m_isOnConstantDirtyFlag = false;
 	}
@@ -138,20 +138,6 @@ void Camera::UpdateViewDirection(float ndcX, float ndcY)
 	q = Quaternion(m_right * sinf(thetaVertical * 0.5f), cosf(thetaVertical * 0.5f));
 	m_forward = Vector3::Transform(m_forward, Matrix::CreateFromQuaternion(q));
 	m_up = Vector3::Transform(basisY, Matrix::CreateFromQuaternion(q));
-}
-
-Vector3 Camera::GetPosition() { return m_eyePos; }
-
-Vector3 Camera::GetChunkPosition() { return m_chunkPos; }
-
-Vector3 Camera::GetForward() { return m_forward; }
-
-Matrix Camera::GetViewMatrix() { return XMMatrixLookToLH(m_eyePos, m_forward, m_up); }
-
-Matrix Camera::GetProjectionMatrix()
-{
-	return XMMatrixPerspectiveFovLH(
-		XMConvertToRadians(m_projFovAngleY), m_aspectRatio, m_nearZ, m_farZ);
 }
 
 void Camera::MoveForward(float dt) { m_eyePos += m_forward * m_speed * dt; }

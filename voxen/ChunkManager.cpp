@@ -88,7 +88,7 @@ void ChunkManager::RenderSemiAlpha()
 	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::atlasMapSRV.Get(),
 		Graphics::grassColorMapSRV.Get() };
 	Graphics::context->PSSetShaderResources(0, 2, pptr.data());
-
+	
 	for (auto& c : m_renderChunkList) {
 		if (c->IsEmptySemiAlpha())
 			continue;
@@ -146,6 +146,30 @@ void ChunkManager::RenderInstance()
 		Graphics::context->IASetVertexBuffers(0, 2, buffers.data(), strides.data(), offsets.data());
 		Graphics::context->DrawIndexedInstanced(
 			indexCountPerInstance[i], (UINT)m_instanceInfoList[i].size(), 0, 0, 0);
+	}
+}
+
+void ChunkManager::RenderMirror()
+{
+	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::atlasMapSRV.Get(),
+		Graphics::grassColorMapSRV.Get() };
+	Graphics::context->PSSetShaderResources(0, 2, pptr.data());
+	
+	for (auto& c : m_renderChunkList) {
+		if (c->IsEmptyLowLod())
+			continue;
+
+		UINT id = c->GetID();
+		UINT stride = sizeof(VoxelVertex);
+		UINT offset = 0;
+
+		Graphics::context->IASetIndexBuffer(
+			m_lowLodIndexBuffers[id].Get(), DXGI_FORMAT_R32_UINT, 0);
+		Graphics::context->IASetVertexBuffers(
+			0, 1, m_lowLodVertexBuffers[id].GetAddressOf(), &stride, &offset);
+		Graphics::context->VSSetConstantBuffers(1, 1, m_constantBuffers[id].GetAddressOf());
+
+		Graphics::context->DrawIndexed((UINT)c->GetLowLodIndices().size(), 0, 0);
 	}
 }
 
@@ -245,6 +269,7 @@ void ChunkManager::UpdateUnloadChunkList()
 void ChunkManager::UpdateRenderChunkList(Camera& camera)
 {
 	m_renderChunkList.clear();
+	m_renderMirrorChunkList.clear();
 
 	for (auto& p : m_chunkMap) {
 		if (!p.second->IsLoaded())
@@ -253,10 +278,13 @@ void ChunkManager::UpdateRenderChunkList(Camera& camera)
 		if (p.second->IsEmpty())
 			continue;
 
-		if (!FrustumCulling(p.second->GetPosition(), camera))
-			continue;
+		if (FrustumCulling(p.second->GetPosition(), camera, false)) {
+			m_renderChunkList.push_back(p.second);
+		}
 
-		m_renderChunkList.push_back(p.second);
+		if (FrustumCulling(p.second->GetPosition(), camera, true)) {
+			m_renderMirrorChunkList.push_back(p.second);
+		}
 	}
 }
 
@@ -313,9 +341,18 @@ void ChunkManager::UpdateInstanceInfoList(Camera& camera)
 	}
 }
 
-bool ChunkManager::FrustumCulling(Vector3 position, Camera& camera)
+bool ChunkManager::FrustumCulling(Vector3 position, Camera& camera, bool useMirror)
 {
-	Matrix invMat = camera.GetProjectionMatrix().Invert() * camera.GetViewMatrix().Invert();
+	Matrix mirrorMat = camera.GetProjectionMatrix();
+	Matrix viewMat = camera.GetViewMatrix();
+	Matrix projMat = camera.GetProjectionMatrix();
+	Matrix invMat;
+	if (useMirror) {
+		invMat = (mirrorMat * viewMat * projMat).Invert();
+	}
+	else {
+		invMat = (viewMat * projMat).Invert();
+	}
 
 	std::vector<Vector3> worldPos = { Vector3::Transform(Vector3(-1.0f, 1.0f, 0.0f), invMat),
 		Vector3::Transform(Vector3(1.0f, 1.0f, 0.0f), invMat),
@@ -356,6 +393,7 @@ bool ChunkManager::FrustumCulling(Vector3 position, Camera& camera)
 			continue;
 		return false;
 	}
+
 	return true;
 }
 

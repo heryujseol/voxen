@@ -19,13 +19,19 @@ public:
 	void Update(float dt, bool keyPressed[256], float mouseX, float mouseY);
 
 	ComPtr<ID3D11Buffer> m_constantBuffer;
+	ComPtr<ID3D11Buffer> m_mirrorConstantBuffer;
 	ComPtr<ID3D11Buffer> m_envMapConstantBuffer;
 
-	Vector3 GetPosition();
-	Vector3 GetChunkPosition();
-	Vector3 GetForward();
-	Matrix GetViewMatrix();
-	Matrix GetProjectionMatrix();
+	inline Vector3 GetPosition() { return m_eyePos; }
+	inline Vector3 GetChunkPosition() { return m_chunkPos; }
+	inline Vector3 GetForward() { return m_forward; }
+	inline Matrix GetViewMatrix() { return XMMatrixLookToLH(m_eyePos, m_forward, m_up); }
+	inline Matrix GetProjectionMatrix()
+	{
+		return XMMatrixPerspectiveFovLH(
+			XMConvertToRadians(m_projFovAngleY), m_aspectRatio, m_nearZ, m_farZ);
+	}
+	inline Matrix GetMirrorPlaneMatrix() { return m_mirrorPlaneMatrix; }
 
 	bool m_isOnConstantDirtyFlag;
 	bool m_isOnChunkDirtyFlag;
@@ -34,8 +40,8 @@ private:
 	void UpdatePosition(bool keyPressed[256], float dt);
 	void UpdateViewDirection(float mouseX, float mouseY);
 
-	void MoveForward(float dt);
-	void MoveRight(float dt);
+	inline void MoveForward(float dt);
+	inline void MoveRight(float dt);
 
 	float m_projFovAngleY;
 	float m_nearZ;
@@ -47,6 +53,7 @@ private:
 	Vector3 m_forward;
 	Vector3 m_up;
 	Vector3 m_right;
+	Matrix m_mirrorPlaneMatrix;
 
 	float m_viewNdcX;
 	float m_viewNdcY;

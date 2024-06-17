@@ -49,6 +49,7 @@ namespace Graphics {
 	extern ComPtr<ID3D11RasterizerState> solidRS;
 	extern ComPtr<ID3D11RasterizerState> wireRS;
 	extern ComPtr<ID3D11RasterizerState> noneCullRS;
+	extern ComPtr<ID3D11RasterizerState> mirrorRS;
 
 	// Sampler State
 	extern ComPtr<ID3D11SamplerState> pointWrapSS;
@@ -60,6 +61,7 @@ namespace Graphics {
 	extern ComPtr<ID3D11DepthStencilState> basicDSS;
 	extern ComPtr<ID3D11DepthStencilState> postEffectDSS;
 	extern ComPtr<ID3D11DepthStencilState> mirrorMaskingDSS;
+	extern ComPtr<ID3D11DepthStencilState> mirrorDrawMaskedDSS;
 
 	
 	// Blend State
@@ -99,9 +101,6 @@ namespace Graphics {
 	extern ComPtr<ID3D11Texture2D> mirrorWorldDepthBuffer;
 	extern ComPtr<ID3D11DepthStencilView> mirrorWorldDSV;
 
-	extern ComPtr<ID3D11Texture2D> mirrorPlaneDepthBuffer;
-	extern ComPtr<ID3D11DepthStencilView> mirrorPlaneDSV;
-
 
 	// SRV & Buffer
 	extern ComPtr<ID3D11Texture2D> atlasMapBuffer;
@@ -126,7 +125,6 @@ namespace Graphics {
 	extern ComPtr<ID3D11ShaderResourceView> envMapSRV;
 
 	extern ComPtr<ID3D11ShaderResourceView> mirrorWorldRenderSRV;
-	extern ComPtr<ID3D11ShaderResourceView> mirrorPlaneDepthSRV;
 
 
 	// Viewport
@@ -163,10 +161,13 @@ namespace Graphics {
 	extern GraphicsPSO basicPSO;
 	extern GraphicsPSO basicWirePSO;
 	extern GraphicsPSO basicNoneCullPSO;
+	extern GraphicsPSO basicMirrorPSO;
 	extern GraphicsPSO skyboxPSO;
 	extern GraphicsPSO skyboxEnvMapPSO;
 	extern GraphicsPSO cloudPSO;
+	extern GraphicsPSO cloudMirrorPSO;
 	extern GraphicsPSO postEffectPSO;
 	extern GraphicsPSO instancePSO;
 	extern GraphicsPSO mirrorMaskingPSO;
+	extern GraphicsPSO mirrorBlendPSO;
 }

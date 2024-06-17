@@ -154,7 +154,7 @@ void App::Render()
 	Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
 
 	// DepthOnly
-	//RenderDepthOnly();
+	RenderDepthOnly();
 
 	// Basic
 	RenderBasic();
@@ -166,10 +166,8 @@ void App::Render()
 	Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
 
 	// postEffect
-	//Graphics::SetPipelineStates(Graphics::postEffectPSO);
-	//m_postEffect.Render();
-
-
+	Graphics::SetPipelineStates(Graphics::postEffectPSO);
+	m_postEffect.Render();
 	
 	Graphics::context->OMSetRenderTargets(
 		1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
@@ -337,11 +335,6 @@ void App::RenderBasic()
 	m_chunkManager.RenderInstance();
 }
 
-void App::RenderCloud() 
-{
-	
-}
-
 void App::RenderMirror() 
 {
 	DXUtils::UpdateViewport(Graphics::mirrorWorldViewPort, 0, 0, m_width / 4, m_height / 4);
@@ -350,19 +343,24 @@ void App::RenderMirror()
 	const FLOAT clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	Graphics::context->ClearRenderTargetView(Graphics::mirrorWorldRTV.Get(), clearColor);
 	Graphics::context->ClearDepthStencilView(
-		Graphics::mirrorPlaneDSV.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+		Graphics::mirrorWorldDSV.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
 	Graphics::context->OMSetRenderTargets(
-		1, Graphics::mirrorWorldRTV.GetAddressOf(), Graphics::mirrorPlaneDSV.Get());
+		1, Graphics::mirrorWorldRTV.GetAddressOf(), Graphics::mirrorWorldDSV.Get());
 
 	// plane
 	Graphics::SetPipelineStates(Graphics::mirrorMaskingPSO);
 	m_chunkManager.RenderTransparency();
 
 	// mirror cloud
-	Graphics::SetPipelineStates(Graphics::cloudPSO);
+	Graphics::context->VSSetConstantBuffers(0, 1, m_camera.m_mirrorConstantBuffer.GetAddressOf());
+	Graphics::SetPipelineStates(Graphics::cloudMirrorPSO);
 	m_cloud.Render();
 
-	// mirror lowlod world
+	// mirror low lod world
+	Graphics::SetPipelineStates(Graphics::basicMirrorPSO);
+	m_chunkManager.RenderMirror();
 
+	// 원래의 constantBuffer로 두기
+	Graphics::context->VSSetConstantBuffers(0, 1, m_camera.m_constantBuffer.GetAddressOf());
 }

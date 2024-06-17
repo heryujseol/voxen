@@ -34,7 +34,6 @@ private:
 	void RenderDepthOnly();
 	void RenderEnvMap();
 	void RenderBasic();
-	void RenderCloud();
 	void RenderMirror();
 
 

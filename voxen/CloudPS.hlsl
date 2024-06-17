@@ -68,11 +68,6 @@ float HenyeyGreensteinPhase(float3 L, float3 V, float aniso)
     return (1.0f - g * g) / (4.0f * PI * pow(abs(1.0f + g * g - 2.0f * g * cosT), 3.0f / 2.0f));
 }
 
-float BeerLambert(float absorptionCoefficient, float distanceTraveled)
-{
-    return exp(-absorptionCoefficient * distanceTraveled);
-}
-
 float4 main(vsOutput input) : SV_TARGET
 {
     float distance = length(input.posWorld.xz - eyePos.xz);
