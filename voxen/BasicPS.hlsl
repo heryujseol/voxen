@@ -3,6 +3,11 @@ Texture2D grassColorMap : register(t1);
 
 SamplerState pointWrapSS : register(s0);
 
+#ifdef USE_DEPTH_CLIP
+    Texture2D depthTex : register(t2);
+    SamplerState linearClampSS : register(s2);
+#endif
+
 cbuffer CameraConstantBuffer : register(b0)
 {
     matrix view;
@@ -101,11 +106,24 @@ float4 main(vsOutput input) : SV_TARGET
     //float4 biome = grassColorMap.SampleLevel(pointClampSS, float2(1 - temperature, 1 - temperature / downfall), 0.0);
     
     float2 texcoord = getVoxelTexcoord(input.posModel, input.face);
-
     uint index = (input.type - 1) * 6 + input.face;
     
+#ifdef USE_ALPHA_CLIP 
     if (atlasTextureArray.SampleLevel(pointWrapSS, float3(texcoord, index), 0.0).a != 1.0)
         discard;
+#endif
+    
+#ifdef USE_DEPTH_CLIP
+    float2 screenTexcoord = float2(input.posProj.x / (1920.0 / 4.0), input.posProj.y / (1080.0 / 4.0));
+    float planeDepth = depthTex.Sample(linearClampSS, screenTexcoord).r;
+    float pixelDepth = input.posProj.z;
+
+    // Discard pixel if its depth is less than the depth buffer's value
+    if (pixelDepth < planeDepth)
+    {
+        discard;
+    }
+#endif
     
     float3 color = atlasTextureArray.Sample(pointWrapSS, float3(texcoord, index)).rgb * 0.3;
     

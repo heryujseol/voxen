@@ -37,12 +37,15 @@ namespace Graphics {
 
 	// Pixel Shader
 	extern ComPtr<ID3D11PixelShader> basicPS;
+	extern ComPtr<ID3D11PixelShader> basicAlphaClipPS;
+	extern ComPtr<ID3D11PixelShader> basicDepthClipPS;
 	extern ComPtr<ID3D11PixelShader> skyboxPS;
 	extern ComPtr<ID3D11PixelShader> skyboxEnvMapPS;
 	extern ComPtr<ID3D11PixelShader> cloudPS;
 	extern ComPtr<ID3D11PixelShader> samplingPS;
 	extern ComPtr<ID3D11PixelShader> instancePS;
 	extern ComPtr<ID3D11PixelShader> mirrorMaskingPS;
+	extern ComPtr<ID3D11PixelShader> transparencyPS;
 
 
 	// Rasterizer State
@@ -66,6 +69,7 @@ namespace Graphics {
 	
 	// Blend State
 	extern ComPtr<ID3D11BlendState> alphaBS;
+	extern ComPtr<ID3D11BlendState> srcBS;
 
 
 	// RTV & Buffer
@@ -98,6 +102,9 @@ namespace Graphics {
 	extern ComPtr<ID3D11Texture2D> envMapDepthBuffer;
 	extern ComPtr<ID3D11DepthStencilView> envMapDSV;
 
+	extern ComPtr<ID3D11Texture2D> mirrorPlaneDepthBuffer;
+	extern ComPtr<ID3D11DepthStencilView> mirrorPlaneDepthDSV;
+
 	extern ComPtr<ID3D11Texture2D> mirrorWorldDepthBuffer;
 	extern ComPtr<ID3D11DepthStencilView> mirrorWorldDSV;
 
@@ -125,6 +132,7 @@ namespace Graphics {
 	extern ComPtr<ID3D11ShaderResourceView> envMapSRV;
 
 	extern ComPtr<ID3D11ShaderResourceView> mirrorWorldRenderSRV;
+	extern ComPtr<ID3D11ShaderResourceView> mirrorPlaneDepthSRV;
 
 
 	// Viewport

@@ -109,10 +109,6 @@ void ChunkManager::RenderSemiAlpha()
 
 void ChunkManager::RenderTransparency()
 {
-	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::atlasMapSRV.Get(),
-		Graphics::envMapSRV.Get() };
-	Graphics::context->PSSetShaderResources(0, 2, pptr.data());
-
 	for (auto& c : m_renderChunkList) {
 		if (c->IsEmptyTransparency())
 			continue;
@@ -133,6 +129,10 @@ void ChunkManager::RenderTransparency()
 
 void ChunkManager::RenderInstance()
 {
+	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::atlasMapSRV.Get(),
+		Graphics::grassColorMapSRV.Get() };
+	Graphics::context->PSSetShaderResources(0, 2, pptr.data());
+
 	UINT indexCountPerInstance[4] = { 12, 24, 6 };
 
 	for (int i = 0; i < Block::INSTANCE_TYPE_COUNT; ++i) {

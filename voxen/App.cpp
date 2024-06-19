@@ -161,14 +161,14 @@ void App::Render()
 
 	// Mirror
 	RenderMirror();
-	
+
 	DXUtils::UpdateViewport(Graphics::basicViewport, 0, 0, m_width, m_height);
 	Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
 
 	// postEffect
 	Graphics::SetPipelineStates(Graphics::postEffectPSO);
 	m_postEffect.Render();
-	
+
 	Graphics::context->OMSetRenderTargets(
 		1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
 
@@ -304,7 +304,8 @@ void App::RenderEnvMap()
 	DXUtils::UpdateViewport(Graphics::envMapViewPort, 0, 0, m_width / 8, m_width / 8);
 	Graphics::context->RSSetViewports(1, &Graphics::envMapViewPort);
 
-	Graphics::context->OMSetRenderTargets(1, Graphics::envMapRTV.GetAddressOf(), Graphics::envMapDSV.Get());
+	Graphics::context->OMSetRenderTargets(
+		1, Graphics::envMapRTV.GetAddressOf(), Graphics::envMapDSV.Get());
 
 	Graphics::context->GSSetConstantBuffers(0, 1, m_camera.m_envMapConstantBuffer.GetAddressOf());
 
@@ -312,7 +313,7 @@ void App::RenderEnvMap()
 	m_skybox.Render();
 }
 
-void App::RenderBasic() 
+void App::RenderBasic()
 {
 	const FLOAT clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	Graphics::context->ClearRenderTargetView(Graphics::basicRTV.Get(), clearColor);
@@ -335,23 +336,31 @@ void App::RenderBasic()
 	m_chunkManager.RenderInstance();
 }
 
-void App::RenderMirror() 
+void App::RenderMirror()
 {
 	DXUtils::UpdateViewport(Graphics::mirrorWorldViewPort, 0, 0, m_width / 4, m_height / 4);
 	Graphics::context->RSSetViewports(1, &Graphics::mirrorWorldViewPort);
+
+	// plane depth
+	Graphics::context->OMSetRenderTargets(0, nullptr, Graphics::mirrorPlaneDepthDSV.Get());
+	Graphics::context->ClearDepthStencilView(
+		Graphics::mirrorPlaneDepthDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
+	Graphics::SetPipelineStates(Graphics::basicPSO);
+	m_chunkManager.RenderTransparency();
+
 
 	const FLOAT clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	Graphics::context->ClearRenderTargetView(Graphics::mirrorWorldRTV.Get(), clearColor);
 	Graphics::context->ClearDepthStencilView(
 		Graphics::mirrorWorldDSV.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
-
 	Graphics::context->OMSetRenderTargets(
 		1, Graphics::mirrorWorldRTV.GetAddressOf(), Graphics::mirrorWorldDSV.Get());
 
-	// plane
+	// plane stencil and envMap
 	Graphics::SetPipelineStates(Graphics::mirrorMaskingPSO);
+	Graphics::context->PSSetShaderResources(0, 1, Graphics::envMapSRV.GetAddressOf());
 	m_chunkManager.RenderTransparency();
-
+	
 	// mirror cloud
 	Graphics::context->VSSetConstantBuffers(0, 1, m_camera.m_mirrorConstantBuffer.GetAddressOf());
 	Graphics::SetPipelineStates(Graphics::cloudMirrorPSO);
@@ -359,11 +368,21 @@ void App::RenderMirror()
 
 	// mirror low lod world
 	Graphics::SetPipelineStates(Graphics::basicMirrorPSO);
+	Graphics::context->PSSetShaderResources(2, 1, Graphics::mirrorPlaneDepthSRV.GetAddressOf());
 	m_chunkManager.RenderMirror();
 
-	// 원래의 constantBuffer로 두기
+	// 원래의 글로벌로 두기
 	Graphics::context->VSSetConstantBuffers(0, 1, m_camera.m_constantBuffer.GetAddressOf());
+	DXUtils::UpdateViewport(Graphics::basicViewport, 0, 0, m_width, m_height);
+	Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
+	Graphics::context->OMSetRenderTargets(
+		1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
 
-	// blend transparency
+	// mirror blending
+	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::atlasMapSRV.Get(),
+		Graphics::mirrorWorldRenderSRV.Get(), Graphics::depthOnlySRV.Get() };
+	Graphics::context->PSSetShaderResources(0, 3, pptr.data());
 
+	Graphics::SetPipelineStates(Graphics::mirrorBlendPSO);
+	m_chunkManager.RenderTransparency();
 }

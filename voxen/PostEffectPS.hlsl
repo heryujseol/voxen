@@ -88,5 +88,5 @@ float4 main(SamplingPixelShaderInput input) : SV_TARGET
         
     color = lerp(fogColor, color, fogFactor);
     
-    return float4(color, 0.0);
+    return float4(color, 1.0);
 }
