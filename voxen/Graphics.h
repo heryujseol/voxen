@@ -69,7 +69,6 @@ namespace Graphics {
 	
 	// Blend State
 	extern ComPtr<ID3D11BlendState> alphaBS;
-	extern ComPtr<ID3D11BlendState> srcBS;
 
 
 	// RTV & Buffer

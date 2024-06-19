@@ -1,6 +1,7 @@
 Texture2DArray atlasTextureArray : register(t0);
 Texture2D mirrorWorldTex : register(t1);
 Texture2D depthOnlyTex : register(t2);
+Texture2D basicRenderTex : register(t3);
 
 SamplerState pointWrapSS : register(s0);
 SamplerState linearClampSS : register(s2);
@@ -97,7 +98,7 @@ float3 getReflectionCoefficient(uint type)
     
     if (type == 1) // water
     {
-        return float3(0.02, 0.02, 0.02);
+        fresnel = float3(0.02, 0.02, 0.02);
     }
     
     return fresnel;
@@ -134,30 +135,40 @@ float4 main(vsOutput input) : SV_TARGET
     float2 texcoord = getVoxelTexcoord(input.posModel, input.face);
     uint index = (input.type - 1) * 6 + input.face;
     
-    float3 color = atlasTextureArray.Sample(pointWrapSS, float3(texcoord, index)).rgb;
-    
     float3 normal = getNormal(input.face);
     
     if (normal.y > 0 && 62 - 1e4 <= input.posWorld.y && input.posWorld.y <= 62 + 1e4)
     {
-        float3 toEye = normalize(eyePos - input.posWorld);
-        float3 frensnel = schlickFresnel(normal, toEye, getReflectionCoefficient(input.type));
-        
         float2 screenTexcoord = float2(input.posProj.x / 1920.0, input.posProj.y / 1080.0);
-        float3 mirrorColor = mirrorWorldTex.Sample(linearClampSS, screenTexcoord).rgb;
-        float3 reflectColor = frensnel * mirrorColor;
         
+        // origin render color
+        float3 originColor = basicRenderTex.Sample(linearClampSS, screenTexcoord).rgb;
+        
+        // absorption color
+        float3 textureColor = atlasTextureArray.Sample(pointWrapSS, float3(texcoord, index)).rgb;
+        
+        // reflect color
+        float3 mirrorColor = mirrorWorldTex.Sample(linearClampSS, screenTexcoord).rgb;
+        
+        // fresnel factor
+        float3 toEye = normalize(eyePos - input.posWorld);
+        float3 frensnelFactor = schlickFresnel(normal, toEye, getReflectionCoefficient(input.type));
+        
+        // absorption factor
         float objectDistance = length(texcoordToView(screenTexcoord));
         float planeDistance = length(eyePos - input.posWorld);
-        float diffDistance = saturate(objectDistance - planeDistance);
+        float diffDistance = abs(objectDistance - planeDistance);
+        float absorptionCoeff = 0.15;
+        float absorptionFactor = 1.0 - exp(-absorptionCoeff * diffDistance); // beer-lambert
         
-        float coeff = 3.0;
-        float absorptionFactor = 1.0 - exp(-coeff * diffDistance); // beer-lambert
+        // blending 3 colors
+        float3 projColor = (1.0 - frensnelFactor) * (lerp(originColor, textureColor, absorptionFactor));
+        float3 retColor = lerp(projColor, mirrorColor, frensnelFactor);
         
-        return float4(reflectColor, 1.0);
+        return float4(retColor, 1.0);
     }
     else
     {
-        return float4(0.0, 0.0, 0.0, 1.0);
+        return float4(0.0, 1.0, 0.0, 1.0);
     }
 }

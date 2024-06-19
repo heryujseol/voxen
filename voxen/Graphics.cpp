@@ -891,25 +891,6 @@ bool Graphics::InitBlendStates()
 		return false;
 	}
 
-	// src BS
-	ZeroMemory(&desc, sizeof(desc));
-	desc.AlphaToCoverageEnable = false;
-	desc.IndependentBlendEnable = false;
-	desc.RenderTarget[0].BlendEnable = true;
-	desc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_COLOR;
-	desc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_COLOR;
-	desc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
-	desc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
-	desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
-	desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
-	desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
-
-	ret = Graphics::device->CreateBlendState(&desc, srcBS.GetAddressOf());
-	if (FAILED(ret)) {
-		std::cout << "failed create alpha BS" << std::endl;
-		return false;
-	}
-
 	return true;
 }
 
@@ -992,7 +973,6 @@ void Graphics::InitGraphicsPSO()
 	// mirrorBlendPSO
 	mirrorBlendPSO = basicPSO;
 	mirrorBlendPSO.pixelShader = transparencyPS;
-	//mirrorBlendPSO.blendState = srcBS;
 }
 
 void Graphics::SetPipelineStates(GraphicsPSO& pso)

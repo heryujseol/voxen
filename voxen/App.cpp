@@ -166,8 +166,8 @@ void App::Render()
 	Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
 
 	// postEffect
-	Graphics::SetPipelineStates(Graphics::postEffectPSO);
-	m_postEffect.Render();
+	//Graphics::SetPipelineStates(Graphics::postEffectPSO);
+	//m_postEffect.Render();
 
 	Graphics::context->OMSetRenderTargets(
 		1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
@@ -379,9 +379,15 @@ void App::RenderMirror()
 		1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
 
 	// mirror blending
+	Graphics::context->ResolveSubresource(Graphics::postEffectResolvedBuffer.Get(), 0,
+		Graphics::basicRenderBuffer.Get(), 0, DXGI_FORMAT_R8G8B8A8_UNORM);
+
 	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::atlasMapSRV.Get(),
-		Graphics::mirrorWorldRenderSRV.Get(), Graphics::depthOnlySRV.Get() };
-	Graphics::context->PSSetShaderResources(0, 3, pptr.data());
+		Graphics::mirrorWorldRenderSRV.Get(),
+		Graphics::depthOnlySRV.Get(),
+		Graphics::postEffectSRV.Get()
+	};
+	Graphics::context->PSSetShaderResources(0, 4, pptr.data());
 
 	Graphics::SetPipelineStates(Graphics::mirrorBlendPSO);
 	m_chunkManager.RenderTransparency();
