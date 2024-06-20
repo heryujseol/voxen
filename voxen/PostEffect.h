@@ -16,16 +16,18 @@ public:
 
 	bool Initialize();
 	void Render();
+	void RenderFog();
+	void BlurMirror(int loopCount);
 
-	//ComPtr<ID3D11Buffer> m_constantBuffer;
 
 private:
-
 	std::vector<SamplingVertex> m_vertices;
 	std::vector<uint32_t> m_indices;
-
 	UINT m_stride;
 	UINT m_offset;
 	ComPtr<ID3D11Buffer> m_vertexBuffer;
 	ComPtr<ID3D11Buffer> m_indexBuffer;
+
+	postEffectConstantData m_postEffectConstantData;
+	ComPtr<ID3D11Buffer> m_postEffectConstantBuffer;
 };

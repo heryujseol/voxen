@@ -85,24 +85,6 @@ float3 getNormal(uint face)
         return float3(0.0, 0.0, 1.0);
     }
 }
-// fresnelR0는 물질의 고유 성질
-// Water : (0.02, 0.02, 0.02)
-// Glass : (0.08, 0.08, 0.08)
-// Plastic : (0.05, 0.05, 0.05)
-// Gold: (1.0, 0.71, 0.29)
-// Silver: (0.95, 0.93, 0.88)
-// Copper: (0.95, 0.64, 0.54)
-float3 getReflectionCoefficient(uint type)
-{
-    float3 fresnel = float3(1.0, 1.0, 1.0);
-    
-    if (type == 1) // water
-    {
-        fresnel = float3(0.02, 0.02, 0.02);
-    }
-    
-    return fresnel;
-}
 
 float3 schlickFresnel(float3 N, float3 E, float3 R)
 {
@@ -148,27 +130,32 @@ float4 main(vsOutput input) : SV_TARGET
         float3 textureColor = atlasTextureArray.Sample(pointWrapSS, float3(texcoord, index)).rgb;
         
         // reflect color
-        float3 mirrorColor = mirrorWorldTex.Sample(linearClampSS, screenTexcoord).rgb;
+        float4 mirrorColor = mirrorWorldTex.Sample(linearClampSS, screenTexcoord);
         
         // fresnel factor
         float3 toEye = normalize(eyePos - input.posWorld);
-        float3 frensnelFactor = schlickFresnel(normal, toEye, getReflectionCoefficient(input.type));
+        float3 reflectCoeff = float3(0.2, 0.2, 0.2);
+        float3 fresnelFactor = schlickFresnel(normal, toEye, reflectCoeff);
         
         // absorption factor
         float objectDistance = length(texcoordToView(screenTexcoord));
         float planeDistance = length(eyePos - input.posWorld);
         float diffDistance = abs(objectDistance - planeDistance);
-        float absorptionCoeff = 0.15;
+        float absorptionCoeff = 0.2;
         float absorptionFactor = 1.0 - exp(-absorptionCoeff * diffDistance); // beer-lambert
         
         // blending 3 colors
-        float3 projColor = (1.0 - frensnelFactor) * (lerp(originColor, textureColor, absorptionFactor));
-        float3 retColor = lerp(projColor, mirrorColor, frensnelFactor);
+        float3 projColor = (1.0 - fresnelFactor) * (lerp(originColor, textureColor, absorptionFactor));
+        float3 blendColor = lerp(projColor, mirrorColor.rgb, fresnelFactor);
         
-        return float4(retColor, 1.0);
+        // alpha blend
+        float alpha = lerp(1.0, mirrorColor.a, fresnelFactor);
+        
+        return float4(blendColor, alpha);
     }
     else
     {
-        return float4(0.0, 1.0, 0.0, 1.0);
+        discard;
+        return float4(0, 0, 0, 0);
     }
 }

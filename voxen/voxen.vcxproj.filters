@@ -128,7 +128,7 @@
     <FxCompile Include="SamplingPS.hlsl">
       <Filter>쉐이더 파일</Filter>
     </FxCompile>
-    <FxCompile Include="PostEffectPS.hlsl">
+    <FxCompile Include="FogPS.hlsl">
       <Filter>쉐이더 파일</Filter>
     </FxCompile>
     <FxCompile Include="InstanceVS.hlsl">
@@ -147,6 +147,9 @@
       <Filter>쉐이더 파일</Filter>
     </FxCompile>
     <FxCompile Include="TransparencyPS.hlsl">
+      <Filter>쉐이더 파일</Filter>
+    </FxCompile>
+    <FxCompile Include="BlurPS.hlsl">
       <Filter>쉐이더 파일</Filter>
     </FxCompile>
   </ItemGroup>

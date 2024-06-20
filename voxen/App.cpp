@@ -19,8 +19,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 }
 
 App::App()
-	: m_width(1920), m_height(1080), m_hwnd(), m_chunkManager(), m_camera(), m_skybox(),
-	  m_mouseNdcX(0.0f), m_mouseNdcY(0.0f),
+	: m_hwnd(), m_chunkManager(), m_camera(), m_skybox(), m_mouseNdcX(0.0f), m_mouseNdcY(0.0f),
 	  m_keyPressed{
 		  false,
 	  },
@@ -64,8 +63,8 @@ LRESULT App::EventHandler(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		break;
 
 	case WM_MOUSEMOVE:
-		m_mouseNdcX = (float)LOWORD(lParam) / (float)m_width * 2 - 1;
-		m_mouseNdcY = -((float)HIWORD(lParam) / (float)m_height * 2 - 1);
+		m_mouseNdcX = (float)LOWORD(lParam) / (float)WIDTH * 2 - 1;
+		m_mouseNdcY = -((float)HIWORD(lParam) / (float)HEIGHT * 2 - 1);
 
 		break;
 	}
@@ -150,7 +149,7 @@ void App::Render()
 	// making env map
 	RenderEnvMap();
 
-	DXUtils::UpdateViewport(Graphics::basicViewport, 0, 0, m_width, m_height);
+	DXUtils::UpdateViewport(Graphics::basicViewport, 0, 0, WIDTH, HEIGHT);
 	Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
 
 	// DepthOnly
@@ -162,12 +161,12 @@ void App::Render()
 	// Mirror
 	RenderMirror();
 
-	DXUtils::UpdateViewport(Graphics::basicViewport, 0, 0, m_width, m_height);
+	DXUtils::UpdateViewport(Graphics::basicViewport, 0, 0, WIDTH, HEIGHT);
 	Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
 
 	// postEffect
-	//Graphics::SetPipelineStates(Graphics::postEffectPSO);
-	//m_postEffect.Render();
+	//Graphics::SetPipelineStates(Graphics::fogPSO);
+	//m_postEffect.RenderFog();
 
 	Graphics::context->OMSetRenderTargets(
 		1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
@@ -203,7 +202,7 @@ bool App::InitWindow()
 		return false;
 
 
-	RECT wr = { 0, 0, (LONG)m_width, (LONG)m_height };
+	RECT wr = { 0, 0, (LONG)WIDTH, (LONG)HEIGHT };
 	AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, false);
 
 	m_hwnd = CreateWindow(wc.lpszClassName, L"Voxen", WS_OVERLAPPEDWINDOW, 50, 50,
@@ -221,11 +220,11 @@ bool App::InitWindow()
 bool App::InitDirectX()
 {
 	DXGI_FORMAT pixelFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
-	if (!Graphics::InitGraphicsCore(pixelFormat, m_hwnd, m_width, m_height)) {
+	if (!Graphics::InitGraphicsCore(pixelFormat, m_hwnd)) {
 		return false;
 	}
 
-	if (!Graphics::InitGraphicsBuffer(m_width, m_height)) {
+	if (!Graphics::InitGraphicsBuffer()) {
 		return false;
 	}
 
@@ -244,7 +243,7 @@ bool App::InitGUI()
 	ImGui::CreateContext();
 	ImGuiIO& io = ImGui::GetIO();
 	(void)io;
-	io.DisplaySize = ImVec2(float(m_width), float(m_height));
+	io.DisplaySize = ImVec2(float(WIDTH), float(HEIGHT));
 	ImGui::StyleColorsLight();
 
 	// Setup Platform/Renderer backends
@@ -301,7 +300,7 @@ void App::RenderEnvMap()
 	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	Graphics::context->ClearRenderTargetView(Graphics::envMapRTV.Get(), clearColor);
 
-	DXUtils::UpdateViewport(Graphics::envMapViewPort, 0, 0, m_width / 8, m_width / 8);
+	DXUtils::UpdateViewport(Graphics::envMapViewPort, 0, 0, ENV_MAP_SIZE, ENV_MAP_SIZE);
 	Graphics::context->RSSetViewports(1, &Graphics::envMapViewPort);
 
 	Graphics::context->OMSetRenderTargets(
@@ -338,7 +337,7 @@ void App::RenderBasic()
 
 void App::RenderMirror()
 {
-	DXUtils::UpdateViewport(Graphics::mirrorWorldViewPort, 0, 0, m_width / 4, m_height / 4);
+	DXUtils::UpdateViewport(Graphics::mirrorWorldViewPort, 0, 0, MIRROR_WIDTH, MIRROR_HEIGHT);
 	Graphics::context->RSSetViewports(1, &Graphics::mirrorWorldViewPort);
 
 	// plane depth
@@ -347,7 +346,6 @@ void App::RenderMirror()
 		Graphics::mirrorPlaneDepthDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
 	Graphics::SetPipelineStates(Graphics::basicPSO);
 	m_chunkManager.RenderTransparency();
-
 
 	const FLOAT clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	Graphics::context->ClearRenderTargetView(Graphics::mirrorWorldRTV.Get(), clearColor);
@@ -360,33 +358,35 @@ void App::RenderMirror()
 	Graphics::SetPipelineStates(Graphics::mirrorMaskingPSO);
 	Graphics::context->PSSetShaderResources(0, 1, Graphics::envMapSRV.GetAddressOf());
 	m_chunkManager.RenderTransparency();
-	
+
 	// mirror cloud
 	Graphics::context->VSSetConstantBuffers(0, 1, m_camera.m_mirrorConstantBuffer.GetAddressOf());
 	Graphics::SetPipelineStates(Graphics::cloudMirrorPSO);
 	m_cloud.Render();
 
 	// mirror low lod world
-	Graphics::SetPipelineStates(Graphics::basicMirrorPSO);
 	Graphics::context->PSSetShaderResources(2, 1, Graphics::mirrorPlaneDepthSRV.GetAddressOf());
+	Graphics::SetPipelineStates(Graphics::basicMirrorPSO);
 	m_chunkManager.RenderMirror();
+
+	// blur mirror world
+	Graphics::SetPipelineStates(Graphics::mirrorBlurPSO);
+	m_postEffect.BlurMirror(3);
 
 	// 원래의 글로벌로 두기
 	Graphics::context->VSSetConstantBuffers(0, 1, m_camera.m_constantBuffer.GetAddressOf());
-	DXUtils::UpdateViewport(Graphics::basicViewport, 0, 0, m_width, m_height);
+	DXUtils::UpdateViewport(Graphics::basicViewport, 0, 0, WIDTH, HEIGHT);
 	Graphics::context->RSSetViewports(1, &Graphics::basicViewport);
 	Graphics::context->OMSetRenderTargets(
 		1, Graphics::basicRTV.GetAddressOf(), Graphics::basicDSV.Get());
 
 	// mirror blending
-	Graphics::context->ResolveSubresource(Graphics::postEffectResolvedBuffer.Get(), 0,
+	Graphics::context->ResolveSubresource(Graphics::basicResolvedBuffer.Get(), 0,
 		Graphics::basicRenderBuffer.Get(), 0, DXGI_FORMAT_R8G8B8A8_UNORM);
 
 	std::vector<ID3D11ShaderResourceView*> pptr = { Graphics::atlasMapSRV.Get(),
-		Graphics::mirrorWorldRenderSRV.Get(),
-		Graphics::depthOnlySRV.Get(),
-		Graphics::postEffectSRV.Get()
-	};
+		Graphics::mirrorWorldSRV.Get(), Graphics::depthOnlySRV.Get(),
+		Graphics::basicResolvedSRV.Get() };
 	Graphics::context->PSSetShaderResources(0, 4, pptr.data());
 
 	Graphics::SetPipelineStates(Graphics::mirrorBlendPSO);

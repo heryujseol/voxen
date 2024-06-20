@@ -2,10 +2,11 @@ Texture2DArray atlasTextureArray : register(t0);
 Texture2D grassColorMap : register(t1);
 
 SamplerState pointWrapSS : register(s0);
+SamplerState linearWrapSS : register(s1);
+SamplerState linearClampSS : register(s2);
 
 #ifdef USE_DEPTH_CLIP
     Texture2D depthTex : register(t2);
-    SamplerState linearClampSS : register(s2);
 #endif
 
 cbuffer CameraConstantBuffer : register(b0)
@@ -114,7 +115,10 @@ float4 main(vsOutput input) : SV_TARGET
 #endif
     
 #ifdef USE_DEPTH_CLIP
-    float2 screenTexcoord = float2(input.posProj.x / (1920.0 / 4.0), input.posProj.y / (1080.0 / 4.0));
+    float width, height, lod;
+    depthTex.GetDimensions(0, width, height, lod);
+    
+    float2 screenTexcoord = float2(input.posProj.x / width, input.posProj.y / height);
     float planeDepth = depthTex.Sample(linearClampSS, screenTexcoord).r;
     float pixelDepth = input.posProj.z;
 
