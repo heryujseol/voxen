@@ -149,7 +149,8 @@ float4 main(vsOutput input) : SV_TARGET
         float3 blendColor = lerp(projColor, mirrorColor.rgb, fresnelFactor);
         
         // alpha blend
-        float alpha = lerp(1.0, mirrorColor.a, fresnelFactor);
+        float fresnelAvg = dot(fresnelFactor, float3(1, 1, 1)) / 3.0;
+        float alpha = lerp(1.0, mirrorColor.a, fresnelAvg);
         
         return float4(blendColor, alpha);
     }
