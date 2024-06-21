@@ -1,5 +1,6 @@
 #include "Graphics.h"
 #include "DXUtils.h"
+#include "App.h"
 
 #include <iostream>
 
@@ -14,49 +15,59 @@ namespace Graphics {
 	ComPtr<ID3D11InputLayout> cloudIL;
 	ComPtr<ID3D11InputLayout> samplingIL;
 	ComPtr<ID3D11InputLayout> instanceIL;
-	ComPtr<ID3D11InputLayout> depthOnlyIL;
 
 
 	// Vertex Shader
 	ComPtr<ID3D11VertexShader> basicVS;
 	ComPtr<ID3D11VertexShader> skyboxVS;
+	ComPtr<ID3D11VertexShader> skyboxEnvMapVS;
 	ComPtr<ID3D11VertexShader> cloudVS;
 	ComPtr<ID3D11VertexShader> samplingVS;
 	ComPtr<ID3D11VertexShader> instanceVS;
-	ComPtr<ID3D11VertexShader> depthOnlyVS;
+
+
+	// Geometry Shader
+	ComPtr<ID3D11GeometryShader> skyboxEnvMapGS;
 
 
 	// Pixel Shader
 	ComPtr<ID3D11PixelShader> basicPS;
+	ComPtr<ID3D11PixelShader> basicAlphaClipPS;
+	ComPtr<ID3D11PixelShader> basicDepthClipPS;
 	ComPtr<ID3D11PixelShader> skyboxPS;
+	ComPtr<ID3D11PixelShader> skyboxEnvMapPS;
 	ComPtr<ID3D11PixelShader> cloudPS;
 	ComPtr<ID3D11PixelShader> samplingPS;
 	ComPtr<ID3D11PixelShader> instancePS;
-	ComPtr<ID3D11PixelShader> depthOnlyPS;
-	ComPtr<ID3D11PixelShader> postEffectPS;
-	ComPtr<ID3D11PixelShader> alphaClipPS;
+	ComPtr<ID3D11PixelShader> fogPS;
+	ComPtr<ID3D11PixelShader> mirrorMaskingPS;
+	ComPtr<ID3D11PixelShader> transparencyPS;
+	ComPtr<ID3D11PixelShader> blurXPS;
+	ComPtr<ID3D11PixelShader> blurYPS;
 
 
 	// Rasterizer State
 	ComPtr<ID3D11RasterizerState> solidRS;
 	ComPtr<ID3D11RasterizerState> wireRS;
 	ComPtr<ID3D11RasterizerState> noneCullRS;
-	ComPtr<ID3D11RasterizerState> postEffectRS;
+	ComPtr<ID3D11RasterizerState> mirrorRS;
 
 
 	// Sampler State
-	ComPtr<ID3D11SamplerState> pointClampSS;
+	ComPtr<ID3D11SamplerState> pointWrapSS;
 	ComPtr<ID3D11SamplerState> linearWrapSS;
 	ComPtr<ID3D11SamplerState> linearClampSS;
 
 
 	// Depth Stencil State
 	ComPtr<ID3D11DepthStencilState> basicDSS;
-	ComPtr<ID3D11DepthStencilState> postEffectDSS;
+	ComPtr<ID3D11DepthStencilState> mirrorMaskingDSS;
+	ComPtr<ID3D11DepthStencilState> mirrorDrawMaskedDSS;
 
 
 	// Blend State
 	ComPtr<ID3D11BlendState> alphaBS;
+	ComPtr<ID3D11BlendState> srcBS;
 
 
 	// RTV & Buffer
@@ -69,8 +80,14 @@ namespace Graphics {
 	ComPtr<ID3D11Texture2D> cloudRenderBuffer;
 	ComPtr<ID3D11RenderTargetView> cloudRTV;
 
-	ComPtr<ID3D11Texture2D> postEffectBuffer;
-	ComPtr<ID3D11RenderTargetView> postEffectRTV;
+	ComPtr<ID3D11Texture2D> envMapRenderBuffer;
+	ComPtr<ID3D11RenderTargetView> envMapRTV;
+
+	ComPtr<ID3D11Texture2D> mirrorWorldRenderBuffer;
+	ComPtr<ID3D11RenderTargetView> mirrorWorldRTV;
+
+	ComPtr<ID3D11Texture2D> mirrorWorldBlurBuffer[2];
+	ComPtr<ID3D11RenderTargetView> mirrorWorldBlurRTV[2];
 
 
 	// DSV & Buffer
@@ -79,6 +96,15 @@ namespace Graphics {
 
 	ComPtr<ID3D11Texture2D> depthOnlyBuffer;
 	ComPtr<ID3D11DepthStencilView> depthOnlyDSV;
+
+	ComPtr<ID3D11Texture2D> envMapDepthBuffer;
+	ComPtr<ID3D11DepthStencilView> envMapDSV;
+
+	ComPtr<ID3D11Texture2D> mirrorPlaneDepthBuffer;
+	ComPtr<ID3D11DepthStencilView> mirrorPlaneDepthDSV;
+
+	ComPtr<ID3D11Texture2D> mirrorWorldDepthBuffer;
+	ComPtr<ID3D11DepthStencilView> mirrorWorldDSV;
 
 
 	// SRV & Buffer
@@ -98,12 +124,20 @@ namespace Graphics {
 
 	ComPtr<ID3D11ShaderResourceView> depthOnlySRV;
 
-	ComPtr<ID3D11Texture2D> postEffectResolvedBuffer;
-	ComPtr<ID3D11ShaderResourceView> postEffectSRV;
+	ComPtr<ID3D11Texture2D> basicResolvedBuffer;
+	ComPtr<ID3D11ShaderResourceView> basicResolvedSRV;
+
+	ComPtr<ID3D11ShaderResourceView> envMapSRV;
+
+	ComPtr<ID3D11ShaderResourceView> mirrorWorldSRV;
+	ComPtr<ID3D11ShaderResourceView> mirrorWorldBlurSRV[2];
+	ComPtr<ID3D11ShaderResourceView> mirrorPlaneDepthSRV;
 
 
 	// Viewport
 	D3D11_VIEWPORT basicViewport;
+	D3D11_VIEWPORT envMapViewPort;
+	D3D11_VIEWPORT mirrorWorldViewPort;
 
 
 	// PSO
@@ -111,19 +145,22 @@ namespace Graphics {
 	void SetPipelineStates(GraphicsPSO& pso);
 	GraphicsPSO basicPSO;
 	GraphicsPSO basicWirePSO;
+	GraphicsPSO basicNoneCullPSO;
+	GraphicsPSO basicMirrorPSO;
 	GraphicsPSO skyboxPSO;
+	GraphicsPSO skyboxEnvMapPSO;
 	GraphicsPSO cloudPSO;
-	GraphicsPSO cloudBlendPSO;
-	GraphicsPSO depthOnlyPSO;
-	GraphicsPSO postEffectPSO;
+	GraphicsPSO cloudMirrorPSO;
+	GraphicsPSO fogPSO;
 	GraphicsPSO instancePSO;
-	GraphicsPSO semiAlphaPSO;
-	GraphicsPSO transparencyPSO;
+	GraphicsPSO mirrorMaskingPSO;
+	GraphicsPSO mirrorBlendPSO;
+	GraphicsPSO mirrorBlurPSO;
 }
 
 
 // Function
-bool Graphics::InitGraphicsCore(DXGI_FORMAT pixelFormat, HWND& hwnd, UINT width, UINT height)
+bool Graphics::InitGraphicsCore(DXGI_FORMAT pixelFormat, HWND& hwnd)
 {
 	D3D_DRIVER_TYPE driverType = D3D_DRIVER_TYPE_HARDWARE;
 
@@ -133,7 +170,7 @@ bool Graphics::InitGraphicsCore(DXGI_FORMAT pixelFormat, HWND& hwnd, UINT width,
 #endif
 
 	D3D_FEATURE_LEVEL levels[] = {
-		D3D_FEATURE_LEVEL_11_1,
+		// D3D_FEATURE_LEVEL_11_1,
 		D3D_FEATURE_LEVEL_11_0,
 		D3D_FEATURE_LEVEL_9_3,
 	};
@@ -148,12 +185,12 @@ bool Graphics::InitGraphicsCore(DXGI_FORMAT pixelFormat, HWND& hwnd, UINT width,
 
 	DXGI_SWAP_CHAIN_DESC desc;
 	ZeroMemory(&desc, sizeof(desc));
-	desc.BufferDesc.Width = width;
-	desc.BufferDesc.Height = height;
+	desc.BufferDesc.Width = App::WIDTH;
+	desc.BufferDesc.Height = App::HEIGHT;
 	desc.BufferDesc.RefreshRate.Numerator = 60;
 	desc.BufferDesc.RefreshRate.Denominator = 1;
 	desc.BufferDesc.Format = pixelFormat;
-	desc.SampleDesc.Count = 1; // backbuffer´Â ¸ÖÆ¼ »ùÇÃ¸µ ÇÏÁö ¾ÊÀ½
+	desc.SampleDesc.Count = 1; // backbuffer
 	desc.SampleDesc.Quality = 0;
 	desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 	desc.BufferCount = 2;
@@ -174,21 +211,21 @@ bool Graphics::InitGraphicsCore(DXGI_FORMAT pixelFormat, HWND& hwnd, UINT width,
 	return true;
 }
 
-bool Graphics::InitGraphicsBuffer(UINT width, UINT height)
+bool Graphics::InitGraphicsBuffer()
 {
-	if (!InitRenderTargetBuffers(width, height))
+	if (!InitRenderTargetBuffers())
 		return false;
 
-	if (!InitDepthStencilBuffers(width, height))
+	if (!InitDepthStencilBuffers())
 		return false;
 
-	if (!InitShaderResourceBuffers(width, height))
+	if (!InitShaderResourceBuffers())
 		return false;
 
 	return true;
 }
 
-bool Graphics::InitRenderTargetBuffers(UINT width, UINT height)
+bool Graphics::InitRenderTargetBuffers()
 {
 	// backBuffer
 	swapChain->GetBuffer(0, IID_PPV_ARGS(backBuffer.GetAddressOf()));
@@ -203,7 +240,8 @@ bool Graphics::InitRenderTargetBuffers(UINT width, UINT height)
 	// Basic RTV
 	DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	UINT bindFlag = D3D11_BIND_RENDER_TARGET;
-	if (!DXUtils::CreateTextureBuffer(basicRenderBuffer, width, height, true, format, bindFlag)) {
+	if (!DXUtils::CreateTextureBuffer(
+			basicRenderBuffer, App::WIDTH, App::HEIGHT, true, format, bindFlag)) {
 		std::cout << "failed create render target buffer" << std::endl;
 		return false;
 	}
@@ -216,7 +254,8 @@ bool Graphics::InitRenderTargetBuffers(UINT width, UINT height)
 
 
 	// Cloud RTV
-	if (!DXUtils::CreateTextureBuffer(cloudRenderBuffer, width, height, true, format, bindFlag)) {
+	if (!DXUtils::CreateTextureBuffer(
+			cloudRenderBuffer, App::WIDTH, App::HEIGHT, true, format, bindFlag)) {
 		std::cout << "failed create render target buffer" << std::endl;
 		return false;
 	}
@@ -227,15 +266,71 @@ bool Graphics::InitRenderTargetBuffers(UINT width, UINT height)
 		return false;
 	}
 
+
+	// EnvMap RTV
+	bindFlag = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+	UINT miscFlag = D3D11_RESOURCE_MISC_TEXTURECUBE;
+	if (!DXUtils::CreateTextureBuffer(envMapRenderBuffer, App::ENV_MAP_SIZE, App::ENV_MAP_SIZE,
+			false, format, bindFlag, 1, 6, miscFlag)) {
+		std::cout << "failed create env map buffer" << std::endl;
+		return false;
+	}
+
+	D3D11_RENDER_TARGET_VIEW_DESC rtvDesc;
+	ZeroMemory(&rtvDesc, sizeof(rtvDesc));
+	rtvDesc.Format = format;
+	rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
+	rtvDesc.Texture2DArray.MipSlice = 0;
+	rtvDesc.Texture2DArray.ArraySize = 6;
+	rtvDesc.Texture2DArray.FirstArraySlice = 0;
+	ret = Graphics::device->CreateRenderTargetView(
+		envMapRenderBuffer.Get(), &rtvDesc, envMapRTV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create env target view" << std::endl;
+		return false;
+	}
+
+
+	// MirrorWorld RTV
+	if (!DXUtils::CreateTextureBuffer(mirrorWorldRenderBuffer, App::MIRROR_WIDTH,
+			App::MIRROR_HEIGHT, false, format, bindFlag)) {
+		std::cout << "failed create mirror world render buffer" << std::endl;
+		return false;
+	}
+
+	ret = Graphics::device->CreateRenderTargetView(
+		mirrorWorldRenderBuffer.Get(), nullptr, mirrorWorldRTV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create mirror world rtv" << std::endl;
+		return false;
+	}
+
+	// MirrorWorld Blur RTV
+	for (int i = 0; i < 2; ++i) {
+		if (!DXUtils::CreateTextureBuffer(mirrorWorldBlurBuffer[i], App::MIRROR_WIDTH,
+				App::MIRROR_HEIGHT, false, format, bindFlag)) {
+			std::cout << "failed create mirror world blur buffer" << std::endl;
+			return false;
+		}
+
+		ret = Graphics::device->CreateRenderTargetView(
+			mirrorWorldBlurBuffer[i].Get(), nullptr, mirrorWorldBlurRTV[i].GetAddressOf());
+		if (FAILED(ret)) {
+			std::cout << "failed create mirror world blur rtv" << std::endl;
+			return false;
+		}
+	}
+
 	return true;
 }
 
-bool Graphics::InitDepthStencilBuffers(UINT width, UINT height)
+bool Graphics::InitDepthStencilBuffers()
 {
 	// basic DSV
 	DXGI_FORMAT format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-	D3D11_BIND_FLAG bindFlag = D3D11_BIND_DEPTH_STENCIL;
-	if (!DXUtils::CreateTextureBuffer(basicDepthBuffer, width, height, true, format, bindFlag)) {
+	UINT bindFlag = D3D11_BIND_DEPTH_STENCIL;
+	if (!DXUtils::CreateTextureBuffer(
+			basicDepthBuffer, App::WIDTH, App::HEIGHT, true, format, bindFlag)) {
 		std::cout << "failed create depth stencil buffer" << std::endl;
 		return false;
 	}
@@ -251,13 +346,16 @@ bool Graphics::InitDepthStencilBuffers(UINT width, UINT height)
 		return false;
 	}
 
+
 	// depthOnly
 	format = DXGI_FORMAT_R32_TYPELESS;
-	if (!DXUtils::CreateTextureBuffer(depthOnlyBuffer, width, height, false, format, (UINT)72)) {
+	bindFlag = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
+	if (!DXUtils::CreateTextureBuffer(
+			depthOnlyBuffer, App::WIDTH, App::HEIGHT, false, format, bindFlag)) {
 		std::cout << "failed create depth stencil buffer" << std::endl;
 		return false;
 	}
-	
+
 	ZeroMemory(&dsvDesc, sizeof(dsvDesc));
 	dsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
 	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
@@ -265,39 +363,86 @@ bool Graphics::InitDepthStencilBuffers(UINT width, UINT height)
 		depthOnlyBuffer.Get(), &dsvDesc, depthOnlyDSV.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create depth stencil view" << std::endl;
-		std::cout << ret << std::endl;
+		return false;
+	}
+
+
+	// envMap
+	format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	bindFlag = D3D11_BIND_DEPTH_STENCIL;
+	UINT miscFlag = D3D11_RESOURCE_MISC_TEXTURECUBE;
+	if (!DXUtils::CreateTextureBuffer(envMapDepthBuffer, App::ENV_MAP_SIZE, App::ENV_MAP_SIZE,
+			false, format, bindFlag, 1, 6, miscFlag)) {
+		std::cout << "failed create env map depth stencil buffer" << std::endl;
+		return false;
+	}
+
+	ZeroMemory(&dsvDesc, sizeof(dsvDesc));
+	dsvDesc.Format = format;
+	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
+	dsvDesc.Texture2DArray.MipSlice = 0;
+	dsvDesc.Texture2DArray.ArraySize = 6;
+	dsvDesc.Texture2DArray.FirstArraySlice = 0;
+	ret = Graphics::device->CreateDepthStencilView(
+		envMapDepthBuffer.Get(), &dsvDesc, envMapDSV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create env map depth stencil view" << std::endl;
+		return false;
+	}
+
+
+	// mirrorPlaneDepth
+	format = DXGI_FORMAT_R32_TYPELESS;
+	bindFlag = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
+	if (!DXUtils::CreateTextureBuffer(mirrorPlaneDepthBuffer, App::MIRROR_WIDTH, App::MIRROR_HEIGHT,
+			false, format, bindFlag)) {
+		std::cout << "failed create mirror plane depth stencil buffer" << std::endl;
+		return false;
+	}
+
+	ZeroMemory(&dsvDesc, sizeof(dsvDesc));
+	dsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
+	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+	ret = Graphics::device->CreateDepthStencilView(
+		mirrorPlaneDepthBuffer.Get(), &dsvDesc, mirrorPlaneDepthDSV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create mirror plane masking depth stencil view" << std::endl;
+		return false;
+	}
+
+
+	// mirrorWorld
+	format = DXGI_FORMAT_R24G8_TYPELESS;
+	bindFlag = D3D11_BIND_DEPTH_STENCIL;
+	if (!DXUtils::CreateTextureBuffer(mirrorWorldDepthBuffer, App::MIRROR_WIDTH, App::MIRROR_HEIGHT,
+			false, format, bindFlag)) {
+		std::cout << "failed create mirror world depth stencil buffer" << std::endl;
+		return false;
+	}
+
+	ZeroMemory(&dsvDesc, sizeof(dsvDesc));
+	dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+	dsvDesc.Texture2D.MipSlice = 0;
+	ret = Graphics::device->CreateDepthStencilView(
+		mirrorWorldDepthBuffer.Get(), &dsvDesc, mirrorWorldDSV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create mirror world depth stencil view" << std::endl;
 		return false;
 	}
 
 	return true;
 }
 
-bool Graphics::InitShaderResourceBuffers(UINT width, UINT height)
+bool Graphics::InitShaderResourceBuffers()
 {
 	// Asset Files
-
-	/*
-
-	if (!DXUtils::CreateTexture2DFromFile(
+	if (!DXUtils::CreateTextureArrayFromAtlasFile(
 			atlasMapBuffer, atlasMapSRV, "../assets/blockatlas1.png")) {
 		std::cout << "failed create texture from atlas file" << std::endl;
 		return false;
 	}
 
-	if (!DXUtils::CreateTextureArrayFromAtlasFile(
-			atlasMapBuffer, atlasMapSRV, "../assets/blender_uv_grid_2k.png")) {
-		std::cout << "failed create texture from atlas file" << std::endl;
-		return false;
-	}
-
-	*/
-
-	if (!DXUtils::CreateTextureArrayFromAtlasFile(
-			atlasMapBuffer, atlasMapSRV, "../assets/blockatlas1.png")) {
-		std::cout << "failed create texture from atlas file" << std::endl;
-		return false;
-	} 
-	
 	/*if (!DXUtils::CreateTextureFromFile(
 			grassColorMapBuffer, grassColorMapSRV, "../assets/grass_color_map.png")) {
 		std::cout << "failed create texture from grass color map file" << std::endl;
@@ -319,10 +464,10 @@ bool Graphics::InitShaderResourceBuffers(UINT width, UINT height)
 	DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	UINT bindFlag = D3D11_BIND_SHADER_RESOURCE;
 	if (!DXUtils::CreateTextureBuffer(
-			cloudResolvedBuffer, width, height, false, format, bindFlag)) {
-		std::cout << "failed create shader resource buffer" << std::endl;
+			cloudResolvedBuffer, App::WIDTH, App::HEIGHT, false, format, bindFlag)) {
+		std::cout << "failed create shader resource buffer from cloud" << std::endl;
 		return false;
-	} 
+	}
 	HRESULT ret = Graphics::device->CreateShaderResourceView(
 		cloudResolvedBuffer.Get(), 0, cloudSRV.GetAddressOf());
 	if (FAILED(ret)) {
@@ -345,18 +490,65 @@ bool Graphics::InitShaderResourceBuffers(UINT width, UINT height)
 	}
 
 
-	// postEffectSRV
+	// basicResolvedSRV
 	format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	bindFlag = D3D11_BIND_SHADER_RESOURCE;
 	if (!DXUtils::CreateTextureBuffer(
-			postEffectResolvedBuffer, width, height, false, format, bindFlag)) {
-		std::cout << "failed create shader resource buffer" << std::endl;
+			basicResolvedBuffer, App::WIDTH, App::HEIGHT, false, format, bindFlag)) {
+		std::cout << "failed create shader resource buffer from basic resolved" << std::endl;
 		return false;
 	}
 	ret = Graphics::device->CreateShaderResourceView(
-		postEffectResolvedBuffer.Get(), 0, postEffectSRV.GetAddressOf());
+		basicResolvedBuffer.Get(), 0, basicResolvedSRV.GetAddressOf());
 	if (FAILED(ret)) {
-		std::cout << "failed create shader resource view from cloud srv" << std::endl;
+		std::cout << "failed create shader resource view from basic resolved srv" << std::endl;
+		return false;
+	}
+
+
+	// envMapSRV
+	ZeroMemory(&srvDesc, sizeof(srvDesc));
+	srvDesc.Format = format;
+	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
+	srvDesc.TextureCube.MipLevels = 1;
+	srvDesc.TextureCube.MostDetailedMip = 0;
+	ret = device->CreateShaderResourceView(
+		envMapRenderBuffer.Get(), &srvDesc, envMapSRV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create shader resource view from env map srv" << std::endl;
+		return false;
+	}
+
+
+	// mirror world render SRV
+	ret = Graphics::device->CreateShaderResourceView(
+		mirrorWorldRenderBuffer.Get(), 0, mirrorWorldSRV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create shader resource view from mirror world srv" << std::endl;
+		return false;
+	}
+
+	// mirror world blur SRV
+	for (int i = 0; i < 2; ++i) {
+		ret = Graphics::device->CreateShaderResourceView(
+			mirrorWorldBlurBuffer[i].Get(), 0, mirrorWorldBlurSRV[i].GetAddressOf());
+		if (FAILED(ret)) {
+			std::cout << "failed create shader resource view from mirror world blur srv"
+					  << std::endl;
+			return false;
+		}
+	}
+
+	// mirror plane depth SRV
+	ZeroMemory(&srvDesc, sizeof(srvDesc));
+	srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Texture2D.MostDetailedMip = 0;
+	srvDesc.Texture2D.MipLevels = 1;
+	ret = device->CreateShaderResourceView(
+		mirrorPlaneDepthBuffer.Get(), &srvDesc, mirrorPlaneDepthSRV.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create shader resource view from mirror plane depth srv" << std::endl;
 		return false;
 	}
 
@@ -411,6 +603,14 @@ bool Graphics::InitVertexShaderAndInputLayouts()
 		return false;
 	}
 
+	// Skybox EnvMap
+	std::vector<D3D_SHADER_MACRO> macros = { { "USE_INPUT_SKYBOX", "1" }, { NULL, NULL } };
+	if (!DXUtils::CreateVertexShaderAndInputLayout(
+			L"EnvMapVS.hlsl", skyboxEnvMapVS, skyboxIL, elementDesc2, macros.data())) {
+		std::cout << "failed create skybox env map vs" << std::endl;
+		return false;
+	}
+
 	// Cloud
 	std::vector<D3D11_INPUT_ELEMENT_DESC> elementDesc3 = {
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
@@ -433,15 +633,6 @@ bool Graphics::InitVertexShaderAndInputLayouts()
 		return false;
 	}
 
-	// DepthOnly
-	std::vector<D3D11_INPUT_ELEMENT_DESC> elementDesc5 = {
-		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 } };
-	if (!DXUtils::CreateVertexShaderAndInputLayout(
-			L"DepthOnlyVS.hlsl", depthOnlyVS, depthOnlyIL, elementDesc5)) {
-		std::cout << "failed create depthOnly vs" << std::endl;
-		return false;
-	}
-
 	// Instance
 	std::vector<D3D11_INPUT_ELEMENT_DESC> elementDesc6 = {
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
@@ -455,7 +646,7 @@ bool Graphics::InitVertexShaderAndInputLayouts()
 		{ "TYPE", 0, DXGI_FORMAT_R32_UINT, 1, 64, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
 	};
 	if (!DXUtils::CreateVertexShaderAndInputLayout(
-		L"InstanceVS.hlsl", instanceVS, instanceIL, elementDesc6)) {
+			L"InstanceVS.hlsl", instanceVS, instanceIL, elementDesc6)) {
 		std::cout << "failed create instance vs" << std::endl;
 		return false;
 	}
@@ -463,7 +654,16 @@ bool Graphics::InitVertexShaderAndInputLayouts()
 	return true;
 }
 
-bool Graphics::InitGeometryShaders() { return true; }
+bool Graphics::InitGeometryShaders()
+{
+	// Skybox EnvMap
+	std::vector<D3D_SHADER_MACRO> macros = { { "USE_INPUT_SKYBOX", "1" }, { NULL, NULL } };
+	if (!DXUtils::CreateGeometryShader(L"EnvMapGS.hlsl", skyboxEnvMapGS, macros.data())) {
+		std::cout << "failed create skybox env map gs" << std::endl;
+		return false;
+	}
+	return true;
+}
 
 bool Graphics::InitPixelShaders()
 {
@@ -473,9 +673,36 @@ bool Graphics::InitPixelShaders()
 		return false;
 	}
 
+	// BasicAlphaClipPS
+	std::vector<D3D_SHADER_MACRO> macros;
+	macros.push_back({ "USE_ALPHA_CLIP", "1" });
+	macros.push_back({ NULL, NULL });
+	if (!DXUtils::CreatePixelShader(L"BasicPS.hlsl", basicAlphaClipPS, macros.data())) {
+		std::cout << "failed create basic alpha clip ps" << std::endl;
+		return false;
+	}
+
+	// BasicDepthClipPS
+	macros.clear();
+	macros.push_back({ "USE_DEPTH_CLIP", "1" });
+	macros.push_back({ NULL, NULL });
+	if (!DXUtils::CreatePixelShader(L"BasicPS.hlsl", basicDepthClipPS, macros.data())) {
+		std::cout << "failed create basic depth clip ps" << std::endl;
+		return false;
+	}
+
 	// SkyboxPS
 	if (!DXUtils::CreatePixelShader(L"SkyboxPS.hlsl", skyboxPS)) {
 		std::cout << "failed create skybox ps" << std::endl;
+		return false;
+	}
+
+	// Skybox EnvMap
+	macros.clear();
+	macros.push_back({ "USE_RENDER_TARGET_ARRAY_INDEX", "1" });
+	macros.push_back({ NULL, NULL });
+	if (!DXUtils::CreatePixelShader(L"SkyboxPS.hlsl", skyboxEnvMapPS, macros.data())) {
+		std::cout << "failed create skybox env map ps" << std::endl;
 		return false;
 	}
 
@@ -491,15 +718,9 @@ bool Graphics::InitPixelShaders()
 		return false;
 	}
 
-	// DepthOnly
-	if (!DXUtils::CreatePixelShader(L"DepthOnlyPS.hlsl", depthOnlyPS)) {
-		std::cout << "failed create DepthOnly ps" << std::endl;
-		return false;
-	}
-
-	// PostEffectPS
-	if (!DXUtils::CreatePixelShader(L"PostEffectPS.hlsl", postEffectPS)) {
-		std::cout << "failed create PostEffect ps" << std::endl;
+	// fogPS
+	if (!DXUtils::CreatePixelShader(L"FogPS.hlsl", fogPS)) {
+		std::cout << "failed create fog ps" << std::endl;
 		return false;
 	}
 
@@ -509,9 +730,31 @@ bool Graphics::InitPixelShaders()
 		return false;
 	}
 
-	// AlphaClipPS
-	if (!DXUtils::CreatePixelShader(L"AlphaClipPS.hlsl", alphaClipPS)) {
-		std::cout << "failed create alpha clip ps" << std::endl;
+	// MirrorMaskingPS
+	if (!DXUtils::CreatePixelShader(L"MirrorMaskingPS.hlsl", mirrorMaskingPS)) {
+		std::cout << "failed create mirrorMasking ps" << std::endl;
+		return false;
+	}
+
+	// TransparencyPS
+	if (!DXUtils::CreatePixelShader(L"TransparencyPS.hlsl", transparencyPS)) {
+		std::cout << "failed create transparency ps" << std::endl;
+		return false;
+	}
+
+	// BlurPS
+	macros.clear();
+	macros.push_back({ "BLUR_X", "1" });
+	macros.push_back({ NULL, NULL });
+	if (!DXUtils::CreatePixelShader(L"BlurPS.hlsl", blurXPS, macros.data())) {
+		std::cout << "failed create blur x ps" << std::endl;
+		return false;
+	}
+	macros.clear();
+	macros.push_back({ "BLUR_Y", "1" });
+	macros.push_back({ NULL, NULL });
+	if (!DXUtils::CreatePixelShader(L"BlurPS.hlsl", blurYPS, macros.data())) {
+		std::cout << "failed create blur y ps" << std::endl;
 		return false;
 	}
 
@@ -543,22 +786,21 @@ bool Graphics::InitRasterizerStates()
 		return false;
 	}
 
-	// postEffectRS
-	rastDesc.FillMode = D3D11_FILL_MODE::D3D11_FILL_SOLID;
-	
-	rastDesc.DepthClipEnable = false;
-	ret = Graphics::device->CreateRasterizerState(&rastDesc, postEffectRS.GetAddressOf());
-	if (FAILED(ret)) {
-		std::cout << "failed create postEffect RS" << std::endl;
-		return false;
-	}
-
 	// noneCullRS
 	rastDesc.FillMode = D3D11_FILL_MODE::D3D11_FILL_SOLID;
 	rastDesc.CullMode = D3D11_CULL_MODE::D3D11_CULL_NONE;
 	ret = Graphics::device->CreateRasterizerState(&rastDesc, noneCullRS.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create noneCull RS" << std::endl;
+		return false;
+	}
+
+	// mirrorRS
+	rastDesc.CullMode = D3D11_CULL_MODE::D3D11_CULL_BACK;
+	rastDesc.FrontCounterClockwise = true;
+	ret = Graphics::device->CreateRasterizerState(&rastDesc, mirrorRS.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create mirror RS" << std::endl;
 		return false;
 	}
 
@@ -578,7 +820,7 @@ bool Graphics::InitSamplerStates()
 	desc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
 	desc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
 	desc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-	HRESULT ret = Graphics::device->CreateSamplerState(&desc, pointClampSS.GetAddressOf());
+	HRESULT ret = Graphics::device->CreateSamplerState(&desc, pointWrapSS.GetAddressOf());
 	if (FAILED(ret)) {
 		std::cout << "failed create point clamp SS" << std::endl;
 		return false;
@@ -622,11 +864,47 @@ bool Graphics::InitDepthStencilStates()
 		return false;
 	}
 
-	// PostEffect DDS
-	desc.DepthFunc = D3D11_COMPARISON_FUNC::D3D11_COMPARISON_ALWAYS;
-	ret = Graphics::device->CreateDepthStencilState(&desc, postEffectDSS.GetAddressOf());
+	// Mirror Masking DSS
+	ZeroMemory(&desc, sizeof(desc));
+	desc.DepthEnable = false;
+	desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK::D3D11_DEPTH_WRITE_MASK_ZERO;
+	desc.DepthFunc = D3D11_COMPARISON_FUNC::D3D11_COMPARISON_NEVER;
+	desc.StencilEnable = true;
+	desc.StencilReadMask = 0xFF;
+	desc.StencilWriteMask = 0xFF;
+	desc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;	   // stencil X
+	desc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP; // stencil O depth X
+	desc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_REPLACE;   // stencil O depth O
+	desc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+	desc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP; // BackFace�� �⺻��
+	desc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
+	desc.BackFace.StencilPassOp = D3D11_STENCIL_OP_REPLACE;
+	desc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+	ret = Graphics::device->CreateDepthStencilState(&desc, mirrorMaskingDSS.GetAddressOf());
 	if (FAILED(ret)) {
-		std::cout << "failed create postEffect DSS" << std::endl;
+		std::cout << "failed create mirror masking DSS" << std::endl;
+		return false;
+	}
+
+	// Mirror Draw Masked DSS
+	ZeroMemory(&desc, sizeof(desc));
+	desc.DepthEnable = true;
+	desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK::D3D11_DEPTH_WRITE_MASK_ALL;
+	desc.DepthFunc = D3D11_COMPARISON_FUNC::D3D11_COMPARISON_LESS;
+	desc.StencilEnable = true;
+	desc.StencilReadMask = 0xFF;
+	desc.StencilWriteMask = 0xFF;
+	desc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+	desc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
+	desc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+	desc.FrontFace.StencilFunc = D3D11_COMPARISON_EQUAL;
+	desc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+	desc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
+	desc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+	desc.BackFace.StencilFunc = D3D11_COMPARISON_NEVER;
+	ret = Graphics::device->CreateDepthStencilState(&desc, mirrorDrawMaskedDSS.GetAddressOf());
+	if (FAILED(ret)) {
+		std::cout << "failed create mirror draw masked DSS" << std::endl;
 		return false;
 	}
 
@@ -635,6 +913,7 @@ bool Graphics::InitDepthStencilStates()
 
 bool Graphics::InitBlendStates()
 {
+	// alpha BS
 	D3D11_BLEND_DESC desc;
 	ZeroMemory(&desc, sizeof(desc));
 	desc.AlphaToCoverageEnable = false;
@@ -653,6 +932,7 @@ bool Graphics::InitBlendStates()
 		std::cout << "failed create alpha BS" << std::endl;
 		return false;
 	}
+
 	return true;
 }
 
@@ -665,14 +945,28 @@ void Graphics::InitGraphicsPSO()
 	basicPSO.geometryShader = nullptr;
 	basicPSO.rasterizerState = solidRS;
 	basicPSO.pixelShader = basicPS;
-	basicPSO.samplerStates.push_back(pointClampSS.Get());
+	basicPSO.samplerStates.push_back(pointWrapSS.Get());
 	basicPSO.samplerStates.push_back(linearWrapSS.Get());
+	basicPSO.samplerStates.push_back(linearClampSS.Get());
 	basicPSO.depthStencilState = basicDSS;
+	basicPSO.stencilRef = 0;
 	basicPSO.blendState = nullptr;
 
 	// basic wire PSO
 	basicWirePSO = basicPSO;
 	basicWirePSO.rasterizerState = wireRS;
+
+	// basic none cull PSO
+	basicNoneCullPSO = basicPSO;
+	basicNoneCullPSO.rasterizerState = noneCullRS;
+	basicNoneCullPSO.pixelShader = basicAlphaClipPS;
+
+	// basic mirror PSO
+	basicMirrorPSO = basicPSO;
+	basicMirrorPSO.rasterizerState = mirrorRS;
+	basicMirrorPSO.pixelShader = basicDepthClipPS;
+	basicMirrorPSO.depthStencilState = mirrorDrawMaskedDSS;
+	basicMirrorPSO.stencilRef = 1;
 
 	// skyboxPSO
 	skyboxPSO = basicPSO;
@@ -680,32 +974,30 @@ void Graphics::InitGraphicsPSO()
 	skyboxPSO.vertexShader = skyboxVS;
 	skyboxPSO.pixelShader = skyboxPS;
 
+	// skyboxEnvMapPSO
+	skyboxEnvMapPSO = skyboxPSO;
+	skyboxEnvMapPSO.vertexShader = skyboxEnvMapVS;
+	skyboxEnvMapPSO.geometryShader = skyboxEnvMapGS;
+	skyboxEnvMapPSO.pixelShader = skyboxEnvMapPS;
+
 	// cloudPSO
 	cloudPSO = basicPSO;
 	cloudPSO.inputLayout = cloudIL;
 	cloudPSO.vertexShader = cloudVS;
 	cloudPSO.pixelShader = cloudPS;
+	cloudPSO.blendState = alphaBS;
 
-	// cloudBlendPSO
-	cloudBlendPSO = basicPSO;
-	cloudBlendPSO.inputLayout = samplingIL;
-	cloudBlendPSO.vertexShader = samplingVS;
-	cloudBlendPSO.pixelShader = samplingPS;
-	cloudBlendPSO.blendState = alphaBS;
+	// cloudMirrorPSO
+	cloudMirrorPSO = cloudPSO;
+	cloudMirrorPSO.rasterizerState = mirrorRS;
+	cloudMirrorPSO.depthStencilState = mirrorDrawMaskedDSS;
+	cloudMirrorPSO.stencilRef = 1;
 
-	// depthOnlyPSO
-	depthOnlyPSO = basicPSO;
-	depthOnlyPSO.inputLayout = depthOnlyIL;
-	depthOnlyPSO.vertexShader = depthOnlyVS;
-	depthOnlyPSO.pixelShader = depthOnlyPS;
-
-	// postEffectPSO
-	postEffectPSO = basicPSO;
-	postEffectPSO.vertexShader = samplingVS;
-	postEffectPSO.pixelShader = postEffectPS;
-	postEffectPSO.inputLayout = samplingIL;
-	postEffectPSO.samplerStates.push_back(linearClampSS.Get());
-	postEffectPSO.rasterizerState = postEffectRS;
+	// fogPSO
+	fogPSO = basicPSO;
+	fogPSO.inputLayout = samplingIL;
+	fogPSO.vertexShader = samplingVS;
+	fogPSO.pixelShader = fogPS;
 
 	// instancePSO
 	instancePSO = basicPSO;
@@ -714,14 +1006,22 @@ void Graphics::InitGraphicsPSO()
 	instancePSO.rasterizerState = noneCullRS;
 	instancePSO.pixelShader = instancePS;
 
-	// semiAlphaPSO
-	semiAlphaPSO = basicPSO;
-	semiAlphaPSO.rasterizerState = noneCullRS;
-	semiAlphaPSO.pixelShader = alphaClipPS;
-	
-	// transparencyPSO
-	transparencyPSO = basicPSO;
-	transparencyPSO.blendState = alphaBS;
+	// mirrorMaskingPSO
+	mirrorMaskingPSO = basicPSO;
+	mirrorMaskingPSO.depthStencilState = mirrorMaskingDSS;
+	mirrorMaskingPSO.stencilRef = 1;
+	mirrorMaskingPSO.pixelShader = mirrorMaskingPS;
+
+	// mirrorBlendPSO
+	mirrorBlendPSO = basicPSO;
+	mirrorBlendPSO.pixelShader = transparencyPS;
+	mirrorBlendPSO.blendState = alphaBS;
+
+	// mirrorBlur PSO
+	mirrorBlurPSO = basicPSO;
+	mirrorBlurPSO.inputLayout = samplingIL;
+	mirrorBlurPSO.vertexShader = samplingVS;
+	mirrorBlurPSO.pixelShader = blurXPS;
 }
 
 void Graphics::SetPipelineStates(GraphicsPSO& pso)
@@ -742,7 +1042,7 @@ void Graphics::SetPipelineStates(GraphicsPSO& pso)
 	else
 		context->PSSetSamplers(0, (UINT)pso.samplerStates.size(), pso.samplerStates.data());
 
-	context->OMSetDepthStencilState(pso.depthStencilState.Get(), 0);
+	context->OMSetDepthStencilState(pso.depthStencilState.Get(), pso.stencilRef);
 
 	context->OMSetBlendState(pso.blendState.Get(), pso.blendFactor, 0xffffffff);
 }

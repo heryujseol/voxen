@@ -68,11 +68,6 @@ float HenyeyGreensteinPhase(float3 L, float3 V, float aniso)
     return (1.0f - g * g) / (4.0f * PI * pow(abs(1.0f + g * g - 2.0f * g * cosT), 3.0f / 2.0f));
 }
 
-float BeerLambert(float absorptionCoefficient, float distanceTraveled)
-{
-    return exp(-absorptionCoefficient * distanceTraveled);
-}
-
 float4 main(vsOutput input) : SV_TARGET
 {
     float distance = length(input.posWorld.xz - eyePos.xz);
@@ -108,7 +103,7 @@ float4 main(vsOutput input) : SV_TARGET
     
     // distance alpha
     float alphaWeight = smoothstep(320.0, cloudScale, clamp(distance, 320.0, cloudScale));
-    float alpha = (1.0 - alphaWeight) * 0.8; // [0, 0.8]
+    float alpha = (1.0 - alphaWeight) * 0.75; // [0, 0.8]
     
     return float4(color, alpha);
 }

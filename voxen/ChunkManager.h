@@ -14,7 +14,7 @@ using namespace DirectX::SimpleMath;
 class ChunkManager {
 
 public:
-	static const int CHUNK_COUNT = 7;
+	static const int CHUNK_COUNT = 11;
 	static const int MAX_HEIGHT = 256;
 	static const int MAX_HEIGHT_CHUNK_COUNT = 8;
 	static const int CHUNK_COUNT_P = CHUNK_COUNT + 2;
@@ -33,8 +33,8 @@ public:
 	void RenderOpaque();
 	void RenderSemiAlpha();
 	void RenderTransparency();
-
 	void RenderInstance();
+	void RenderMirror();
 
 private:
 	void UpdateChunkList(Vector3 cameraChunkPos);
@@ -43,7 +43,7 @@ private:
 	void UpdateRenderChunkList(Camera& camera);
 	void UpdateInstanceInfoList(Camera& camera);
 
-	bool FrustumCulling(Vector3 position, Camera& camera);
+	bool FrustumCulling(Vector3 position, Camera& camera, bool useMirror);
 
 	bool MakeBuffer(Chunk* chunk);
 	void ClearChunkBuffer(Chunk* chunk);
@@ -59,6 +59,10 @@ private:
 	std::vector<Chunk*> m_loadChunkList;
 	std::vector<Chunk*> m_unloadChunkList;
 	std::vector<Chunk*> m_renderChunkList;
+	std::vector<Chunk*> m_renderMirrorChunkList;
+
+	std::vector<ComPtr<ID3D11Buffer>> m_lowLodVertexBuffers;
+	std::vector<ComPtr<ID3D11Buffer>> m_lowLodIndexBuffers;
 
 	std::vector<ComPtr<ID3D11Buffer>> m_opaqueVertexBuffers;
 	std::vector<ComPtr<ID3D11Buffer>> m_opaqueIndexBuffers;

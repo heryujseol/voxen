@@ -1,7 +1,7 @@
 Texture2D renderTex : register(t0); // Rendering results
 Texture2D depthOnlyTex : register(t1); // DepthOnly
 
-SamplerState linearClampSS : register(s0);
+SamplerState linearClampSS : register(s2);
 
 cbuffer CameraConstantBuffer : register(b0)
 {

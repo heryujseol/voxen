@@ -20,43 +20,53 @@ namespace Graphics {
 	extern ComPtr<ID3D11InputLayout> cloudIL;
 	extern ComPtr<ID3D11InputLayout> samplingIL;
 	extern ComPtr<ID3D11InputLayout> instanceIL;
-	extern ComPtr<ID3D11InputLayout> depthOnlyIL;
 
 
 	// Vertex Shader
 	extern ComPtr<ID3D11VertexShader> basicVS;
 	extern ComPtr<ID3D11VertexShader> skyboxVS;
+	extern ComPtr<ID3D11VertexShader> skyboxEnvMapVS;
 	extern ComPtr<ID3D11VertexShader> cloudVS;
 	extern ComPtr<ID3D11VertexShader> samplingVS;
-	extern ComPtr<ID3D11VertexShader> depthOnlyVS;
 	extern ComPtr<ID3D11VertexShader> instanceVS;
+
+
+	// Geometry Shader
+	extern ComPtr<ID3D11GeometryShader> skyoxEnvMapGS;
 
 
 	// Pixel Shader
 	extern ComPtr<ID3D11PixelShader> basicPS;
+	extern ComPtr<ID3D11PixelShader> basicAlphaClipPS;
+	extern ComPtr<ID3D11PixelShader> basicDepthClipPS;
 	extern ComPtr<ID3D11PixelShader> skyboxPS;
+	extern ComPtr<ID3D11PixelShader> skyboxEnvMapPS;
 	extern ComPtr<ID3D11PixelShader> cloudPS;
 	extern ComPtr<ID3D11PixelShader> samplingPS;
 	extern ComPtr<ID3D11PixelShader> instancePS;
-	extern ComPtr<ID3D11PixelShader> depthOnlyPS;
-	extern ComPtr<ID3D11PixelShader> alphaClipPS;
+	extern ComPtr<ID3D11PixelShader> fogPS;
+	extern ComPtr<ID3D11PixelShader> mirrorMaskingPS;
+	extern ComPtr<ID3D11PixelShader> transparencyPS;
+	extern ComPtr<ID3D11PixelShader> blurXPS;
+	extern ComPtr<ID3D11PixelShader> blurYPS;
 
 
 	// Rasterizer State
 	extern ComPtr<ID3D11RasterizerState> solidRS;
 	extern ComPtr<ID3D11RasterizerState> wireRS;
 	extern ComPtr<ID3D11RasterizerState> noneCullRS;
-	extern ComPtr<ID3D11RasterizerState> postEffectRS;
+	extern ComPtr<ID3D11RasterizerState> mirrorRS;
 
 	// Sampler State
-	extern ComPtr<ID3D11SamplerState> pointClampSS;
+	extern ComPtr<ID3D11SamplerState> pointWrapSS;
 	extern ComPtr<ID3D11SamplerState> linearWrapSS;
 	extern ComPtr<ID3D11SamplerState> linearClampSS;
 
 
 	// Depth Stencil State
 	extern ComPtr<ID3D11DepthStencilState> basicDSS;
-	extern ComPtr<ID3D11DepthStencilState> postEffectDSS;
+	extern ComPtr<ID3D11DepthStencilState> mirrorMaskingDSS;
+	extern ComPtr<ID3D11DepthStencilState> mirrorDrawMaskedDSS;
 
 	
 	// Blend State
@@ -73,8 +83,14 @@ namespace Graphics {
 	extern ComPtr<ID3D11Texture2D> cloudRenderBuffer;
 	extern ComPtr<ID3D11RenderTargetView> cloudRTV;
 
-	extern ComPtr<ID3D11Texture2D> postEffectBuffer;
-	extern ComPtr<ID3D11RenderTargetView> postEffectRTV;
+	extern ComPtr<ID3D11Texture2D> envMapRenderBuffer;
+	extern ComPtr<ID3D11RenderTargetView> envMapRTV;
+
+	extern ComPtr<ID3D11Texture2D> mirrorWorldRenderBuffer;
+	extern ComPtr<ID3D11RenderTargetView> mirrorWorldRTV;
+	
+	extern ComPtr<ID3D11Texture2D> mirrorWorldBlurBuffer[2];
+	extern ComPtr<ID3D11RenderTargetView> mirrorWorldBlurRTV[2];
 	
 
 	// DSV & Buffer
@@ -83,6 +99,15 @@ namespace Graphics {
 
 	extern ComPtr<ID3D11Texture2D> depthOnlyBuffer;
 	extern ComPtr<ID3D11DepthStencilView> depthOnlyDSV;
+
+	extern ComPtr<ID3D11Texture2D> envMapDepthBuffer;
+	extern ComPtr<ID3D11DepthStencilView> envMapDSV;
+
+	extern ComPtr<ID3D11Texture2D> mirrorPlaneDepthBuffer;
+	extern ComPtr<ID3D11DepthStencilView> mirrorPlaneDepthDSV;
+
+	extern ComPtr<ID3D11Texture2D> mirrorWorldDepthBuffer;
+	extern ComPtr<ID3D11DepthStencilView> mirrorWorldDSV;
 
 
 	// SRV & Buffer
@@ -102,23 +127,31 @@ namespace Graphics {
 
 	extern ComPtr<ID3D11ShaderResourceView> depthOnlySRV;
 
-	extern ComPtr<ID3D11Texture2D> postEffectResolvedBuffer;
-	extern ComPtr<ID3D11ShaderResourceView> postEffectSRV;
+	extern ComPtr<ID3D11Texture2D> basicResolvedBuffer;
+	extern ComPtr<ID3D11ShaderResourceView> basicResolvedSRV;
+
+	extern ComPtr<ID3D11ShaderResourceView> envMapSRV;
+
+	extern ComPtr<ID3D11ShaderResourceView> mirrorWorldSRV;
+	extern ComPtr<ID3D11ShaderResourceView> mirrorWorldBlurSRV[2];
+	extern ComPtr<ID3D11ShaderResourceView> mirrorPlaneDepthSRV;
 
 
 	// Viewport
 	extern D3D11_VIEWPORT basicViewport;
+	extern D3D11_VIEWPORT envMapViewPort;
+	extern D3D11_VIEWPORT mirrorWorldViewPort;
 
 
 	// device, context, swapChain
-	extern bool InitGraphicsCore(DXGI_FORMAT pixelFormat, HWND& hwnd, UINT width, UINT height);
+	extern bool InitGraphicsCore(DXGI_FORMAT pixelFormat, HWND& hwnd);
 	
 
 	// RTV, DSV, SRV (+ UAV ...)
-	extern bool InitGraphicsBuffer(UINT width, UINT height);
-	extern bool InitRenderTargetBuffers(UINT width, UINT height);
-	extern bool InitDepthStencilBuffers(UINT width, UINT height);
-	extern bool InitShaderResourceBuffers(UINT width, UINT height);
+	extern bool InitGraphicsBuffer();
+	extern bool InitRenderTargetBuffers();
+	extern bool InitDepthStencilBuffers();
+	extern bool InitShaderResourceBuffers();
 	
 
 	// VS, IL, PS, RS, SS, DSS (+ HS, DS, GS, BS ...)
@@ -137,12 +170,15 @@ namespace Graphics {
 	extern void SetPipelineStates(GraphicsPSO& pso);
 	extern GraphicsPSO basicPSO;
 	extern GraphicsPSO basicWirePSO;
+	extern GraphicsPSO basicNoneCullPSO;
+	extern GraphicsPSO basicMirrorPSO;
 	extern GraphicsPSO skyboxPSO;
+	extern GraphicsPSO skyboxEnvMapPSO;
 	extern GraphicsPSO cloudPSO;
-	extern GraphicsPSO cloudBlendPSO;
-	extern GraphicsPSO depthOnlyPSO;
-	extern GraphicsPSO postEffectPSO;
+	extern GraphicsPSO cloudMirrorPSO;
+	extern GraphicsPSO fogPSO;
 	extern GraphicsPSO instancePSO;
-	extern GraphicsPSO semiAlphaPSO;
-	extern GraphicsPSO transparencyPSO;
+	extern GraphicsPSO mirrorMaskingPSO;
+	extern GraphicsPSO mirrorBlendPSO;
+	extern GraphicsPSO mirrorBlurPSO;
 }

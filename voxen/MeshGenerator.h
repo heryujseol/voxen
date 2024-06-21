@@ -438,6 +438,4 @@ namespace MeshGenerator {
 
 		SetSquareIndices(indices, 0);
 	}
-
-
 }

@@ -32,6 +32,9 @@ void Chunk::Update(float dt)
 
 void Chunk::Clear()
 {
+	m_lowLodVertices.clear();
+	m_lowLodIndices.clear();
+
 	m_opaqueVertices.clear();
 	m_opaqueIndices.clear();
 
@@ -75,7 +78,7 @@ void Chunk::InitChunkData()
 				// for tree leaf testing
 				if (height + 3 <= ny && ny <= height + 6 && 14 <= x && x <= 20 && 14 <= z &&
 					z <= 20) {
-					m_blocks[x][y][z].SetType(10);
+					m_blocks[x][y][z].SetType(11);
 				}
 				/////////////////////////////
 			}
@@ -101,17 +104,18 @@ void Chunk::InitInstanceInfoData()
 void Chunk::InitWorldVerticesData()
 {
 	// 1. make axis column bit data
+	std::unordered_map<uint8_t, bool> llTypeMap;
 	std::unordered_map<uint8_t, bool> opTypeMap;
 	std::unordered_map<uint8_t, bool> tpTypeMap;
 	std::unordered_map<uint8_t, bool> saTypeMap;
 
+	static uint64_t llColBit[CHUNK_SIZE_P2 * 3];
 	static uint64_t opColBit[CHUNK_SIZE_P2 * 3];
-	static uint64_t opCullColBit[CHUNK_SIZE_P2 * 6];
 	static uint64_t tpCullColBit[CHUNK_SIZE_P2 * 6];
 	static uint64_t saCullColBit[CHUNK_SIZE_P2 * 6];
 
+	std::fill(llColBit, llColBit + CHUNK_SIZE_P2 * 3, 0);
 	std::fill(opColBit, opColBit + CHUNK_SIZE_P2 * 3, 0);
-	std::fill(opCullColBit, opCullColBit + CHUNK_SIZE_P2 * 6, 0);
 	std::fill(tpCullColBit, tpCullColBit + CHUNK_SIZE_P2 * 6, 0);
 	std::fill(saCullColBit, saCullColBit + CHUNK_SIZE_P2 * 6, 0);
 
@@ -128,6 +132,11 @@ void Chunk::InitWorldVerticesData()
 				uint8_t type = m_blocks[x][y][z].GetType();
 				if (type == BLOCK_TYPE::AIR || Block::IsInstance(type))
 					continue;
+
+				llTypeMap[type] = true;
+				llColBit[Utils::GetIndexFrom3D(0, y, z, CHUNK_SIZE_P)] |= (1ULL << x);
+				llColBit[Utils::GetIndexFrom3D(1, z, x, CHUNK_SIZE_P)] |= (1ULL << y);
+				llColBit[Utils::GetIndexFrom3D(2, y, x, CHUNK_SIZE_P)] |= (1ULL << z);
 
 				if (Block::IsTransparency(type)) {
 					// 타입이 같거나 불투명 블록이면 메쉬를 생성하지 않음
@@ -186,11 +195,8 @@ void Chunk::InitWorldVerticesData()
 					saTypeMap[type] = true;
 				}
 				else {
-					// x dir column
 					opColBit[Utils::GetIndexFrom3D(0, y, z, CHUNK_SIZE_P)] |= (1ULL << x);
-					// y dir column
 					opColBit[Utils::GetIndexFrom3D(1, z, x, CHUNK_SIZE_P)] |= (1ULL << y);
-					// z dir column
 					opColBit[Utils::GetIndexFrom3D(2, y, x, CHUNK_SIZE_P)] |= (1ULL << z);
 
 					opTypeMap[type] = true;
@@ -198,10 +204,23 @@ void Chunk::InitWorldVerticesData()
 			}
 		}
 	}
-	// opaque face culling
+
+	// lowlod & opaque face culling
+	static uint64_t llCullColBit[CHUNK_SIZE_P2 * 6];
+	static uint64_t opCullColBit[CHUNK_SIZE_P2 * 6];
+
+	std::fill(llCullColBit, llCullColBit + CHUNK_SIZE_P2 * 6, 0);
+	std::fill(opCullColBit, opCullColBit + CHUNK_SIZE_P2 * 6, 0);
+
 	for (int axis = 0; axis < 3; ++axis) {
 		for (int h = 1; h < CHUNK_SIZE_P - 1; ++h) {
 			for (int w = 1; w < CHUNK_SIZE_P - 1; ++w) {
+				uint64_t llBit = llColBit[Utils::GetIndexFrom3D(axis, h, w, CHUNK_SIZE_P)];
+				llCullColBit[Utils::GetIndexFrom3D(axis * 2 + 0, h, w, CHUNK_SIZE_P)] =
+					llBit & ~(llBit << 1);
+				llCullColBit[Utils::GetIndexFrom3D(axis * 2 + 1, h, w, CHUNK_SIZE_P)] =
+					llBit & ~(llBit >> 1);
+
 				uint64_t opBit = opColBit[Utils::GetIndexFrom3D(axis, h, w, CHUNK_SIZE_P)];
 				opCullColBit[Utils::GetIndexFrom3D(axis * 2 + 0, h, w, CHUNK_SIZE_P)] =
 					opBit & ~(opBit << 1);
@@ -213,10 +232,13 @@ void Chunk::InitWorldVerticesData()
 
 
 	// 2. build face culled bit slices column
+	static uint64_t llSliceColBit[Block::BLOCK_TYPE_COUNT][CHUNK_SIZE2 * 6];
 	static uint64_t opSliceColBit[Block::BLOCK_TYPE_COUNT][CHUNK_SIZE2 * 6];
 	static uint64_t tpSliceColBit[Block::BLOCK_TYPE_COUNT][CHUNK_SIZE2 * 6];
 	static uint64_t saSliceColBit[Block::BLOCK_TYPE_COUNT][CHUNK_SIZE2 * 6];
 
+	for (const auto& p : llTypeMap)
+		std::fill(llSliceColBit[p.first], llSliceColBit[p.first] + CHUNK_SIZE2 * 6, 0);
 	for (const auto& p : opTypeMap)
 		std::fill(opSliceColBit[p.first], opSliceColBit[p.first] + CHUNK_SIZE2 * 6, 0);
 	for (const auto& p : tpTypeMap)
@@ -224,12 +246,15 @@ void Chunk::InitWorldVerticesData()
 	for (const auto& p : saTypeMap)
 		std::fill(saSliceColBit[p.first], saSliceColBit[p.first] + CHUNK_SIZE2 * 6, 0);
 
+	MakeFaceSliceColumnBit(llCullColBit, llSliceColBit);
 	MakeFaceSliceColumnBit(opCullColBit, opSliceColBit);
 	MakeFaceSliceColumnBit(tpCullColBit, tpSliceColBit);
 	MakeFaceSliceColumnBit(saCullColBit, saSliceColBit);
 
 
 	// 3. make vertices by bit slices column
+	for (const auto& p : llTypeMap)
+		GreedyMeshing(llSliceColBit[p.first], m_lowLodVertices, m_lowLodIndices, p.first);
 	for (const auto& p : opTypeMap)
 		GreedyMeshing(opSliceColBit[p.first], m_opaqueVertices, m_opaqueIndices, p.first);
 	for (const auto& p : tpTypeMap)
