@@ -202,8 +202,6 @@ Blend State 설정으로 얻는 결과
 옵션 `AlphaToCoverageEnable = false`
 
 - 서브샘플이 PS에서 뱉는 Alpha값을 평균처리 후 서브샘플에 대해서 값을 양자화하여 Blending되는 옵션
-  - Ex) 알파의 평균이 `0.249`이면 `0.25`로 양자화되어 Blending
-  - Ex) 알파의 평균이 `0.251`이면 `0.5`로 양자화되어 Blending
   - 그 결과 구간이 나뉘어지는 문제 발생 -> 프로젝트 환경에서는 단순히 옵션을 끄고 진행
     <img width="800" height="460" alt="Image" src="https://github.com/user-attachments/assets/4c986217-ebf6-496a-9f4b-e3854043fc37" />
 - 철조망 렌더링 같이 얇은 메쉬의 MSAA 렌더링을 위한 옵션
