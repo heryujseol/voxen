@@ -32,10 +32,6 @@ public:
 		return XMMatrixLookToLH(Vector3::Zero, -m_shadowDir, m_shadowUp);
 	}
 	inline Matrix GetProjectionMatrixFromCascade(int i) const { return m_proj[i]; };
-	inline Matrix GetShadowInverseViewProj(int i) const
-	{
-		return (GetShadowViewMatrix() * GetProjectionMatrixFromCascade(i)).Invert();
-	}
 
 private:
 	void UpdateByDate(UINT dateTime, const Camera& camera);

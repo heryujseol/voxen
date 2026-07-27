@@ -686,22 +686,26 @@ void ChunkManager::UpdatePatchChunkMap(
 
 void ChunkManager::UpdateRenderChunkList(Camera& camera, const Light& light)
 {
-	////////////////////////////////////
-	// check start time
-	static long long sum = 0;
-	static long long count = 0;
-	auto start_time = std::chrono::steady_clock::now();
-	////////////////////////////////////
-
 	m_renderChunkList.clear();
 	m_renderMirrorChunkList.clear();
 	m_renderShadowChunkList.clear();
 
-	Matrix cameraInverseViewProjMatrix = camera.GetInverseViewProj();
-	std::vector<Matrix> cascadeShadowInverseViewProjMatrixList;
-	for (int i = 0; i < Light::CASCADE_LEVEL; ++i)
-		cascadeShadowInverseViewProjMatrixList.push_back(light.GetShadowInverseViewProj(i));
+	/*
+	* Frustum Culling에 사용할 Gribb-Hartmann 평면 추출
+	*/
+	Matrix cameraViewProjMatrix = camera.GetViewMatrix() * camera.GetProjectionMatrix();
+	std::array<Vector4, 6> cameraGribbHartmannPlanes;
+	GetGribbHartmannPlanes(cameraViewProjMatrix, cameraGribbHartmannPlanes);
 
+	std::vector<std::array<Vector4, 6>> cascadeShadowGribbHartmannPlanes(Light::CASCADE_LEVEL);
+	for (int i = 0; i < Light::CASCADE_LEVEL; ++i) {
+		Matrix cascadeShadowViewProjMatrix =
+			light.GetShadowViewMatrix() * light.GetProjectionMatrixFromCascade(i);
+
+		GetGribbHartmannPlanes(
+			cascadeShadowViewProjMatrix, cascadeShadowGribbHartmannPlanes[i]);
+	}
+	
 	for (auto& p : m_chunkMap) {
 		Chunk* chunk = p.second;
 
@@ -714,34 +718,23 @@ void ChunkManager::UpdateRenderChunkList(Camera& camera, const Light& light)
 
 		Vector3 chunkPos = chunk->GetPosition();
 
-		if (FrustumCulling(chunkPos, cameraInverseViewProjMatrix, false)) {
+		if (FrustumCulling(chunkPos, cameraGribbHartmannPlanes)) {
 			m_renderChunkList.push_back(chunk);
 		}
 
 		for (int i = 0; i < Light::CASCADE_LEVEL; ++i) {
-			if (FrustumCulling(chunkPos, cascadeShadowInverseViewProjMatrixList[i], false)) {
+			if (FrustumCulling(chunkPos, cascadeShadowGribbHartmannPlanes[i])) {
 				m_renderShadowChunkList.push_back(chunk);
 				break;
 			}
 		}
 
 		Vector3 mirrorChunkPos = Vector3::Transform(chunkPos, camera.GetMirrorPlaneMatrix());
-		if (FrustumCulling(mirrorChunkPos, cameraInverseViewProjMatrix, true)) {
+		mirrorChunkPos.y -= Chunk::CHUNK_SIZE;
+		if (FrustumCulling(mirrorChunkPos, cameraGribbHartmannPlanes)) {
 			m_renderMirrorChunkList.push_back(chunk);
 		}
 	}
-
-	////////////////////////////////////
-	// check end time
-	auto end_time = std::chrono::steady_clock::now();
-	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
-	sum += duration.count();
-	count++;
-
-	std::cout << "duration: " << duration.count() << " micro s"
-			  << " | "
-			  << "average: " << (float)sum / (float)count << " micro s" << std::endl;
-	////////////////////////////////////
 }
 
 void ChunkManager::UpdateInstanceInfoList(Camera& camera)
@@ -865,51 +858,80 @@ void ChunkManager::AddInstanceInfoBySplitFace(Vector3 worldPosition, const Insta
 	}
 }
 
-bool ChunkManager::FrustumCulling(Vector3 position, const Matrix& invMatrix, bool useMirror)
+void ChunkManager::GetGribbHartmannPlanes(const Matrix& vpm, std::array<Vector4, 6>& outPlanes)
 {
-	// Transformed view frustum NDC Position to world position
-	std::vector<Vector3> worldPos = { Vector3::Transform(Vector3(-1.0f, 1.0f, 0.0f), invMatrix),
-		Vector3::Transform(Vector3(1.0f, 1.0f, 0.0f), invMatrix),
-		Vector3::Transform(Vector3(1.0f, -1.0f, 0.0f), invMatrix),
-		Vector3::Transform(Vector3(-1.0f, -1.0f, 0.0f), invMatrix),
-		Vector3::Transform(Vector3(-1.0f, 1.0f, 1.0f), invMatrix),
-		Vector3::Transform(Vector3(1.0f, 1.0f, 1.0f), invMatrix),
-		Vector3::Transform(Vector3(1.0f, -1.0f, 1.0f), invMatrix),
-		Vector3::Transform(Vector3(-1.0f, -1.0f, 1.0f), invMatrix) };
+	/*
+	 * Gribb-Hartmann Plane 추출
+	 *
+	 * P * [col0, col1, col2, col3] ==> [x_c, y_c, z_c, w_c]
+	 *
+	 * NDC-x: -1 <= x_c/w_c <= 1
+	 * NDC-y: -1 <= y_c/w_c <= 1
+	 * NDC-z:  0 <= z_c/w_c <= 1
+	 *
+	 * clip-x: -w_c <= x_c <= w_c
+	 * clip-y: -w_c <= y_c <= w_c
+	 * clip-z:    0 <= z_c <= w_c
+	 *
+	 * left: x_c + w_c >= 0  내부
+	 * right: w_c - x_c >= 0 내부
+	 * ..
+	 *
+	 * left에 한해 `x_c + w_c == p*col0 + p*col3 == p*(col0 + col3)`
+	 *
+	 * face에 대한 col plane 구성
+	 *
+	 * 중요!
+	 * left 평면에 위치를 대입했을 때 >= 를 판단해서 내부로 판단하는 것을 보아
+	 * Gribb-Hartmann으로 추출된 평면은 안쪽을 가리키는 평면임에 명심해야 함
+	 * 그 결과, 아래서 pVertex를 구해야 함
+	 */
 
-	std::vector<Vector4> vfPlanes = {
-		DirectX::XMPlaneFromPoints(worldPos[0], worldPos[1], worldPos[2]), // front
-		DirectX::XMPlaneFromPoints(worldPos[7], worldPos[6], worldPos[5]), // back
-		DirectX::XMPlaneFromPoints(worldPos[4], worldPos[5], worldPos[1]), // top
-		DirectX::XMPlaneFromPoints(worldPos[3], worldPos[2], worldPos[6]), // bottom
-		DirectX::XMPlaneFromPoints(worldPos[4], worldPos[0], worldPos[3]), // left
-		DirectX::XMPlaneFromPoints(worldPos[1], worldPos[5], worldPos[6])  // right
-	};
+	Vector4 colVectors[4];
+	for (int col = 0; col < 4; ++col) {
+		colVectors[col] = Vector4(vpm.m[0][col], vpm.m[1][col], vpm.m[2][col], vpm.m[3][col]);
+	}
 
-	float x = (float)Chunk::CHUNK_SIZE;
-	float y = (float)Chunk::CHUNK_SIZE;
-	float z = (float)Chunk::CHUNK_SIZE;
-	if (useMirror)
-		y *= -1;
+	outPlanes[0] = colVectors[0] + colVectors[3]; // left
+	outPlanes[1] = colVectors[3] - colVectors[0]; // right
+	outPlanes[2] = colVectors[1] + colVectors[3]; // bottom
+	outPlanes[3] = colVectors[3] - colVectors[1]; // top
+	outPlanes[4] = colVectors[2];				  // near
+	outPlanes[5] = colVectors[3] - colVectors[2]; // far
+}
 
-	for (int i = 0; i < vfPlanes.size(); ++i) {
-		if (XMVectorGetX(XMPlaneDotCoord(vfPlanes[i], position)) <= 0.0f)
-			continue;
-		if (XMVectorGetX(XMPlaneDotCoord(vfPlanes[i], position + Vector3(x, 0.0f, 0.0f))) <= 0.0f)
-			continue;
-		if (XMVectorGetX(XMPlaneDotCoord(vfPlanes[i], position + Vector3(0.0f, y, 0.0f))) <= 0.0f)
-			continue;
-		if (XMVectorGetX(XMPlaneDotCoord(vfPlanes[i], position + Vector3(x, y, 0.0f))) <= 0.0f)
-			continue;
-		if (XMVectorGetX(XMPlaneDotCoord(vfPlanes[i], position + Vector3(0.0f, 0.0f, z))) <= 0.0f)
-			continue;
-		if (XMVectorGetX(XMPlaneDotCoord(vfPlanes[i], position + Vector3(x, 0.0f, z))) <= 0.0f)
-			continue;
-		if (XMVectorGetX(XMPlaneDotCoord(vfPlanes[i], position + Vector3(0.0f, y, z))) <= 0.0f)
-			continue;
-		if (XMVectorGetX(XMPlaneDotCoord(vfPlanes[i], position + Vector3(x, y, z))) <= 0.0f)
-			continue;
-		return false;
+bool ChunkManager::FrustumCulling(
+	Vector3 position, const std::array<Vector4, 6>& gribbHartmannPlanes)
+{
+	/*
+	* AABB pVertex 얻기: nVertex는 판단에 필요 없음
+	* 
+	* AABB 최소점, 최대점을 구하고 평면에 대입하여 부등호 판단으로 충분히 구할 수 있음
+	* Chunk 자체가 AABB이므로 minPos, maxPos를 구하고 평면(노멀벡터)를 가지고 비교하여 pVertex 구함
+	* 
+	* pVertex를 평면에 대입해서 위치 판단
+	* - 8 꼭짓점을 모든 평면에 대해서 검사할 필요가 없어짐
+	* 
+	* 오개념
+	* nVertex가 가장 안쪽, pVertex가 가장 바깥쪽이다 X
+	* nVertex는 평면에 대입했을 때 가장 작은값, pVertex는 평면에 대입했을 때 가장 큰 값
+	*/
+	Vector3 minPos = position;
+	Vector3 maxPos = position + Vector3(Chunk::CHUNK_SIZE);
+
+	for (int i = 0; i < 6; ++i) {
+		float a = gribbHartmannPlanes[i].x;
+		float b = gribbHartmannPlanes[i].y;
+		float c = gribbHartmannPlanes[i].z;
+		float d = gribbHartmannPlanes[i].w;
+
+		Vector3 pVertex;
+		pVertex.x = (a > 0) ? maxPos.x : minPos.x;
+		pVertex.y = (b > 0) ? maxPos.y : minPos.y;
+		pVertex.z = (c > 0) ? maxPos.z : minPos.z;
+
+		if (a * pVertex.x + b * pVertex.y + c * pVertex.z + d < 0)
+			return false;
 	}
 
 	return true;
