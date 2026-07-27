@@ -168,6 +168,8 @@ PlaneDotCoord 결과:
 
 </details>
 
+<br />
+
 ## 3. 핵심 개념
 
 AABB와 Gribb-Hartmann의 결합이 중요하다.
@@ -260,6 +262,8 @@ AABB로 nVertex나 pVertex를 구하고, Gribb-Hartmann 평면에 대입하기�
 이 때, Gribb-Hartmann 평면이 어느 방향을 바라보는지에 따라 n-Vertex 를 사용할지 p-Vertex를 사용할지 잘 구분해여 사용해야 한다.
 
 나의 프로젝트에서는 p-Vertex를 사용하여 Culling을 진행하였다.
+
+<br />
 
 ## 4. 구현 내용
 
@@ -355,6 +359,8 @@ bool ChunkManager::FrustumCulling(
 }
 ```
 
+<br />
+
 ## 5. 3가지 프러스텀 비교
 
 ### 5.1 Camera
@@ -409,9 +415,13 @@ if (FrustumCulling(mirrorChunkPos, cameraGribbHartmannPlanes)) {
 }
 ```
 
+<br />
+
 ## 6. 결과
 
 초기의 역변환 형태의 Frustum Culling은 평균 `1.0ms`가 걸릴만큼 느렸지만, Gribb-Hartmann AABB로 인해 평균 `0.2ms`로 속도가 매우 단축되었다.
+
+<br />
 
 ## 7. 회고
 
@@ -419,6 +429,8 @@ if (FrustumCulling(mirrorChunkPos, cameraGribbHartmannPlanes)) {
 - 초기엔 역변환 형식의 직관적인 Culling을 진행했지만, Gribb-Hartmann 평면 추출 방식으로 수정하여 속도가 매우 단축되었다.
 - Gribb-Hartmann으로 추출된 평면의 노멀 방향이 내가 초기에 구성한 역변환 ViewFrustum 평면의 방향과 달라서 문제가 있었지만 해결했다.
   - left side: `p*(col0 + col3) >= 0`를 만족하는 것은 내부라는 것이고, left 평면이 ViewFrustum 안쪽을 가르킨다고 판단 해야한다.
+
+<br />
 
 ## 8. 나아가 (적용한 AABB와 Gribb-Hartmann 개념 및 Viewer 구현 내용)
 
