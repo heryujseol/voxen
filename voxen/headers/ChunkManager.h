@@ -2,6 +2,7 @@
 
 #include <unordered_map>
 #include <unordered_set>
+#include <array>
 #include <future>
 
 #include "Chunk.h"
@@ -80,8 +81,8 @@ private:
 	void AddInstanceInfo(Vector3 worldPosition, const Instance& instance);
 	void AddInstanceInfoBySplitFace(Vector3 worldPosition, const Instance& instance);
 
-	bool FrustumCulling(
-		Vector3 position, const Camera& camera, const Light& light, bool useMirror, bool useShadow, int index = 0);
+	bool FrustumCulling(Vector3 position, const std::array<Vector4, 6>& gribbHartmannPlanes);
+	void GetGribbHartmannPlanes(const Matrix& vpm, std::array<Vector4, 6>& outPlanes);
 
 	void UpdateChunkGPUBuffer(Chunk* chunk);
 	

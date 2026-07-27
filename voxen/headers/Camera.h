@@ -32,6 +32,7 @@ public:
 		return XMMatrixPerspectiveFovLH(
 			XMConvertToRadians(m_projFovAngleY), m_aspectRatio, m_nearZ, m_farZ);
 	}
+	
 	inline Matrix GetMirrorPlaneMatrix() const { return m_mirrorPlaneMatrix; }
 	inline bool IsUnderWater() const { return m_isUnderWater; }
 

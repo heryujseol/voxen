@@ -10,9 +10,13 @@ Frustum Culling은 카메라의 시야 절두체(frustum) 밖에 있는 청크�
 화면에 보이지 않는 청크의 드로우 콜을 제거하여 GPU 부하를 줄이는 핵심 최적화다.
 매 프레임 로드된 모든 청크를 대상으로 3종류의 프러스텀 검사를 수행한다.
 
-1. 단순한 카메라 렌더 리스트 컬링
-2. 쉐도우 맵을 위한 Light 렌더 리스트 컬링
-3. 수면 반사를 위한 렌더 리스트 컬링
+1. 단순한 카메라에 들어올 청크 렌더 리스트 컬링
+2. 쉐도우 맵을 위한 Light 청크 렌더 리스트 컬링
+3. 수면 반사를 위한 청크 렌더 리스트 컬링
+
+초기엔 View NDC 박스를 역변환 후 World 기준으로 구성된 Frustum 평면 6개와, 청크 8개의 꼭짓점을 모두 연산하여 결과를 나타냈다.
+
+현재는 수정하여 Gribb-Hartmann Planes 추출하여 AABB로 Frustum Culling을 최적화하였다.
 
 ## 2. 도입 동기
 
@@ -22,12 +26,15 @@ Frustum Culling은 카메라의 시야 절두체(frustum) 밖에 있는 청크�
 
 추가로 섀도우 맵과 수면 반사도 각각 별도의 프러스텀을 가지므로, 이들에 대해서도 독립적인 컬링이 필요하다.
 
-## 3. 핵심 아이디어
+<details>
+<summary>Gribb-Hartmann 이전(초기 구현 내용) 내용 보기</summary>
+
+## 3. 초기: 핵심 아이디어
 
 ### 3.1 NDC 역변환 기반 프러스텀 구성
 
-일반적인 프러스텀 컬링은 뷰-프로젝션 행렬에서 6개 평면 방정식을 직접 추출하는 방식을 사용한다. (Gribb-Hartmann Culling)
-이 프로젝트에서는 비효율적이지만 직관적인 역변환 형태의 방식을 채용했다.
+초기엔 비효율적이지만 직관적인 역변환 형태의 방식을 채용했다.
+
 디버깅이 쉽고, 기하적으로 이해하기 쉬운 코드를 작성하기 위함이다.
 
 ```
@@ -35,17 +42,13 @@ NDC 큐브의 8개 꼭짓점 → (View × Projection)⁻¹ 역변환 → 월드 
 ```
 
 NDC 공간의 단위 큐브 꼭짓점을 월드 공간으로 역변환하면 프러스텀의 실제 월드 좌표를 얻고, 이 꼭짓점들로부터 6개 평면을 구성하는 방식이다.
-이 방식은 카메라 프러스텀뿐 아니라 캐스케이드 섀도우의 직교 프러스텀에도 동일한 코드로 적용할 수 있다는 장점이 있다.
 
-### 3.2 AABB 보수적 판정
+### 3.2 보수적 판정
 
-청크는 32x32x32 크기의 축 정렬 바운딩 박스(AABB)로 근사된다.
-
-1. AABB의 8개 꼭짓점 모두가 어느 한 평면의 바깥에 있어야만 해당 청크를 제외한다.
+1. Chunk의 8개 꼭짓점 모두가 어느 한 평면의 바깥에 있어야만 해당 청크를 제외한다.
 2. 꼭짓점 하나라도 안쪽에 있으면 보수적으로 통과시킨다.
-   이는 거짓 음성(보이는데 제외하는 경우)을 방지하는 대신, 거짓 양성(안 보이는데 통과-불필요한 드로우콜 발생하는 경우)을 허용하는 전략이다.
 
-## 4. 구현 내용
+## 4. 초기: 구현 내용
 
 ### 4.1 렌더 리스트 구성 (UpdateRenderChunkList)
 
@@ -117,7 +120,7 @@ vfPlanes[4] = XMPlaneFromPoints(worldPos[4], worldPos[0], worldPos[3])  // Left
 vfPlanes[5] = XMPlaneFromPoints(worldPos[1], worldPos[5], worldPos[6])  // Right
 ```
 
-### 4.3 AABB vs 프러스텀 판정
+### 4.3 판정
 
 ```cpp
 float x = (float)Chunk::CHUNK_SIZE;  // 32
@@ -127,7 +130,7 @@ if (useMirror)
     y *= -1;  // 미러 반사 시 Y축 반전
 ```
 
-청크의 AABB는 `position`을 원점으로 `(position + 32, position + 32, position + 32)`까지의 축 정렬 박스다.
+청크의 8개의 꼭짓점은 `position`을 원점으로 `(position + 32, position + 32, position + 32)`까지의 축 정렬 박스다.
 미러 렌더링 시에는 Y축이 반전되어 `position.y - 32` 방향으로 확장된다.
 
 ```cpp
@@ -157,15 +160,210 @@ PlaneDotCoord 결과:
 
 6개 평면 각각에 대해:
 
-1. AABB의 8개 꼭짓점을 순회
+1. Chunk의 8개 꼭짓점을 순회
 2. **하나라도** 평면 안쪽(≤ 0)이면 → `continue`로 해당 평면 통과 (다음 평면 검사)
 3. **8개 모두** 바깥쪽(> 0)이면 → `return false` (프러스텀 밖으로 확정, 컬링)
 
 6개 평면을 모두 통과하면 `return true` (프러스텀 안에 있거나 교차).
 
+</details>
+
+<br />
+
+## 3. 핵심 개념
+
+AABB와 Gribb-Hartmann의 결합이 중요하다.
+
+### 3.1 AABB 최적화
+
+Chunk 자체는 축 정렬된 좌표를 가지고 있기 때문에 모든 점에 대한 검사는 비효율적이다.
+
+`n-Vertex / p-Vertex`를 구해서 최적화가 가능하다.
+
+```
+n-Vertex: 평면에 대입했을 때(노멀과 내적)의 값이 가장 최소인 위치 - 평면 노멀 방향에 멈
+p-Vertex: 평면에 대입했을 때(노멀과 내적)의 값이 가장 최대인 위치 - 평면 노멀 방향에 가까움
+```
+
+오개념을 조심해야 하는데, `n-Vertex`는 평면에 가장 가까운 한 점을 구하는게 아니다.
+
+- `n-Vertex`는 단순히 평면에 대입했을 때 가장 작은 값을 고를 뿐이다. (평면 노멀과 위치벡터의 내적의 최소)
+
+`n-Vertex/p-Vertex`를 구하는 방식은 다음과 같다.
+
+```cpp
+minPos = (0, 0, 0)
+maxPos = minPos + (ChunkSize, ChunkSize, ChunkSize)
+
+// 평면의 노멀벡터
+N = (a, b, c)
+
+// n vertex
+nVertex.x = (a > 0) ? minPos.x : maxPos.x // 노멀 방향에 반대임
+nVertex.y = (b > 0) ? minPos.y : maxPos.y
+nVertex.z = (c > 0) ? minPos.z : maxPos.z
+
+// p vertex
+pVertex.x = (a > 0) ? maxPos.x : minPos.x // 노멀 방향에 가까움
+pVertex.y = (b > 0) ? maxPos.y : minPos.y
+pVertex.z = (c > 0) ? maxPos.z : minPos.z
+```
+
+### 3.2 Gribb-Hartmann 평면 추출
+
+어느 한 점이 View Frustum에 들어오는지는 다음과 같다.
+
+```cpp
+P * [VP Matrix]
+P * [col0, col1, col2, col3] ==> [x_c, y_c, z_c, w_c]
+
+NDC-x: -1 <= x_c/w_c <= 1
+NDC-y: -1 <= y_c/w_c <= 1
+NDC-z:  0 <= z_c/w_c <= 1
+```
+
+이 때, NDC도 가지말고 Clip Space에서 연산이 충분히 가능하다.
+
+```cpp
+P * [col0, col1, col2, col3] ==> [x_c, y_c, z_c, w_c]
+
+clip-x: -w_c <= x_c <= w_c
+clip-y: -w_c <= y_c <= w_c
+clip-z:    0 <= z_c <= w_c
+
+leftSide 판정:  x_c + w_c >= 0 (내부)
+rightSide 판정: w_c - x_c >= 0 (내부)
+...
+
+```
+
+또한 실제로 `x_c` 혹은 `y_c`와 같은 연산을 직접 계산할 필요도 없다. 해당 값은 결국 `P`가 `col-N` 벡터와 곱해진 결과이다.
+
+```cpp
+leftSide 판정: x_c + w_c >= 0 (내부)
+
+x_c == P * col0
+w_c == P * col3
+
+x_c + w_c == P * (col0 + col3)
+
+leftSide 판정: P * (col0 + col3) >= 0  (내부)
+```
+
+leftSide와 마찬가지로 다른 Side에 대해서도 이미 값을 계산해놓는다.
+이 때, `P`와 내적되는 오른쪽 column Vector를 평면으로 본다. 이것이 **Gribb-Hartmann Plane**이 된다.
+
+즉, 미리 Matrix를 이용하여 Side에 맞는 **Gribb-Hartmann Plane** 구성한 후 임의의 점 하나를 평면에 대입하여 부등호 연산을 하면 위치가 판단된다.
+
+### 3.3 AABB + Gribb-Hartmann 평면 결합
+
+AABB로 nVertex나 pVertex를 구하고, Gribb-Hartmann 평면에 대입하기만 하면 Frustum Culling을 진행할 수 있게 된다.
+
+이 때, Gribb-Hartmann 평면이 어느 방향을 바라보는지에 따라 n-Vertex 를 사용할지 p-Vertex를 사용할지 잘 구분해여 사용해야 한다.
+
+나의 프로젝트에서는 p-Vertex를 사용하여 Culling을 진행하였다.
+
+<br />
+
+## 4. 구현 내용
+
+### 4.1 평면 사전 추출
+
+이전에는 Frustum Culling 호출마다 역행렬을 구해서 곱하는 비효율의 연속이였고, useMirror, useShadow에 따라 구분하여 함수가 좋지 못했다.
+
+그래서 Frustum Culling 호출 전에 camera, mirror, shadow에 따른 Gribb-Hartmann Planes 미리 구성하고 호출하였다.
+
+```cpp
+void ChunkManager::UpdateRenderChunkList(Camera& camera, const Light& light)
+{
+	/*
+	* Frustum Culling에 사용할 Gribb-Hartmann 평면 추출
+	*/
+    // 일반 카메라: Gribb-Hartmann 평면 추출
+	Matrix cameraViewProjMatrix = camera.GetViewMatrix() * camera.GetProjectionMatrix();
+	std::array<Vector4, 6> cameraGribbHartmannPlanes;
+	GetGribbHartmannPlanes(cameraViewProjMatrix, cameraGribbHartmannPlanes);
+
+    // Shadow: Gribb-Hartmann 평면 추출
+	std::vector<std::array<Vector4, 6>> cascadeShadowGribbHartmannPlanes(Light::CASCADE_LEVEL);
+	for (int i = 0; i < Light::CASCADE_LEVEL; ++i) {
+		Matrix cascadeShadowViewProjMatrix =
+			light.GetShadowViewMatrix() * light.GetProjectionMatrixFromCascade(i);
+
+		GetGribbHartmannPlanes(
+			cascadeShadowViewProjMatrix, cascadeShadowGribbHartmannPlanes[i]);
+	}
+
+	for (auto& p : m_chunkMap) {
+		Chunk* chunk = p.second;
+
+        // ... 검사
+
+		Vector3 chunkPos = chunk->GetPosition();
+
+		// ... 종류별 Frustum Culling() 호출
+        if (Frustum Culling(chunkPos, cameraGribbHartmannPlanes))
+            ...
+	}
+}
+```
+
+### 4.2 Gribb-Hartmann 평면 추출
+
+```cpp
+void ChunkManager::GetGribbHartmannPlanes(const Matrix& vpm, std::array<Vector4, 6>& outPlanes)
+{
+	Vector4 colVectors[4];
+	for (int col = 0; col < 4; ++col) {
+		colVectors[col] = Vector4(vpm.m[0][col], vpm.m[1][col], vpm.m[2][col], vpm.m[3][col]);
+	}
+
+	outPlanes[0] = colVectors[0] + colVectors[3]; // left
+	outPlanes[1] = colVectors[3] - colVectors[0]; // right
+	outPlanes[2] = colVectors[1] + colVectors[3]; // bottom
+	outPlanes[3] = colVectors[3] - colVectors[1]; // top
+	outPlanes[4] = colVectors[2];				  // near
+	outPlanes[5] = colVectors[3] - colVectors[2]; // far
+}
+```
+
+### 4.3 Frustum Culling 호출
+
+실제 Frustum Culling은 매우 짧아졌다.
+
+평면의 노멀이 Frustum Culling 안쪽을 가리키기 때문에 내적의 결과가 가장 큰 `pVertex`를 이용하여 판단한다.
+
+```cpp
+bool ChunkManager::FrustumCulling(
+	Vector3 position, const std::array<Vector4, 6>& gribbHartmannPlanes)
+{
+	Vector3 minPos = position;
+	Vector3 maxPos = position + Vector3(Chunk::CHUNK_SIZE);
+
+	for (int i = 0; i < 6; ++i) {
+		float a = gribbHartmannPlanes[i].x;
+		float b = gribbHartmannPlanes[i].y;
+		float c = gribbHartmannPlanes[i].z;
+		float d = gribbHartmannPlanes[i].w;
+
+		Vector3 pVertex;
+		pVertex.x = (a > 0) ? maxPos.x : minPos.x;
+		pVertex.y = (b > 0) ? maxPos.y : minPos.y;
+		pVertex.z = (c > 0) ? maxPos.z : minPos.z;
+
+		if (a * pVertex.x + b * pVertex.y + c * pVertex.z + d < 0)
+			return false;
+	}
+
+	return true;
+}
+```
+
+<br />
+
 ## 5. 3가지 프러스텀 비교
 
-### 5.1 카메라 프러스텀
+### 5.1 Camera
 
 ```
 카메라 위치에서 원근 투영(Perspective)으로 형성되는 사다리꼴 절두체.
@@ -181,7 +379,7 @@ PlaneDotCoord 결과:
 
 입력: `camera.GetViewMatrix() × camera.GetProjectionMatrix()`
 
-### 5.2 섀도우 캐스케이드 프러스텀
+### 5.2 Shadow Light
 
 ```
 각 캐스케이드는 직교 투영(Orthographic)으로 형성되는 직육면체.
@@ -191,35 +389,50 @@ PlaneDotCoord 결과:
    │ C0   │  │   C1     │  │      C2        │
    │ 가까움│  │  중간    │  │     먼 곳       │
    └──────┘  └──────────┘  └────────────────┘
+
+for (int i = 0; i < Light::CASCADE_LEVEL; ++i) {
+	if (FrustumCulling(chunkPos, cascadeShadowGribbHartmannPlanes[i])) {
+		m_renderShadowChunkList.push_back(chunk);
+		break;
+	}
+}
 ```
 
 입력: `light.GetViewMatrix() × light.GetProjectionMatrixFromCascade(i)` (i = 0, 1, 2)
 
-3개 캐스케이드 중 하나라도 통과하면 섀도우 리스트에 추가한다. 캐스케이드 간 중복 방지를 위해 첫 번째 통과 시 `break`한다.
+3개 캐스케이드 중 하나라도 통과하면 리스트에 추가한다. 캐스케이드 간 중복 방지를 위해 첫 번째 통과 시 `break`한다.
 
-### 5.3 미러 프러스텀
+### 5.3 Mirror World
+
+카메라는 그대로지만, Chunk Position 기준점이 Plane에 따라 뒤집힌다.
+그래서 Chunk Position의 기준점을 내려서 Frustum Culling을 실행시킨다.
 
 ```
-수면(Y=waterLevel)을 기준으로 물체를 수면에 반사한 영역
-View Frustum은 일반적인 경우와 동일하지만, 물체의 `position`을 Reflection Matrix에 곱해서 FrustumCulling 연산을 진행한다.
-
-          수면
-    ──────────────────
-    ╲     반사 영역    ╱
-     ╲               ╱
-      ╲             ╱
-       ╲___________╱
+Vector3 mirrorChunkPos = Vector3::Transform(chunkPos, camera.GetMirrorPlaneMatrix());
+mirrorChunkPos.y -= Chunk::CHUNK_SIZE;
+if (FrustumCulling(mirrorChunkPos, cameraGribbHartmannPlanes)) {
+	m_renderMirrorChunkList.push_back(chunk);
+}
 ```
 
-미러 컬링은 카메라 프러스텀을 그대로 사용하되, 청크의 위치를 `mirrorPlaneMatrix`로 반사 변환한 후 테스트한다. 또한 AABB의 Y 확장 방향을 반전(`y *= -1`)하여, 반사 공간에서의 바운딩 박스를 올바르게 구성한다.
+<br />
 
-## 6. 회고
+## 6. 결과
 
-- 현재는 역변환 방식을 채용하지만, Gribb-Hartmann Culling을 활용하면 평면에 대한 행렬곱 없이 벡터만을 추출하여 더해 ClipSpace에 대한 평면을 구할 수 있는 방법이 존재했음
-- AABB 8개 꼭짓점을 모두 테스트하는 대신, 평면 법선에 대한 p-vertex/n-vertex 기법을 사용하면 평면당 2번의 내적만으로 판정할 수 있어 꼭짓점 검사 횟수를 줄일 수 있는 방법도 존재
-- 컬링 자체의 최적화 요소는 더 많았지만 메쉬 단위가 아닌 청크 단위로 연산하기에 빠름
+초기의 역변환 형태의 Frustum Culling은 평균 `1.0ms`가 걸릴만큼 느렸지만, Gribb-Hartmann AABB로 인해 평균 `0.2ms`로 속도가 매우 단축되었다.
 
-## 7. 나아가
+<br />
+
+## 7. 회고
+
+- 잊어버린 평면과 점의 관계를 파악할 수 있는 챕터였다
+- 초기엔 역변환 형식의 직관적인 Culling을 진행했지만, Gribb-Hartmann 평면 추출 방식으로 수정하여 속도가 매우 단축되었다.
+- Gribb-Hartmann으로 추출된 평면의 노멀 방향이 내가 초기에 구성한 역변환 ViewFrustum 평면의 방향과 달라서 문제가 있었지만 해결했다.
+  - left side: `p*(col0 + col3) >= 0`를 만족하는 것은 내부라는 것이고, left 평면이 ViewFrustum 안쪽을 가르킨다고 판단 해야한다.
+
+<br />
+
+## 8. 나아가 (적용한 AABB와 Gribb-Hartmann 개념 및 Viewer 구현 내용)
 
 ### 평면의 방정식
 
@@ -257,9 +470,9 @@ ax + by + cz + d = 0 (d = -N*Q)
 #### AABB에서의 두 점과 n/p-vertex로 최적화
 
 - AABB의 좌표로 최대최소점을 구하고 그것을 평면의 노멀벡터의 음양부호에 따라 n-vertex / p-vertex를 구할 수 있음
-  - **n-vertex** : 평면 노멀에 가장 안쪽
-  - **p-vertex** : 평면에 가장 바깥쪽
-- n-vertex만을 가지고 충분히 프러스텀의 내외부 판단을 할 수 있음
+  - **n-vertex** : 평면 노멀과 내적의 결과가 최소
+  - **p-vertex** : 평면 노멀과 내적의 결과가 최대
+- n-vertex, p-vertex 만을 가지고 충분히 프러스텀의 내외부 판단을 할 수 있음
 
 ```cpp
 minPos = (0, 0, 0)
@@ -328,6 +541,9 @@ P*(col0 + col3) >= 0
 // col0 + col3 이 left의 평면 계수가 됨
 ```
 
+- 여기서 중요!
+  - P와 내적되는 평면(ex. `col0 + col3`)의 노멀은 프러스텀 안쪽을 가르키는 방향임에 명심해야 함
+
 ---
 
 ### Gribb-Hartmann Culling + AABB 최적화
@@ -352,11 +568,11 @@ for (int i = 0; i < 6; ++i) {
     float c = planes[i].z;
     float d = planes[i].w;
 
-    // n-vertex 선택
-    Vector3 n;
-    n.x = (a > 0) ? min.x : max.x;
-    n.y = (b > 0) ? min.y : max.y;
-    n.z = (c > 0) ? min.z : max.z;
+    // p-vertex 선택
+    Vector3 p;
+    p.x = (a > 0) ? max.x : min.x;
+    p.y = (b > 0) ? max.y : min.y;
+    p.z = (c > 0) ? max.z : min.z;
 
     // XMPlaneDotCoord 없이 직접 대입
     if (a*n.x + b*n.y + c*n.z + d < 0)
