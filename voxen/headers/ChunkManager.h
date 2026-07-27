@@ -80,8 +80,7 @@ private:
 	void AddInstanceInfo(Vector3 worldPosition, const Instance& instance);
 	void AddInstanceInfoBySplitFace(Vector3 worldPosition, const Instance& instance);
 
-	bool FrustumCulling(
-		Vector3 position, const Camera& camera, const Light& light, bool useMirror, bool useShadow, int index = 0);
+	bool FrustumCulling(Vector3 position, const Matrix& invMatrix, bool useMirror);
 
 	void UpdateChunkGPUBuffer(Chunk* chunk);
 	

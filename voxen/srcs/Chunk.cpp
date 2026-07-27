@@ -21,9 +21,9 @@ ChunkLoadMemory* Chunk::Initialize(PosInt3 offsetPosition, ChunkLoadMemory* memo
 {
 	////////////////////////////////////
 	// check start time
-	static long long sum = 0;
-	static long long count = 0;
-	auto start_time = std::chrono::steady_clock::now();
+	// static long long sum = 0;
+	// static long long count = 0;
+	// auto start_time = std::chrono::steady_clock::now();
 	////////////////////////////////////
 
 	m_offsetPosition = Utils::PosInt3ToVector(offsetPosition);
@@ -52,10 +52,10 @@ ChunkLoadMemory* Chunk::Initialize(PosInt3 offsetPosition, ChunkLoadMemory* memo
 
 	////////////////////////////////////
 	// check end time
-	auto end_time = std::chrono::steady_clock::now();
-	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
-	sum += duration.count();
-	count++;
+	// auto end_time = std::chrono::steady_clock::now();
+	// auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
+	// sum += duration.count();
+	// count++;
 
 	// std::cout << "duration: " << duration.count() << " micro s"
 	//		  << " | "

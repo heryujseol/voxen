@@ -686,9 +686,21 @@ void ChunkManager::UpdatePatchChunkMap(
 
 void ChunkManager::UpdateRenderChunkList(Camera& camera, const Light& light)
 {
+	////////////////////////////////////
+	// check start time
+	static long long sum = 0;
+	static long long count = 0;
+	auto start_time = std::chrono::steady_clock::now();
+	////////////////////////////////////
+
 	m_renderChunkList.clear();
 	m_renderMirrorChunkList.clear();
 	m_renderShadowChunkList.clear();
+
+	Matrix cameraInverseViewProjMatrix = camera.GetInverseViewProj();
+	std::vector<Matrix> cascadeShadowInverseViewProjMatrixList;
+	for (int i = 0; i < Light::CASCADE_LEVEL; ++i)
+		cascadeShadowInverseViewProjMatrixList.push_back(light.GetShadowInverseViewProj(i));
 
 	for (auto& p : m_chunkMap) {
 		Chunk* chunk = p.second;
@@ -702,22 +714,34 @@ void ChunkManager::UpdateRenderChunkList(Camera& camera, const Light& light)
 
 		Vector3 chunkPos = chunk->GetPosition();
 
-		if (FrustumCulling(chunkPos, camera, light, false, false)) {
+		if (FrustumCulling(chunkPos, cameraInverseViewProjMatrix, false)) {
 			m_renderChunkList.push_back(chunk);
 		}
 
 		for (int i = 0; i < Light::CASCADE_LEVEL; ++i) {
-			if (FrustumCulling(chunkPos, camera, light, false, true, i)) {
+			if (FrustumCulling(chunkPos, cascadeShadowInverseViewProjMatrixList[i], false)) {
 				m_renderShadowChunkList.push_back(chunk);
 				break;
 			}
 		}
 
 		Vector3 mirrorChunkPos = Vector3::Transform(chunkPos, camera.GetMirrorPlaneMatrix());
-		if (FrustumCulling(mirrorChunkPos, camera, light, true, false)) {
+		if (FrustumCulling(mirrorChunkPos, cameraInverseViewProjMatrix, true)) {
 			m_renderMirrorChunkList.push_back(chunk);
 		}
 	}
+
+	////////////////////////////////////
+	// check end time
+	auto end_time = std::chrono::steady_clock::now();
+	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
+	sum += duration.count();
+	count++;
+
+	std::cout << "duration: " << duration.count() << " micro s"
+			  << " | "
+			  << "average: " << (float)sum / (float)count << " micro s" << std::endl;
+	////////////////////////////////////
 }
 
 void ChunkManager::UpdateInstanceInfoList(Camera& camera)
@@ -841,27 +865,17 @@ void ChunkManager::AddInstanceInfoBySplitFace(Vector3 worldPosition, const Insta
 	}
 }
 
-bool ChunkManager::FrustumCulling(Vector3 position, const Camera& camera, const Light& light,
-	bool useMirror, bool useShadow, int index)
+bool ChunkManager::FrustumCulling(Vector3 position, const Matrix& invMatrix, bool useMirror)
 {
-	Matrix invMat = Matrix();
-
-	if (useShadow) {
-		invMat = (light.GetViewMatrix() * light.GetProjectionMatrixFromCascade(index)).Invert();
-	}
-	else {
-		invMat = (camera.GetViewMatrix() * camera.GetProjectionMatrix()).Invert();
-	}
-
 	// Transformed view frustum NDC Position to world position
-	std::vector<Vector3> worldPos = { Vector3::Transform(Vector3(-1.0f, 1.0f, 0.0f), invMat),
-		Vector3::Transform(Vector3(1.0f, 1.0f, 0.0f), invMat),
-		Vector3::Transform(Vector3(1.0f, -1.0f, 0.0f), invMat),
-		Vector3::Transform(Vector3(-1.0f, -1.0f, 0.0f), invMat),
-		Vector3::Transform(Vector3(-1.0f, 1.0f, 1.0f), invMat),
-		Vector3::Transform(Vector3(1.0f, 1.0f, 1.0f), invMat),
-		Vector3::Transform(Vector3(1.0f, -1.0f, 1.0f), invMat),
-		Vector3::Transform(Vector3(-1.0f, -1.0f, 1.0f), invMat) };
+	std::vector<Vector3> worldPos = { Vector3::Transform(Vector3(-1.0f, 1.0f, 0.0f), invMatrix),
+		Vector3::Transform(Vector3(1.0f, 1.0f, 0.0f), invMatrix),
+		Vector3::Transform(Vector3(1.0f, -1.0f, 0.0f), invMatrix),
+		Vector3::Transform(Vector3(-1.0f, -1.0f, 0.0f), invMatrix),
+		Vector3::Transform(Vector3(-1.0f, 1.0f, 1.0f), invMatrix),
+		Vector3::Transform(Vector3(1.0f, 1.0f, 1.0f), invMatrix),
+		Vector3::Transform(Vector3(1.0f, -1.0f, 1.0f), invMatrix),
+		Vector3::Transform(Vector3(-1.0f, -1.0f, 1.0f), invMatrix) };
 
 	std::vector<Vector4> vfPlanes = {
 		DirectX::XMPlaneFromPoints(worldPos[0], worldPos[1], worldPos[2]), // front
