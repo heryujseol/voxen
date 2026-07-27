@@ -191,7 +191,7 @@ p-Vertex: 평면에 대입했을 때(노멀과 내적)의 값이 가장 최대�
 
 `n-Vertex/p-Vertex`를 구하는 방식은 다음과 같다.
 
-```
+```cpp
 minPos = (0, 0, 0)
 maxPos = minPos + (ChunkSize, ChunkSize, ChunkSize)
 
@@ -213,7 +213,7 @@ pVertex.z = (c > 0) ? maxPos.z : minPos.z
 
 어느 한 점이 View Frustum에 들어오는지는 다음과 같다.
 
-```
+```cpp
 P * [VP Matrix]
 P * [col0, col1, col2, col3] ==> [x_c, y_c, z_c, w_c]
 
@@ -224,7 +224,7 @@ NDC-z:  0 <= z_c/w_c <= 1
 
 이 때, NDC도 가지말고 Clip Space에서 연산이 충분히 가능하다.
 
-```
+```cpp
 P * [col0, col1, col2, col3] ==> [x_c, y_c, z_c, w_c]
 
 clip-x: -w_c <= x_c <= w_c
@@ -239,7 +239,7 @@ rightSide 판정: w_c - x_c >= 0 (내부)
 
 또한 실제로 `x_c` 혹은 `y_c`와 같은 연산을 직접 계산할 필요도 없다. 해당 값은 결국 `P`가 `col-N` 벡터와 곱해진 결과이다.
 
-```
+```cpp
 leftSide 판정: x_c + w_c >= 0 (내부)
 
 x_c == P * col0
@@ -273,7 +273,7 @@ AABB로 nVertex나 pVertex를 구하고, Gribb-Hartmann 평면에 대입하기�
 
 그래서 Frustum Culling 호출 전에 camera, mirror, shadow에 따른 Gribb-Hartmann Planes 미리 구성하고 호출하였다.
 
-```
+```cpp
 void ChunkManager::UpdateRenderChunkList(Camera& camera, const Light& light)
 {
 	/*
@@ -310,7 +310,7 @@ void ChunkManager::UpdateRenderChunkList(Camera& camera, const Light& light)
 
 ### 4.2 Gribb-Hartmann 평면 추출
 
-```
+```cpp
 void ChunkManager::GetGribbHartmannPlanes(const Matrix& vpm, std::array<Vector4, 6>& outPlanes)
 {
 	Vector4 colVectors[4];
@@ -333,7 +333,7 @@ void ChunkManager::GetGribbHartmannPlanes(const Matrix& vpm, std::array<Vector4,
 
 평면의 노멀이 Frustum Culling 안쪽을 가리키기 때문에 내적의 결과가 가장 큰 `pVertex`를 이용하여 판단한다.
 
-```
+```cpp
 bool ChunkManager::FrustumCulling(
 	Vector3 position, const std::array<Vector4, 6>& gribbHartmannPlanes)
 {
