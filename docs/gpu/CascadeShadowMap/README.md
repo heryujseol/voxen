@@ -461,7 +461,7 @@ float NdcDist  = min(NdcDistXY, NdcDistZ);
 ## 6. 회고 및 미흡한 점
 
 - 그림자의 원리는 되게 단순하다.
-  - Light로 렌더링 -> PS에서 (VP)-1 역산하여 Light에 정투영 -> 샘플링 -> 깊이 검사
+  - Light로 렌더링 -> PS에서 World * LightVP 하여 Light에 정투영 -> 샘플링 -> 깊이 검사
 
 - Shadow는 RS 환경에서 어려운 과제인 것 같다.
   - 지금까지 voxen중에 가장 어렵고 수정하기 난해한 챕터다.
